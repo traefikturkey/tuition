@@ -2,6 +2,8 @@
 
 A terminal-based management tool for self-hosted homelab services. Simplifies Docker container management with automatic HTTPS, internal DNS, and disaster recovery.
 
+**Works with both Bun and Node.js!**
+
 ## Features
 
 - **Service Catalog** - Pre-configured services (Pi-hole, Plex, Joyride) ready to deploy
@@ -12,6 +14,8 @@ A terminal-based management tool for self-hosted homelab services. Simplifies Do
 - **Interactive TUI** - Blessed-based terminal interface
 
 ## Quick Start
+
+### Option 1: Using Bun (Recommended - Faster)
 
 ```bash
 # Install dependencies
@@ -31,6 +35,38 @@ bun run index.ts service enable pihole
 bun run index.ts tui
 ```
 
+### Option 2: Using Node.js (Universal Compatibility)
+
+```bash
+# Install dependencies
+npm install
+
+# Initialize tuition
+npm run dev:node init
+
+# Start infrastructure
+npm run dev:node caddy start
+npm run dev:node dns start
+
+# Deploy your first service
+npm run dev:node service enable pihole
+
+# Launch interactive TUI
+npm run dev:node tui
+```
+
+### Option 3: Build and Run
+
+```bash
+# Using Bun
+bun run build
+bun run start init
+
+# Using Node.js
+npm run build:node
+npm run start:node init
+```
+
 ## Architecture
 
 ```
@@ -44,56 +80,56 @@ Docker Network (tuition)
     └─ CoreDNS (Port 53)
 ```
 
-## Commands
-
-### System Setup
-- `tuition init` - Interactive setup wizard
-- `tuition validate` - Validate configuration
-- `tuition config show` - Display current configuration
-- `tuition config set <key> <value>` - Set configuration value
-
-### Service Management
-- `tuition service list` - List all services
-- `tuition service show <name>` - Show service details
-- `tuition service enable <name>` - Enable and start service
-- `tuition service disable <name>` - Disable service
-- `tuition service start <name>` - Start service
-- `tuition service stop <name>` - Stop service
-- `tuition service restart <name>` - Restart service
-- `tuition service update <name>` - Update to latest image
-- `tuition service logs <name>` - View logs
-- `tuition service search <query>` - Search catalog
-
-### Reverse Proxy (Caddy)
-- `tuition caddy start` - Start Caddy
-- `tuition caddy stop` - Stop Caddy
-- `tuition caddy restart` - Restart Caddy
-- `tuition caddy reload` - Reload configuration
-- `tuition caddy status` - Show status
-- `tuition caddy regenerate` - Regenerate Caddyfile
-
-### Internal DNS (CoreDNS)
-- `tuition dns start` - Start CoreDNS
-- `tuition dns stop` - Stop CoreDNS
-- `tuition dns status` - Show status
-- `tuition dns regenerate` - Regenerate config
-
-### Disaster Recovery
-- `tuition backup create` - Create backup
-- `tuition backup list` - List backups
-- `tuition backup restore <1>` - Restore backup #1
-- `tuition backup delete <1>` - Delete backup #1
-
-### Interactive TUI
-- `tuition tui` - Launch blessed-based terminal UI
-
 ## Requirements
 
-- Bun runtime (latest)
-- Docker Engine 20.10+
-- Docker Compose 2.0+
-- Linux (Debian/Ubuntu recommended)
-- Domain name with Cloudflare DNS
+- **Runtime**: Bun >=1.0.0 **OR** Node.js >=18.0.0
+- **Docker**: Engine 20.10+, Compose 2.0+
+- **OS**: Linux (Debian/Ubuntu recommended)
+- **Network**: Domain name with Cloudflare DNS
+
+### Installing Bun
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+export PATH="$HOME/.bun/bin:$PATH"
+```
+
+Add to `~/.bashrc` or `~/.zshrc` to make permanent:
+```bash
+export PATH="$HOME/.bun/bin:$PATH"
+```
+
+## Commands
+
+All commands work with both Bun and Node.js:
+
+### Bun Commands
+```bash
+bun run index.ts init                    # Initialize
+bun run index.ts service enable <name>    # Enable service
+bun run index.ts caddy start              # Start Caddy
+bun run index.ts tui                      # Launch TUI
+```
+
+### Node.js Commands
+```bash
+npm run dev:node init                     # Initialize
+npm run dev:node service enable <name>   # Enable service
+npm run dev:node caddy start             # Start Caddy
+npm run dev:node tui                     # Launch TUI
+```
+
+### Full Command Reference
+
+| Command | Bun | Node.js |
+|---------|-----|---------|
+| Initialize | `bun run index.ts init` | `npm run dev:node init` |
+| List services | `bun run index.ts service list` | `npm run dev:node service list` |
+| Enable service | `bun run index.ts service enable <name>` | `npm run dev:node service enable <name>` |
+| Start Caddy | `bun run index.ts caddy start` | `npm run dev:node caddy start` |
+| Start DNS | `bun run index.ts dns start` | `npm run dev:node dns start` |
+| Create backup | `bun run index.ts backup create` | `npm run dev:node backup create` |
+| Launch TUI | `bun run index.ts tui` | `npm run dev:node tui` |
 
 ## Configuration
 
@@ -109,6 +145,64 @@ Configuration is stored in `~/.tuition/config/` with tier hierarchy:
 ├── data/                     # Service data volumes
 ├── backups/                  # Backup archives
 └── logs/                     # Application logs
+```
+
+## Development
+
+### Using Bun (Faster, recommended for development)
+
+```bash
+# TypeScript check
+bun run lint
+
+# Run tests
+bun test
+
+# Run CLI
+bun run index.ts <command>
+
+# Run TUI
+bun run index.ts tui
+```
+
+### Using Node.js (Full compatibility)
+
+```bash
+# TypeScript check
+npm run lint
+
+# Run tests
+npm run test:node
+
+# Run CLI in development mode
+npm run dev:node <command>
+
+# Run TUI
+npm run dev:node tui
+
+# Build for production
+npm run build:node
+
+# Run compiled version
+npm run start:node <command>
+```
+
+### Testing
+
+The project includes comprehensive unit tests covering:
+
+- **Configuration Management** - Config loading, validation, and persistence
+- **Service Catalog** - Service discovery and metadata
+- **Caddyfile Generator** - Reverse proxy configuration generation
+- **Docker Compose** - Compose file generation and environment handling
+- **Backup Manager** - Archive creation and restoration
+
+```bash
+# Using Bun
+bun test
+
+# Using Node.js
+npm run test:node
 ```
 
 ## Service Catalog
@@ -133,43 +227,6 @@ volumes:
 labels:
   caddy: pihole.${DOMAIN}
   caddy.reverse_proxy: "{{upstreams 80}}"
-```
-
-## Development
-
-```bash
-# TypeScript check
-bun run lint
-
-# Run tests
-bun test
-
-# Run CLI
-bun run index.ts <command>
-
-# Run TUI
-bun run index.ts tui
-```
-
-### Testing
-
-The project includes comprehensive unit tests covering:
-
-- **Configuration Management** - Config loading, validation, and persistence
-- **Service Catalog** - Service discovery and metadata
-- **Caddyfile Generator** - Reverse proxy configuration generation
-- **Docker Compose** - Compose file generation and environment handling
-- **Backup Manager** - Archive creation and restoration
-
-```bash
-# Run all tests
-bun test
-
-# Run specific test file
-bun test tests/unit/config.test.ts
-
-# Run with coverage
-bun test --coverage
 ```
 
 ## Project Structure
@@ -211,6 +268,28 @@ Implements 3-2-1 backup strategy:
 - Service passwords auto-generated
 - Environment files excluded from version control
 
+## Troubleshooting
+
+### Bun crashes with native modules
+
+If you see errors like `panic: unsupported uv function`, use Node.js instead:
+
+```bash
+# Switch to Node.js
+npm install
+npm run dev:node init
+```
+
+### Permission denied on Linux
+
+```bash
+# Fix ownership
+sudo chown -R $USER:$USER ~/.tuition
+
+# Or run with sudo (not recommended for production)
+sudo $(which bun) run index.ts init
+```
+
 ## License
 
 MIT
@@ -218,7 +297,8 @@ MIT
 ## Contributing
 
 Contributions welcome! Please ensure:
-- TypeScript compilation passes (`bun run lint`)
+- TypeScript compilation passes (`bun run lint` or `npm run lint`)
+- Tests pass (`bun test` or `npm run test:node`)
 - Follow existing code style
 - Add tests for new features
 - Update documentation
