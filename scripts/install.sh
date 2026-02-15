@@ -1,280 +1,148 @@
 #!/bin/bash
 #
-# Tuition - Automated Installer
-# One command: curl ... | bash
-# Sets up tuition completely automatically with minimal user interaction
+# Tuition - Robust Automated Installer
 #
 
 set -e
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Configuration
 INSTALL_DIR="${HOME}/.local/bin"
 APP_DIR="${HOME}/.tuition/app"
 REPO_URL="https://github.com/traefikturkey/tuition"
-SHELL_CONFIG=""
 
-print_status() {
-    echo -e "${BLUE}[Tuition]${NC} $1"
-}
+echo ""
+echo "╔══════════════════════════════════════════════════════════╗"
+echo "║         Tuition - Homelab Manager                      ║"
+echo "╚══════════════════════════════════════════════════════════╝"
+echo ""
 
-print_success() {
-    echo -e "${GREEN}[✓]${NC} $1"
-}
+# Step 1: Check Node.js
+echo -e "${BLUE}[1/4]${NC} Checking Node.js..."
+if ! command -v node &> /dev/null; then
+    echo -e "${RED}✗${NC} Node.js not found. Please install Node.js 18+ first."
+    echo "   Visit: https://nodejs.org/ or run: nvm install 20"
+    exit 1
+fi
+NODE_VERSION=$(node --version | cut -d'v' -f2 | cut -d'.' -f1)
+if [ "$NODE_VERSION" -lt 18 ]; then
+    echo -e "${RED}✗${NC} Node.js 18+ required. Found: $(node --version)"
+    exit 1
+fi
+echo -e "${GREEN}✓${NC} Node.js $(node --version)"
 
-print_warning() {
-    echo -e "${YELLOW}[!]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[✗]${NC} $1"
-}
-
-# Detect shell and config file
-detect_shell() {
-    if [ -n "$ZSH_VERSION" ] || [ -n "$ZSH_NAME" ]; then
-        SHELL_CONFIG="${HOME}/.zshrc"
-    elif [ -n "$BASH_VERSION" ]; then
-        SHELL_CONFIG="${HOME}/.bashrc"
-    else
-        # Default to bashrc
-        SHELL_CONFIG="${HOME}/.bashrc"
-    fi
-}
-
-# Check if directory is in PATH
-check_path() {
-    if [[ ":$PATH:" == *":$INSTALL_DIR:"* ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-# Add to PATH automatically
-add_to_path() {
-    print_status "Adding $INSTALL_DIR to PATH..."
-    
-    detect_shell
-    
-    # Check if already in config
-    if grep -q "export PATH=.*$INSTALL_DIR" "$SHELL_CONFIG" 2>/dev/null; then
-        print_success "Already in PATH configuration"
-        return 0
-    fi
-    
-    # Add to shell config
-    echo "" >> "$SHELL_CONFIG"
-    echo "# Tuition CLI" >> "$SHELL_CONFIG"
+# Step 2: Setup PATH
+echo ""
+echo -e "${BLUE}[2/4]${NC} Setting up PATH..."
+mkdir -p "$INSTALL_DIR"
+if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    SHELL_CONFIG="${HOME}/.bashrc"
+    [ -f "${HOME}/.zshrc" ] && SHELL_CONFIG="${HOME}/.zshrc"
     echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$SHELL_CONFIG"
-    
-    print_success "Added to $SHELL_CONFIG"
-    print_warning "Run 'source $SHELL_CONFIG' or restart your terminal after installation"
-}
+    echo -e "${YELLOW}!${NC} Added $INSTALL_DIR to PATH in $SHELL_CONFIG"
+    echo "   Run: source $SHELL_CONFIG (or restart terminal)"
+fi
 
-# Check for Node.js
-check_node() {
-    if command -v node &> /dev/null; then
-        NODE_VERSION=$(node --version | cut -d'v' -f2 | cut -d'.' -f1)
-        if [ "$NODE_VERSION" -ge 18 ]; then
-            print_success "Node.js $(node --version) found"
-            return 0
-        else
-            print_error "Node.js 18+ required, found $(node --version)"
-            return 1
-        fi
-    else
-        print_error "Node.js not found. Please install Node.js 18 or later."
-        print_status "Visit: https://nodejs.org/ or use: nvm install 20"
-        return 1
-    fi
-}
+# Step 3: Download
+echo ""
+echo -e "${BLUE}[3/4]${NC} Downloading Tuition..."
 
-# Install from git or local
-install_app() {
-    print_status "Installing Tuition..."
-    
-    # Create directories
-    mkdir -p "$INSTALL_DIR"
-    mkdir -p "$APP_DIR"
-    
-    # Check if we're in a git repo already
-    if [ -f "$(dirname "$0")/package.json" ]; then
-        # Local development - copy files
-        SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-        print_status "Installing from local directory: $SCRIPT_DIR"
-        
-        # Copy all files
-        cp -r "$SCRIPT_DIR"/* "$APP_DIR/"
-        print_success "Copied application files"
-    else
-        # Production - clone from git
-        print_status "Downloading from GitHub..."
-        
-        # Remove old version if exists
-        rm -rf "$APP_DIR"
-        mkdir -p "$APP_DIR"
-        
-        # Clone repository
-        if command -v git &> /dev/null; then
-            print_status "Cloning repository..."
-            if git clone --depth 1 --branch feature/initial-implementation "$REPO_URL" "$APP_DIR" 2>&1; then
-                print_success "Downloaded from $REPO_URL"
-            else
-                print_error "Failed to clone repository"
-                print_status "Trying with full clone (no --depth 1)..."
-                rm -rf "$APP_DIR"
-                if git clone "$REPO_URL" "$APP_DIR" 2>&1; then
-                    cd "$APP_DIR" && git checkout feature/initial-implementation 2>&1
-                    print_success "Downloaded with full clone"
-                else
-                    print_error "Git clone failed completely"
-                    exit 1
-                fi
-            fi
-        else
-            print_error "Git not found. Please install git."
-            exit 1
-        fi
-    fi
-    
-    # Install dependencies
-    print_status "Installing dependencies (this may take a minute)..."
-    cd "$APP_DIR"
-    
-    # Run npm install and capture output
-    if npm install 2>&1 | tee /tmp/tuition-install.log; then
-        print_success "Dependencies installed"
-    else
-        print_error "Failed to install dependencies"
-        print_status "Error log saved to: /tmp/tuition-install.log"
-        print_status "Showing last 20 lines of error:"
-        tail -20 /tmp/tuition-install.log
-        print_status ""
-        print_status "Trying alternative: npm install with --legacy-peer-deps"
-        if npm install --legacy-peer-deps 2>&1; then
-            print_success "Dependencies installed with --legacy-peer-deps"
-        else
-            print_error "Alternative install also failed"
-            print_status "You can try installing manually:"
-            print_status "  cd $APP_DIR"
-            print_status "  npm install"
-            exit 1
-        fi
-    fi
-}
+# Clean and create
+rm -rf "$APP_DIR"
+mkdir -p "$APP_DIR"
 
-# Create wrapper script
-create_wrapper() {
-    print_status "Creating tuition command..."
-    
-    cat > "$INSTALL_DIR/tuition" << 'EOF'
-#!/bin/bash
-# Tuition CLI wrapper
-# Automatically runs tuition from installed location
-
-APP_DIR="${HOME}/.tuition/app"
-
-if [ ! -d "$APP_DIR" ]; then
-    echo "Error: Tuition not found at $APP_DIR"
-    echo "Please reinstall: curl -fsSL https://.../install.sh | bash"
+# Clone with better error handling
+if ! command -v git &> /dev/null; then
+    echo -e "${RED}✗${NC} Git not found. Install git: sudo apt install git"
     exit 1
 fi
 
+echo "   Cloning from $REPO_URL..."
+if git clone --depth 1 --branch feature/initial-implementation "$REPO_URL" "$APP_DIR" 2>&1 | grep -v "^remote:"; then
+    echo -e "${GREEN}✓${NC} Downloaded successfully"
+else
+    echo -e "${YELLOW}!${NC} Shallow clone failed, trying full clone..."
+    rm -rf "$APP_DIR"
+    if git clone "$REPO_URL" "$APP_DIR" 2>&1 | grep -v "^remote:"; then
+        cd "$APP_DIR"
+        git checkout feature/initial-implementation 2>&1 || true
+        echo -e "${GREEN}✓${NC} Downloaded (full clone)"
+    else
+        echo -e "${RED}✗${NC} Git clone failed. Check network connectivity."
+        exit 1
+    fi
+fi
+
+# Verify files were downloaded
+if [ ! -f "$APP_DIR/package.json" ]; then
+    echo -e "${RED}✗${NC} Download failed - package.json not found"
+    ls -la "$APP_DIR/"
+    exit 1
+fi
+
+# Step 4: Install dependencies
+echo ""
+echo -e "${BLUE}[4/4]${NC} Installing dependencies..."
+cd "$APP_DIR"
+
+# Show npm output
+if npm install 2>&1; then
+    echo -e "${GREEN}✓${NC} Dependencies installed"
+else
+    echo -e "${YELLOW}!${NC} Standard install failed, trying with --legacy-peer-deps..."
+    if npm install --legacy-peer-deps 2>&1; then
+        echo -e "${GREEN}✓${NC} Dependencies installed (with --legacy-peer-deps)"
+    else
+        echo -e "${RED}✗${NC} npm install failed"
+        echo "   Check: $APP_DIR"
+        exit 1
+    fi
+fi
+
+# Create wrapper
+echo ""
+echo -e "${BLUE}[Post]${NC} Creating tuition command..."
+cat > "$INSTALL_DIR/tuition" << 'EOF'
+#!/bin/bash
+APP_DIR="${HOME}/.tuition/app"
+if [ ! -d "$APP_DIR" ]; then
+    echo "Error: Tuition not found. Please reinstall."
+    exit 1
+fi
 cd "$APP_DIR" && exec npx tsx index.ts "$@"
 EOF
-    
-    chmod +x "$INSTALL_DIR/tuition"
-    print_success "Created tuition command"
-}
+chmod +x "$INSTALL_DIR/tuition"
 
-# Verify installation
-verify_install() {
-    print_status "Verifying installation..."
-    
-    # Check wrapper exists
-    if [ ! -f "$INSTALL_DIR/tuition" ]; then
-        print_error "Wrapper script not created"
-        return 1
-    fi
-    
-    # Try to run tuition
-    if "$INSTALL_DIR/tuition" --version &>/dev/null || true; then
-        print_success "Tuition is working"
-    fi
-    
-    return 0
-}
+# Verify
+if [ -f "$INSTALL_DIR/tuition" ]; then
+    echo -e "${GREEN}✓${NC} Tuition command created"
+else
+    echo -e "${RED}✗${NC} Failed to create tuition command"
+    exit 1
+fi
 
-# Main installation flow
-main() {
-    echo ""
-    echo "╔══════════════════════════════════════════════════════════╗"
-    echo "║         Tuition - Homelab Management Tool              ║"
-    echo "║              https://github.com/traefikturkey/tuition    ║"
-    echo "╚══════════════════════════════════════════════════════════╝"
-    echo ""
-    
-    # Check requirements
-    print_status "Checking requirements..."
-    check_node || exit 1
-    
-    # Check PATH
-    if ! check_path; then
-        add_to_path
-    else
-        print_success "$INSTALL_DIR already in PATH"
-    fi
-    
-    # Install application
-    install_app
-    
-    # Create wrapper
-    create_wrapper
-    
-    # Verify
-    verify_install
-    
-    # Success message
-    echo ""
-    echo "╔══════════════════════════════════════════════════════════╗"
-    echo "║            Installation Complete! ✓                      ║"
-    echo "╚══════════════════════════════════════════════════════════╝"
-    echo ""
-    
-    if ! check_path; then
-        echo -e "${YELLOW}IMPORTANT:${NC} Run this command to activate tuition:"
-        echo "  source $SHELL_CONFIG"
-        echo ""
-    fi
-    
-    echo "Tuition is installed at: $INSTALL_DIR/tuition"
-    echo "Application files: $APP_DIR"
-    echo ""
-    echo "Next steps:"
-    echo "  1. Run: tuition init"
-    echo "  2. Run: tuition caddy start"
-    echo "  3. Run: tuition service enable pihole"
-    echo ""
-    echo "Or launch the TUI: tuition tui"
-    echo ""
-    
-    # Auto-run init if PATH is already set
-    if check_path; then
-        echo -n "Would you like to run 'tuition init' now? [Y/n] "
-        read -r response
-        if [[ ! "$response" =~ ^[Nn]$ ]]; then
-            echo ""
-            exec "$INSTALL_DIR/tuition" init
-        fi
-    fi
-}
+# Success
+echo ""
+echo "╔══════════════════════════════════════════════════════════╗"
+echo "║            Installation Complete! ✓                      ║"
+echo "╚══════════════════════════════════════════════════════════╝"
+echo ""
+echo "Tuition is installed at: $INSTALL_DIR/tuition"
+echo "Application files: $APP_DIR"
+echo ""
 
-# Run main function
-main "$@"
+# Show next steps
+if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    echo -e "${YELLOW}IMPORTANT:${NC} Run this to activate:"
+    SHELL_CONFIG="${HOME}/.bashrc"
+    [ -f "${HOME}/.zshrc" ] && SHELL_CONFIG="${HOME}/.zshrc"
+    echo "  source $SHELL_CONFIG"
+    echo ""
+fi
+
+echo "Next step: tuition init"
+echo ""
