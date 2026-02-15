@@ -15,44 +15,63 @@ A terminal-based management tool for self-hosted homelab services. Simplifies Do
 
 ## Quick Start
 
-### Option 1: Using Bun (Recommended - Faster)
+### Option 1: Global CLI (Recommended)
+
+Install once, use anywhere:
 
 ```bash
-# Install dependencies
-bun install
+# Clone and enter directory
+cd /apps/tuition
 
-# Initialize tuition
-bun run index.ts init
+# Install dependencies and link globally
+npm install
+npm link          # Creates global 'tuition' command
 
-# Start infrastructure
-bun run index.ts caddy start
-bun run index.ts dns start
-
-# Deploy your first service
-bun run index.ts service enable pihole
-
-# Launch interactive TUI
-bun run index.ts tui
+# Now use tuition anywhere
+tuition init
+tuition config show
+tuition service enable pihole
+tuition caddy start
+tuition tui
 ```
 
-### Option 2: Using Node.js (Universal Compatibility)
+**Or with Bun:**
+```bash
+bun install
+bun link          # Creates global 'tuition' command
+tuition init
+```
+
+### Option 2: Using npx (No Global Install)
 
 ```bash
-# Install dependencies
+# Initialize
+cd /apps/tuition
+npx tuition init
+
+# Run any command
+npx tuition service list
+npx tuition caddy start
+```
+
+### Option 3: Local Scripts
+
+If you don't want global installation:
+
+**Using Bun:**
+```bash
+cd /apps/tuition
+bun install
+bun run index.ts init
+bun run index.ts service enable pihole
+```
+
+**Using Node.js:**
+```bash
+cd /apps/tuition
 npm install
-
-# Initialize tuition
 npm run dev:node init
-
-# Start infrastructure
-npm run dev:node caddy start
-npm run dev:node dns start
-
-# Deploy your first service
 npm run dev:node service enable pihole
-
-# Launch interactive TUI
-npm run dev:node tui
 ```
 
 ### Option 3: Build and Run
@@ -268,7 +287,88 @@ Implements 3-2-1 backup strategy:
 - Service passwords auto-generated
 - Environment files excluded from version control
 
+## Global CLI Installation
+
+To use `tuition` as a global command (instead of `bun run index.ts` or `npm run dev:node`):
+
+### Method 1: npm link (Recommended)
+
+```bash
+cd /apps/tuition
+npm install
+npm link
+
+# Verify installation
+tuition --version
+tuition --help
+
+# Use anywhere
+tuition init
+tuition service list
+```
+
+To remove:
+```bash
+npm unlink -g tuition
+```
+
+### Method 2: bun link
+
+```bash
+cd /apps/tuition
+bun install
+bun link
+
+# Use anywhere
+tuition init
+```
+
+To remove:
+```bash
+bun unlink tuition
+```
+
+### Method 3: npx (No Installation)
+
+```bash
+cd /apps/tuition
+npx tuition --help
+npx tuition init
+```
+
+### Method 4: Shell Alias
+
+Add to `~/.bashrc` or `~/.zshrc`:
+
+```bash
+alias tuition='bun run /apps/tuition/index.ts'
+# Or for Node.js:
+# alias tuition='npx tsx /apps/tuition/index.ts'
+```
+
+Then reload:
+```bash
+source ~/.bashrc  # or ~/.zshrc
+tuition init
+```
+
 ## Troubleshooting
+
+### "tuition: command not found"
+
+If you get this error after `npm link`:
+
+```bash
+# Check if tuition is linked
+which tuition
+ls -la $(npm bin -g)/tuition
+
+# If not found, your PATH may not include npm's global bin
+export PATH="$(npm bin -g):$PATH"
+
+# Or link again with full path
+npm link /apps/tuition
+```
 
 ### Bun crashes with native modules
 
