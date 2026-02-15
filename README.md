@@ -2,88 +2,84 @@
 
 A terminal-based management tool for self-hosted homelab services. Simplifies Docker container management with automatic HTTPS, internal DNS, and disaster recovery.
 
-**Works with both Bun and Node.js!**
+## Installation
 
-## Features
+**One-line install:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/traefikturkey/tuition/main/scripts/install.sh | bash
+```
 
-- **Service Catalog** - Pre-configured services (Pi-hole, Plex, Joyride) ready to deploy
-- **Automatic HTTPS** - Caddy reverse proxy with Let's Encrypt certificates
-- **Internal DNS** - CoreDNS for zero-configuration container resolution
-- **Service Lifecycle** - Enable, disable, start, stop, and update services
-- **Disaster Recovery** - Backup and restore entire homelab setup
-- **Interactive TUI** - Blessed-based terminal interface
+**Or manually:**
+```bash
+git clone https://github.com/traefikturkey/tuition.git /apps/tuition
+cd /apps/tuition
+make install
+```
+
+**That's it!** Now you can use `tuition` from anywhere.
 
 ## Quick Start
 
-### Option 1: Global CLI (Recommended)
-
-Install once, use anywhere:
-
 ```bash
-# Clone and enter directory
-cd /apps/tuition
-
-# Install dependencies and link globally
-npm install
-npm link          # Creates global 'tuition' command
-
-# Now use tuition anywhere
+# Initialize configuration (interactive wizard)
 tuition init
-tuition config show
-tuition service enable pihole
+
+# Start infrastructure (Caddy reverse proxy + CoreDNS)
 tuition caddy start
+tuition dns start
+
+# Deploy your first service
+tuition service enable pihole
+
+# Access your service at: https://pihole.yourdomain.com
+
+# Launch interactive TUI for visual management
 tuition tui
 ```
 
-**Or with Bun:**
-```bash
-bun install
-bun link          # Creates global 'tuition' command
-tuition init
-```
+## Requirements
 
-### Option 2: Using npx (No Global Install)
+- **Runtime**: Node.js 18+ or Bun 1.0+
+- **Docker**: Engine 20.10+, Compose 2.0+
+- **OS**: Linux (Debian/Ubuntu recommended)
+- **Domain**: A domain name with Cloudflare DNS
 
-```bash
-# Initialize
-cd /apps/tuition
-npx tuition init
+## Commands
 
-# Run any command
-npx tuition service list
-npx tuition caddy start
-```
-
-### Option 3: Local Scripts
-
-If you don't want global installation:
-
-**Using Bun:**
-```bash
-cd /apps/tuition
-bun install
-bun run index.ts init
-bun run index.ts service enable pihole
-```
-
-**Using Node.js:**
-```bash
-cd /apps/tuition
-npm install
-npm run dev:node init
-npm run dev:node service enable pihole
-```
-
-### Option 3: Build and Run
+After installation, use `tuition` from anywhere:
 
 ```bash
-# Using Bun
-bun run build
-bun run start init
+tuition init                    # Initialize configuration
+tuition validate                # Validate configuration
+tuition config show             # Show configuration
+tuition config set <key> <val>  # Set configuration value
 
-# Using Node.js
-npm run build:node
-npm run start:node init
+tuition service list            # List all services
+tuition service enable <name>   # Enable and start service
+tuition service disable <name>  # Disable service
+tuition service start <name>    # Start service
+tuition service stop <name>     # Stop service
+tuition service restart <name>  # Restart service
+tuition service update <name>   # Update to latest image
+tuition service logs <name>     # View logs
+tuition service search <query>  # Search catalog
+
+tuition caddy start             # Start Caddy reverse proxy
+tuition caddy stop              # Stop Caddy
+tuition caddy restart           # Restart Caddy
+tuition caddy reload            # Reload configuration
+tuition caddy status            # Show Caddy status
+
+tuition dns start               # Start CoreDNS
+tuition dns stop                # Stop CoreDNS
+tuition dns status              # Show CoreDNS status
+
+tuition backup create           # Create backup
+tuition backup list             # List backups
+tuition backup restore <n>      # Restore backup #n
+tuition backup delete <n>       # Delete backup #n
+
+tuition tui                     # Launch interactive TUI
 ```
 
 ## Architecture
@@ -91,68 +87,20 @@ npm run start:node init
 ```
 Internet
     ↓
-Caddy (Port 443)
+DNS (Cloudflare)
+    ↓
+Caddy (443/80) ──► Automatic HTTPS
     ↓
 Docker Network (tuition)
-    ├─ Pi-hole
-    ├─ Plex
-    └─ CoreDNS (Port 53)
+    ├─ Pi-hole (DNS ad blocking)
+    ├─ Plex (Media server)
+    ├─ Joyride (Media requests)
+    └─ CoreDNS (Internal DNS: 53)
 ```
-
-## Requirements
-
-- **Runtime**: Bun >=1.0.0 **OR** Node.js >=18.0.0
-- **Docker**: Engine 20.10+, Compose 2.0+
-- **OS**: Linux (Debian/Ubuntu recommended)
-- **Network**: Domain name with Cloudflare DNS
-
-### Installing Bun
-
-```bash
-curl -fsSL https://bun.sh/install | bash
-export PATH="$HOME/.bun/bin:$PATH"
-```
-
-Add to `~/.bashrc` or `~/.zshrc` to make permanent:
-```bash
-export PATH="$HOME/.bun/bin:$PATH"
-```
-
-## Commands
-
-All commands work with both Bun and Node.js:
-
-### Bun Commands
-```bash
-bun run index.ts init                    # Initialize
-bun run index.ts service enable <name>    # Enable service
-bun run index.ts caddy start              # Start Caddy
-bun run index.ts tui                      # Launch TUI
-```
-
-### Node.js Commands
-```bash
-npm run dev:node init                     # Initialize
-npm run dev:node service enable <name>   # Enable service
-npm run dev:node caddy start             # Start Caddy
-npm run dev:node tui                     # Launch TUI
-```
-
-### Full Command Reference
-
-| Command | Bun | Node.js |
-|---------|-----|---------|
-| Initialize | `bun run index.ts init` | `npm run dev:node init` |
-| List services | `bun run index.ts service list` | `npm run dev:node service list` |
-| Enable service | `bun run index.ts service enable <name>` | `npm run dev:node service enable <name>` |
-| Start Caddy | `bun run index.ts caddy start` | `npm run dev:node caddy start` |
-| Start DNS | `bun run index.ts dns start` | `npm run dev:node dns start` |
-| Create backup | `bun run index.ts backup create` | `npm run dev:node backup create` |
-| Launch TUI | `bun run index.ts tui` | `npm run dev:node tui` |
 
 ## Configuration
 
-Configuration is stored in `~/.tuition/config/` with tier hierarchy:
+Configuration is stored in `~/.tuition/config/`:
 
 ```
 ~/.tuition/
@@ -168,103 +116,33 @@ Configuration is stored in `~/.tuition/config/` with tier hierarchy:
 
 ## Development
 
-### Using Bun (Faster, recommended for development)
+If you're modifying the source code:
 
 ```bash
-# TypeScript check
-bun run lint
+cd /apps/tuition
+
+# Run in development mode
+make dev ARGS="init"
+make dev ARGS="service list"
 
 # Run tests
-bun test
+make test
 
-# Run CLI
-bun run index.ts <command>
-
-# Run TUI
-bun run index.ts tui
-```
-
-### Using Node.js (Full compatibility)
-
-```bash
 # TypeScript check
-npm run lint
-
-# Run tests
-npm run test:node
-
-# Run CLI in development mode
-npm run dev:node <command>
-
-# Run TUI
-npm run dev:node tui
+make lint
 
 # Build for production
-npm run build:node
-
-# Run compiled version
-npm run start:node <command>
-```
-
-### Testing
-
-The project includes comprehensive unit tests covering:
-
-- **Configuration Management** - Config loading, validation, and persistence
-- **Service Catalog** - Service discovery and metadata
-- **Caddyfile Generator** - Reverse proxy configuration generation
-- **Docker Compose** - Compose file generation and environment handling
-- **Backup Manager** - Archive creation and restoration
-
-```bash
-# Using Bun
-bun test
-
-# Using Node.js
-npm run test:node
-```
-
-## Service Catalog
-
-Services are defined in `catalog/services/` as YAML files:
-
-```yaml
-name: pihole
-category: dns
-description: Network-wide ad blocking
-image: pihole/pihole:latest
-ports:
-  - host: 53
-    container: 53
-    protocol: tcp
-environment:
-  TZ: ${TZ}
-  WEBPASSWORD: ${PIHOLE_PASSWORD}
-volumes:
-  - host: ./data/pihole/etc-pihole
-    container: /etc/pihole
-labels:
-  caddy: pihole.${DOMAIN}
-  caddy.reverse_proxy: "{{upstreams 80}}"
+make build
 ```
 
 ## Project Structure
 
 ```
 src/
-├── cli/commands/         # CLI command implementations
-├── core/
-│   ├── config/          # Configuration management
-│   ├── catalog/         # Service catalog loader
-│   └── lifecycle/       # Service lifecycle
-├── services/
-│   ├── docker/          # Docker integration
-│   ├── caddy/           # Reverse proxy
-│   ├── dns/             # Internal DNS
-│   └── backup/          # Disaster recovery
+├── cli/commands/         # CLI implementations
+├── core/                # Config, catalog, lifecycle
+├── services/            # Docker, Caddy, DNS, backup
 ├── tui/                 # Terminal UI
-│   ├── app.ts          # Main TUI app
-│   └── views/          # TUI views
 └── types/               # TypeScript definitions
 
 catalog/services/        # Service definitions
@@ -273,121 +151,50 @@ catalog/services/        # Service definitions
 └── media/plex.yaml
 ```
 
-## Backup Strategy
-
-Implements 3-2-1 backup strategy:
-- **3 copies** of data (original + 2 backups)
-- **2 different media** types (local disk + optional remote)
-- **1 offsite** copy (user-managed via rsync/S3)
-
-## Security
-
-- HTTPS automatically enabled for all services
-- Cloudflare DNS challenge for certificates
-- Service passwords auto-generated
-- Environment files excluded from version control
-
-## Global CLI Installation
-
-To use `tuition` as a global command (instead of `bun run index.ts` or `npm run dev:node`):
-
-### Method 1: npm link (Recommended)
+## Testing
 
 ```bash
-cd /apps/tuition
-npm install
-npm link
+# Run all tests
+make test
 
-# Verify installation
-tuition --version
-tuition --help
-
-# Use anywhere
-tuition init
-tuition service list
-```
-
-To remove:
-```bash
-npm unlink -g tuition
-```
-
-### Method 2: bun link
-
-```bash
-cd /apps/tuition
-bun install
-bun link
-
-# Use anywhere
-tuition init
-```
-
-To remove:
-```bash
-bun unlink tuition
-```
-
-### Method 3: npx (No Installation)
-
-```bash
-cd /apps/tuition
-npx tuition --help
-npx tuition init
-```
-
-### Method 4: Shell Alias
-
-Add to `~/.bashrc` or `~/.zshrc`:
-
-```bash
-alias tuition='bun run /apps/tuition/index.ts'
-# Or for Node.js:
-# alias tuition='npx tsx /apps/tuition/index.ts'
-```
-
-Then reload:
-```bash
-source ~/.bashrc  # or ~/.zshrc
-tuition init
+# Or with Bun (faster)
+bun test
 ```
 
 ## Troubleshooting
 
 ### "tuition: command not found"
 
-If you get this error after `npm link`:
-
+Add to `~/.bashrc` or `~/.zshrc`:
 ```bash
-# Check if tuition is linked
-which tuition
-ls -la $(npm bin -g)/tuition
-
-# If not found, your PATH may not include npm's global bin
-export PATH="$(npm bin -g):$PATH"
-
-# Or link again with full path
-npm link /apps/tuition
+export PATH="/usr/local/bin:$PATH"
 ```
 
-### Bun crashes with native modules
+Then reload: `source ~/.bashrc`
 
-If you see errors like `panic: unsupported uv function`, use Node.js instead:
+### Permission denied
+
+The install script uses `/usr/local/bin` by default. If you don't have permission:
 
 ```bash
-# Switch to Node.js
-npm install
-npm run dev:node init
+# Install to user directory instead
+INSTALL_DIR="$HOME/.local/bin" curl -fsSL ... | bash
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-### Permission denied on Linux
+### Docker not accessible
+
+Ensure your user is in the docker group:
+```bash
+sudo usermod -aG docker $USER
+# Log out and back in
+```
+
+## Uninstall
 
 ```bash
-# Fix ownership
-sudo chown -R $USER:$USER ~/.tuition
-
-# Or run with sudo (not recommended for production)
-sudo $(which bun) run index.ts init
+cd /apps/tuition
+make uninstall
 ```
 
 ## License
@@ -396,9 +203,11 @@ MIT
 
 ## Contributing
 
-Contributions welcome! Please ensure:
-- TypeScript compilation passes (`bun run lint` or `npm run lint`)
-- Tests pass (`bun test` or `npm run test:node`)
+Pull requests welcome! Please:
+- Run `make lint` to check TypeScript
+- Run `make test` to verify tests pass
 - Follow existing code style
-- Add tests for new features
-- Update documentation
+
+---
+
+**Simple, fast, reliable homelab management.** 🚀
