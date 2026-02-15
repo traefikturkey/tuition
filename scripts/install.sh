@@ -123,8 +123,21 @@ install_app() {
         
         # Clone repository
         if command -v git &> /dev/null; then
-            git clone --depth 1 "$REPO_URL" "$APP_DIR" 2>/dev/null
-            print_success "Downloaded from $REPO_URL"
+            print_status "Cloning repository..."
+            if git clone --depth 1 --branch feature/initial-implementation "$REPO_URL" "$APP_DIR" 2>&1; then
+                print_success "Downloaded from $REPO_URL"
+            else
+                print_error "Failed to clone repository"
+                print_status "Trying with full clone (no --depth 1)..."
+                rm -rf "$APP_DIR"
+                if git clone "$REPO_URL" "$APP_DIR" 2>&1; then
+                    cd "$APP_DIR" && git checkout feature/initial-implementation 2>&1
+                    print_success "Downloaded with full clone"
+                else
+                    print_error "Git clone failed completely"
+                    exit 1
+                fi
+            fi
         else
             print_error "Git not found. Please install git."
             exit 1
@@ -135,11 +148,25 @@ install_app() {
     print_status "Installing dependencies (this may take a minute)..."
     cd "$APP_DIR"
     
-    if npm install --silent 2>&1; then
+    # Run npm install and capture output
+    if npm install 2>&1 | tee /tmp/tuition-install.log; then
         print_success "Dependencies installed"
     else
         print_error "Failed to install dependencies"
-        exit 1
+        print_status "Error log saved to: /tmp/tuition-install.log"
+        print_status "Showing last 20 lines of error:"
+        tail -20 /tmp/tuition-install.log
+        print_status ""
+        print_status "Trying alternative: npm install with --legacy-peer-deps"
+        if npm install --legacy-peer-deps 2>&1; then
+            print_success "Dependencies installed with --legacy-peer-deps"
+        else
+            print_error "Alternative install also failed"
+            print_status "You can try installing manually:"
+            print_status "  cd $APP_DIR"
+            print_status "  npm install"
+            exit 1
+        fi
     fi
 }
 
