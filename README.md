@@ -157,7 +157,7 @@ Docker Network (tuition)
     ├─ Pi-hole (DNS ad blocking)
     ├─ Plex (Media server)
     ├─ Joyride (Media requests)
-    ├─ CoreDNS (Internal DNS: 53)
+    ├─ CoreDNS (Internal DNS: 54)
     └─ Tuition Admin (https://tuition.example.com)
 ```
 

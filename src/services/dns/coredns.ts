@@ -236,8 +236,8 @@ export class CoreDnsManager {
           container_name: 'coredns',
           restart: 'unless-stopped',
           ports: [
-            '53:53/tcp',
-            '53:53/udp',
+            '54:53/tcp',
+            '54:53/udp',
           ],
           volumes: [
             `${this.configPath}/Corefile:/etc/coredns/Corefile:ro`,
