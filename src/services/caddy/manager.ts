@@ -94,13 +94,14 @@ export class CaddyManager {
       }
     }
 
-    // Generate compose file for Caddy
+    // Generate compose file and Dockerfile for Caddy
     await this.generateComposeFile();
 
-    // Start via docker-compose with environment variables
+    // Start via docker-compose with environment variables (build on first run)
     const result = await this.composeManager.up('caddy', { 
       detached: true,
-      env: envVars 
+      env: envVars,
+      build: true 
     });
 
     if (result.success) {
@@ -189,7 +190,10 @@ export class CaddyManager {
     const compose = {
       services: {
         caddy: {
-          image: 'caddy:2-alpine',
+          build: {
+            context: '.',
+            dockerfile: 'caddy.Dockerfile',
+          },
           container_name: 'caddy',
           restart: 'unless-stopped',
           ports: [
@@ -224,6 +228,21 @@ export class CaddyManager {
     await writeFile(
       join(this.projectPath, 'caddy.docker-compose.yaml'),
       yaml,
+      'utf-8'
+    );
+
+    // Create a Caddy Dockerfile with Cloudflare plugin
+    const dockerfile = `# Caddy with Cloudflare DNS plugin
+FROM caddy:2-builder-alpine AS builder
+RUN xcaddy build --with github.com/caddy-dns/cloudflare
+
+FROM caddy:2-alpine
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+`;
+    
+    await writeFile(
+      join(this.projectPath, 'caddy.Dockerfile'),
+      dockerfile,
       'utf-8'
     );
   }
