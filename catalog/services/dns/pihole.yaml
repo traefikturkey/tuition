@@ -1,0 +1,36 @@
+name: pihole
+category: dns
+description: Network-wide ad blocking with DNS sinkhole
+upstreamUrl: https://pi-hole.net/
+image: pihole/pihole:latest
+
+ports:
+  - host: 53
+    container: 53
+    protocol: tcp
+  - host: 53
+    container: 53
+    protocol: udp
+  - host: 80
+    container: 80
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  WEBPASSWORD: ${PIHOLE_PASSWORD}
+  FTLCONF_LOCAL_IPV4: ${HOST_IP}
+  DNSMASQ_LISTENING: all
+
+volumes:
+  - host: ./data/pihole/etc-pihole
+    container: /etc/pihole
+  - host: ./data/pihole/etc-dnsmasq.d
+    container: /etc/dnsmasq.d
+
+labels:
+  caddy: pihole.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 80}}"
+
+resourceLimits:
+  cpus: 0.5
+  memory: 512M

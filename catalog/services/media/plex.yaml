@@ -1,0 +1,42 @@
+name: plex
+category: media
+description: Media server for streaming movies, TV shows, and music
+upstreamUrl: https://www.plex.tv/
+image: plexinc/pms-docker:latest
+
+ports:
+  - host: 32400
+    container: 32400
+    protocol: tcp
+  - host: 32400
+    container: 32400
+    protocol: udp
+
+environment:
+  TZ: ${TZ}
+  PUID: ${PUID}
+  PGID: ${PGID}
+  UMASK: "002"
+  VERSION: latest
+  PLEX_CLAIM: ${PLEX_CLAIM_TOKEN}
+
+volumes:
+  - host: ./data/plex/config
+    container: /config
+  - host: ${MEDIA_PATH}/tv
+    container: /data/tv
+  - host: ${MEDIA_PATH}/movies
+    container: /data/movies
+  - host: ${MEDIA_PATH}/music
+    container: /data/music
+  - host: /tmp
+    container: /transcode
+
+labels:
+  caddy: plex.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 32400}}"
+
+resourceLimits:
+  cpus: 2.0
+  memory: 2G
+  gpus: true

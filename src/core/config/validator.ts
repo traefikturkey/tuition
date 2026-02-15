@@ -1,0 +1,102 @@
+/**
+ * Configuration validation
+ */
+
+import type { GlobalConfig, ServiceConfig } from '../../types/index.js';
+
+export interface ValidationError {
+  field: string;
+  message: string;
+  value?: unknown;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: ValidationError[];
+}
+
+export class ConfigValidator {
+  /**
+   * Validate global configuration
+   */
+  validateGlobal(config: GlobalConfig): ValidationResult {
+    const errors: ValidationError[] = [];
+
+    // Required fields
+    if (!config.hostname || config.hostname.trim() === '') {
+      errors.push({
+        field: 'hostname',
+        message: 'Hostname is required',
+      });
+    }
+
+    if (!config.domain || config.domain.trim() === '') {
+      errors.push({
+        field: 'domain',
+        message: 'Domain is required',
+      });
+    }
+
+    if (!config.adminEmail || config.adminEmail.trim() === '') {
+      errors.push({
+        field: 'adminEmail',
+        message: 'Admin email is required',
+      });
+    } else if (!this.isValidEmail(config.adminEmail)) {
+      errors.push({
+        field: 'adminEmail',
+        message: 'Invalid email format',
+        value: config.adminEmail,
+      });
+    }
+
+    // Validate DNS provider settings
+    if (config.dnsProvider === 'cloudflare' && !config.cloudflareToken) {
+      errors.push({
+        field: 'cloudflareToken',
+        message: 'Cloudflare API token is required when using Cloudflare DNS',
+      });
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
+  }
+
+  /**
+   * Validate service configuration
+   */
+  validateService(name: string, config: ServiceConfig): ValidationResult {
+    const errors: ValidationError[] = [];
+
+    // Service name validation
+    if (!name || name.trim() === '') {
+      errors.push({
+        field: 'name',
+        message: 'Service name is required',
+      });
+    }
+
+    if (!/^[a-z0-9-]+$/.test(name)) {
+      errors.push({
+        field: 'name',
+        message: 'Service name must contain only lowercase letters, numbers, and hyphens',
+        value: name,
+      });
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
+  }
+
+  /**
+   * Validate email format
+   */
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+}

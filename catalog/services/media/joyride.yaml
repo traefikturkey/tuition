@@ -1,0 +1,28 @@
+name: joyride
+category: media
+description: Media request and discovery platform for Plex
+upstreamUrl: https://github.com/joyride
+image: cr.hotio.dev/hotio/joyride:latest
+
+ports:
+  - host: 3000
+    container: 3000
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  PUID: ${PUID}
+  PGID: ${PGID}
+  UMASK: "002"
+
+volumes:
+  - host: ./data/joyride/config
+    container: /config
+
+labels:
+  caddy: joyride.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 3000}}"
+
+resourceLimits:
+  cpus: 0.25
+  memory: 256M
