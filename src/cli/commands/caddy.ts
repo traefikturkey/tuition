@@ -58,9 +58,22 @@ export class CaddyCommand {
     await this.caddy.generateConfig(globalConfig, enabledServices);
     console.log(chalk.green(`✓ Generated Caddyfile with ${enabledServices.length} routes`));
 
+    // Prepare environment variables for Caddy
+    const envVars: Record<string, string> = {
+      DOMAIN: globalConfig.domain,
+      HOSTNAME: globalConfig.hostname,
+      TZ: globalConfig.timezone,
+      PUID: String(globalConfig.puid),
+      PGID: String(globalConfig.pgid),
+    };
+    
+    if (globalConfig.cloudflareToken) {
+      envVars['CF_API_TOKEN'] = globalConfig.cloudflareToken;
+    }
+
     // Start Caddy
     console.log(chalk.blue('Starting Caddy...'));
-    const result = await this.caddy.start();
+    const result = await this.caddy.start(envVars);
 
     if (result.success) {
       console.log(chalk.green(`✓ ${result.message}`));

@@ -296,6 +296,19 @@ export class LifecycleManager {
    * Start a service
    */
   async start(name: string): Promise<{ success: boolean; message: string }> {
+    // Ensure Docker network exists before starting
+    const networkExists = await docker.networkExists('tuition');
+    if (!networkExists) {
+      try {
+        await docker.createNetwork('tuition');
+      } catch (error) {
+        return {
+          success: false,
+          message: `Failed to create Docker network: ${error}`,
+        };
+      }
+    }
+
     const result = await this.composeManager.up(name);
     
     return {

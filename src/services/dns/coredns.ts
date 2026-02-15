@@ -138,6 +138,19 @@ export class CoreDnsManager {
    * Start CoreDNS container
    */
   async start(): Promise<{ success: boolean; message: string }> {
+    // Ensure Docker network exists
+    const networkExists = await docker.networkExists('tuition');
+    if (!networkExists) {
+      try {
+        await docker.createNetwork('tuition');
+      } catch (error) {
+        return { 
+          success: false, 
+          message: `Failed to create Docker network: ${error}` 
+        };
+      }
+    }
+
     // Generate compose file
     await this.generateComposeFile();
 
@@ -217,7 +230,6 @@ export class CoreDnsManager {
     const { stringify: stringifyYaml } = await import('yaml');
     
     const compose = {
-      version: '3.8',
       services: {
         coredns: {
           image: 'coredns/coredns:latest',

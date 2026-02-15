@@ -74,18 +74,34 @@ export class CaddyManager {
   /**
    * Start Caddy container
    */
-  async start(): Promise<{ success: boolean; message: string }> {
+  async start(envVars: Record<string, string> = {}): Promise<{ success: boolean; message: string }> {
     // Check if Caddy is already running
     const container = await docker.getContainer('caddy');
     if (container && container.state === 'running') {
       return { success: true, message: 'Caddy is already running' };
     }
 
+    // Ensure Docker network exists
+    const networkExists = await docker.networkExists('tuition');
+    if (!networkExists) {
+      try {
+        await docker.createNetwork('tuition');
+      } catch (error) {
+        return { 
+          success: false, 
+          message: `Failed to create Docker network: ${error}` 
+        };
+      }
+    }
+
     // Generate compose file for Caddy
     await this.generateComposeFile();
 
-    // Start via docker-compose
-    const result = await this.composeManager.up('caddy', { detached: true });
+    // Start via docker-compose with environment variables
+    const result = await this.composeManager.up('caddy', { 
+      detached: true,
+      env: envVars 
+    });
 
     if (result.success) {
       return { success: true, message: 'Caddy started successfully' };
@@ -171,7 +187,6 @@ export class CaddyManager {
    */
   private async generateComposeFile(): Promise<void> {
     const compose = {
-      version: '3.8',
       services: {
         caddy: {
           image: 'caddy:2-alpine',

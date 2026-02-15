@@ -36,7 +36,7 @@ export interface ComposeService {
 }
 
 export interface ComposeFile {
-  version: string;
+  version?: string;
   services: Record<string, ComposeService>;
   networks?: Record<string, { driver: string; external?: boolean }>;
   volumes?: Record<string, { driver: string }>;
@@ -95,7 +95,6 @@ export class ComposeManager {
     }
 
     const compose: ComposeFile = {
-      version: '3.8',
       services: { [name]: service },
       networks: {
         tuition: {
@@ -117,6 +116,7 @@ export class ComposeManager {
   async up(name: string, options: {
     detached?: boolean;
     build?: boolean;
+    env?: Record<string, string>;
   } = {}): Promise<{ success: boolean; output: string }> {
     const composePath = join(this.projectPath, `${name}.docker-compose.yaml`);
     
@@ -145,7 +145,7 @@ export class ComposeManager {
       args.push('--build');
     }
 
-    return this.execDocker(args);
+    return this.execDocker(args, options.env);
   }
 
   /**
@@ -242,11 +242,13 @@ export class ComposeManager {
   /**
    * Execute docker command
    */
-  private execDocker(args: string[]): Promise<{ success: boolean; output: string }> {
+  private execDocker(args: string[], env?: Record<string, string>): Promise<{ success: boolean; output: string }> {
     return new Promise((resolve) => {
+      const envVars = env ? { ...process.env, ...env } : process.env;
       const proc = spawn('docker', args, {
         cwd: this.projectPath,
         stdio: ['pipe', 'pipe', 'pipe'],
+        env: envVars,
       });
 
       let stdout = '';
