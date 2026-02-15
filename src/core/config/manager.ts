@@ -30,10 +30,13 @@ const DEFAULT_GLOBAL_CONFIG: Partial<GlobalConfig> = {
 export class ConfigManager {
   private configPath: string;
   private statePath: string;
+  private tuitionDir: string;
 
   constructor(customPath?: string) {
     this.configPath = customPath || CONFIG_DIR;
     this.statePath = STATE_DIR;
+    // If custom path provided, use its parent as tuition dir, otherwise use default
+    this.tuitionDir = customPath ? customPath.replace(/\/config$/, '').replace(/\\config$/, '') : TUITION_DIR;
   }
 
   /**
@@ -187,7 +190,7 @@ export class ConfigManager {
    * Get path to tuition directory
    */
   getTuitionDir(): string {
-    return TUITION_DIR;
+    return this.tuitionDir;
   }
 
   /**

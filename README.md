@@ -141,11 +141,35 @@ labels:
 # TypeScript check
 bun run lint
 
+# Run tests
+bun test
+
 # Run CLI
 bun run index.ts <command>
 
 # Run TUI
 bun run index.ts tui
+```
+
+### Testing
+
+The project includes comprehensive unit tests covering:
+
+- **Configuration Management** - Config loading, validation, and persistence
+- **Service Catalog** - Service discovery and metadata
+- **Caddyfile Generator** - Reverse proxy configuration generation
+- **Docker Compose** - Compose file generation and environment handling
+- **Backup Manager** - Archive creation and restoration
+
+```bash
+# Run all tests
+bun test
+
+# Run specific test file
+bun test tests/unit/config.test.ts
+
+# Run with coverage
+bun test --coverage
 ```
 
 ## Project Structure
