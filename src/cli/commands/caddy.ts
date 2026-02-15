@@ -148,6 +148,9 @@ export class CaddyCommand {
     if (status.running) {
       console.log(chalk.gray(`\n  Services accessible via HTTPS:`));
       console.log(chalk.gray(`    https://*.${globalConfig.domain}`));
+      console.log(chalk.gray(`\n  Admin UI:`));
+      console.log(chalk.gray(`    https://tuition.${globalConfig.domain}`));
+      console.log(chalk.yellow(`    Note: Set password with: tuition caddy hash-password`));
     }
     
     console.log();
@@ -185,5 +188,26 @@ export class CaddyCommand {
     } else {
       console.log(chalk.red(`✗ Failed to apply changes: ${result.message}`));
     }
+  }
+
+  /**
+   * Generate password hash for admin UI
+   */
+  async hashPassword(options: { path?: string }): Promise<void> {
+    console.log(chalk.blue('Generating password hash for admin UI...\n'));
+    console.log(chalk.yellow('Run this command in the Caddy container:'));
+    console.log(chalk.gray('  docker exec caddy caddy hash-password'));
+    console.log('');
+    console.log(chalk.yellow('Then add the hash to your Caddyfile at:'));
+    console.log(chalk.gray('  ~/.tuition/Caddyfile'));
+    console.log('');
+    console.log(chalk.yellow('Replace the line:'));
+    console.log(chalk.gray('  # admin <hashed-password>'));
+    console.log(chalk.yellow('With:'));
+    console.log(chalk.gray('  admin <your-generated-hash>'));
+    console.log('');
+    console.log(chalk.yellow('Then reload Caddy:'));
+    console.log(chalk.gray('  tuition caddy reload'));
+    console.log('');
   }
 }

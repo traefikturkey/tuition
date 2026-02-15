@@ -230,6 +230,15 @@ export function createCli(): Command {
       await cmd.regenerate(options);
     });
 
+  caddyCmd
+    .command('hash-password')
+    .description('Generate password hash for admin UI')
+    .option('-p, --path <path>', 'Custom configuration path')
+    .action(async (options) => {
+      const cmd = new CaddyCommand(options.path);
+      await cmd.hashPassword(options);
+    });
+
   // DNS command group
   const dnsCmd = program
     .command('dns')

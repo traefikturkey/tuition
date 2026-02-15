@@ -50,6 +50,16 @@ export class CaddyfileGenerator {
     lines.push(`}`);
     lines.push('');
 
+    // Admin UI route
+    lines.push(`tuition.${config.domain} {`);
+    lines.push(`    basicauth {`);
+    lines.push(`        # TODO: Generate with: caddy hash-password`);
+    lines.push(`        # admin <hashed-password>`);
+    lines.push(`    }`);
+    lines.push(`    reverse_proxy localhost:2019`);
+    lines.push(`}`);
+    lines.push('');
+
     // Service routes
     for (const route of config.routes) {
       lines.push(this.generateRoute(route, config.domain));
