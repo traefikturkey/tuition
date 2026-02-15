@@ -40,9 +40,9 @@ export class CaddyfileGenerator {
     lines.push(`    tls {`);
     lines.push(`        dns ${config.dnsProvider} {`);
     
-    // Add DNS credentials
-    for (const [key, value] of Object.entries(config.dnsCredentials)) {
-      lines.push(`            ${key} ${value}`);
+    // Add DNS credentials - use environment variable syntax
+    if (config.dnsCredentials.api_token) {
+      lines.push(`            api_token {env.CF_API_TOKEN}`);
     }
     
     lines.push(`        }`);
