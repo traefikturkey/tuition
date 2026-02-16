@@ -105,8 +105,41 @@ export class CaddyCommand {
   async restart(options: { path?: string }): Promise<void> {
     await this.initialize();
 
+    // Load configuration and regenerate Caddyfile
+    const globalConfig = await this.config.loadGlobal();
+    const services = await this.config.loadServices();
+
+    const enabledServiceNames = Object.entries(services)
+      .filter(([, config]) => config.enabled)
+      .map(([name]) => name);
+
+    const enabledServices = [];
+    for (const name of enabledServiceNames) {
+      const def = await catalog.get(name);
+      if (def) {
+        enabledServices.push(def);
+      }
+    }
+
+    console.log(chalk.blue('Regenerating Caddyfile...'));
+    await this.caddy.generateConfig(globalConfig, enabledServices);
+    console.log(chalk.green(`✓ Regenerated Caddyfile with ${enabledServices.length} routes`));
+
+    // Prepare environment variables for Caddy
+    const envVars: Record<string, string> = {
+      DOMAIN: globalConfig.domain,
+      HOSTNAME: globalConfig.hostname,
+      TZ: globalConfig.timezone,
+      PUID: String(globalConfig.puid),
+      PGID: String(globalConfig.pgid),
+    };
+
+    if (globalConfig.cloudflareToken) {
+      envVars['CF_API_TOKEN'] = globalConfig.cloudflareToken;
+    }
+
     console.log(chalk.blue('Restarting Caddy...'));
-    const result = await this.caddy.restart();
+    const result = await this.caddy.restart(envVars);
 
     if (result.success) {
       console.log(chalk.green(`✓ ${result.message}`));
@@ -120,6 +153,26 @@ export class CaddyCommand {
    */
   async reload(options: { path?: string }): Promise<void> {
     await this.initialize();
+
+    // Load configuration and regenerate Caddyfile
+    const globalConfig = await this.config.loadGlobal();
+    const services = await this.config.loadServices();
+
+    const enabledServiceNames = Object.entries(services)
+      .filter(([, config]) => config.enabled)
+      .map(([name]) => name);
+
+    const enabledServices = [];
+    for (const name of enabledServiceNames) {
+      const def = await catalog.get(name);
+      if (def) {
+        enabledServices.push(def);
+      }
+    }
+
+    console.log(chalk.blue('Regenerating Caddyfile...'));
+    await this.caddy.generateConfig(globalConfig, enabledServices);
+    console.log(chalk.green(`✓ Regenerated Caddyfile with ${enabledServices.length} routes`));
 
     console.log(chalk.blue('Reloading Caddy configuration...'));
     const result = await this.caddy.reload();

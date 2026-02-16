@@ -55,11 +55,11 @@ export class CaddyfileGenerator {
 
     // Admin UI route
     lines.push(`tuition.${config.domain} {`);
-    lines.push(`    basicauth {`);
+    lines.push(`    basic_auth {`);
     lines.push(`        # TODO: Generate with: caddy hash-password`);
     lines.push(`        # admin <hashed-password>`);
     lines.push(`    }`);
-    lines.push(`    reverse_proxy localhost:2019`);
+    lines.push(`    reverse_proxy caddy:2019`);
     lines.push(`}`);
     lines.push('');
 

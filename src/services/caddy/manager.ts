@@ -141,7 +141,7 @@ export class CaddyManager {
   /**
    * Restart Caddy container
    */
-  async restart(): Promise<{ success: boolean; message: string }> {
+  async restart(envVars: Record<string, string> = {}): Promise<{ success: boolean; message: string }> {
     const stopResult = await this.stop();
     if (!stopResult.success) {
       return stopResult;
@@ -150,7 +150,7 @@ export class CaddyManager {
     // Small delay for clean shutdown
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    return this.start();
+    return this.start(envVars);
   }
 
   /**
