@@ -1,0 +1,21 @@
+name: whoami
+category: development
+description: HTTP test service that returns container hostname and request info - perfect for testing Caddy routing and HTTPS
+upstreamUrl: https://github.com/traefik/whoami
+image: traefik/whoami:latest
+
+ports:
+  - host: 8080
+    container: 80
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+
+labels:
+  caddy: whoami.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 80}}"
+
+resourceLimits:
+  cpus: 0.1
+  memory: 32M

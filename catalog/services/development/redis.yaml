@@ -1,0 +1,25 @@
+name: redis
+category: development
+description: In-memory data store for testing volume persistence and service health monitoring
+upstreamUrl: https://redis.io/
+image: redis:alpine
+
+ports:
+  - host: 6379
+    container: 6379
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+
+volumes:
+  - host: ./data/redis/data
+    container: /data
+
+labels:
+  caddy: redis.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 6379}}"
+
+resourceLimits:
+  cpus: 0.25
+  memory: 128M

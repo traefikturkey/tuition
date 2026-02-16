@@ -1,0 +1,26 @@
+name: nginx
+category: development
+description: Web server for testing static file serving, volume mounts, and HTTPS - includes sample content
+upstreamUrl: https://nginx.org/
+image: nginx:alpine
+
+ports:
+  - host: 8081
+    container: 80
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+
+volumes:
+  - host: ./data/nginx/html
+    container: /usr/share/nginx/html
+    readOnly: true
+
+labels:
+  caddy: nginx.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 80}}"
+
+resourceLimits:
+  cpus: 0.25
+  memory: 64M
