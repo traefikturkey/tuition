@@ -4,6 +4,7 @@
 
 import { ConfigManager } from '../../core/config/manager.js';
 import { ConfigValidator } from '../../core/config/validator.js';
+import { CoreDnsManager } from '../../services/dns/coredns.js';
 import type { GlobalConfig } from '../../types/index.js';
 import chalk from 'chalk';
 import readline from 'readline';
@@ -43,6 +44,12 @@ export class InitCommand {
     // Save configuration
     await manager.saveGlobal(config);
     console.log(chalk.green('\n✓ Saved global configuration'));
+
+    // Generate initial CoreDNS configuration with upstream DNS
+    const dnsManager = new CoreDnsManager(manager.getTuitionDir());
+    await dnsManager.initialize();
+    await dnsManager.generateConfig([], {}, config.upstreamDns);
+    console.log(chalk.green('✓ Generated CoreDNS configuration'));
 
     // Generate secrets file
     const envContent = this.generateEnvFile(config, manager);
