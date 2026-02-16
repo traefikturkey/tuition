@@ -81,7 +81,7 @@ export class CoreDnsManager {
     lines.push('');
     lines.push('. {');
     lines.push('    # Hosts file for static and container entries');
-    lines.push('    hosts {');
+    lines.push('    hosts /etc/coredns/hosts {');
     lines.push(`        fallthrough`);
     lines.push('    }');
     lines.push('');
