@@ -225,6 +225,33 @@ export class DockerClient {
       return null;
     }
   }
+
+  /**
+   * Get container IP address on a specific network
+   * Returns the IP address of a container on the specified Docker network
+   */
+  async getContainerIP(containerName: string, networkName: string): Promise<string | null> {
+    try {
+      const network = this.docker.getNetwork(networkName);
+      const inspect = await network.inspect();
+      
+      // Find the container in the network's Containers list
+      const containers = inspect.Containers || {};
+      for (const [containerId, containerInfo] of Object.entries(containers)) {
+        if (containerInfo.Name === containerName) {
+          // Extract IP from the CIDR notation (e.g., "10.0.7.2/24" -> "10.0.7.2")
+          const ipWithCidr = containerInfo.IPv4Address;
+          if (ipWithCidr) {
+            return ipWithCidr.split('/')[0];
+          }
+        }
+      }
+      
+      return null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // Export singleton

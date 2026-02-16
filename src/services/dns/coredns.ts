@@ -234,6 +234,10 @@ export class CoreDnsManager {
   private async generateComposeFile(): Promise<void> {
     const { stringify: stringifyYaml } = await import('yaml');
     
+    // Static IP for CoreDNS to ensure consistent DNS resolution
+    // This IP must be in the tuition network subnet (10.0.7.0/24)
+    const COREDNS_STATIC_IP = '10.0.7.2';
+    
     const compose = {
       services: {
         coredns: {
@@ -248,7 +252,11 @@ export class CoreDnsManager {
             `${this.configPath}/Corefile:/etc/coredns/Corefile:ro`,
             `${this.configPath}/hosts:/etc/coredns/hosts:ro`,
           ],
-          networks: ['tuition'],
+          networks: {
+            tuition: {
+              ipv4_address: COREDNS_STATIC_IP,
+            },
+          },
           command: ['-conf', '/etc/coredns/Corefile'],
         },
       },

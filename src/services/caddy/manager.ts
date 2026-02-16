@@ -45,6 +45,7 @@ export class CaddyManager {
       adminEmail: string;
       dnsProvider: string;
       cloudflareToken?: string;
+      adminPasswordHash?: string;
     },
     enabledServices: ServiceDefinition[]
   ): Promise<string> {
@@ -60,6 +61,7 @@ export class CaddyManager {
         ? { api_token: globalConfig.cloudflareToken }
         : {},
       routes,
+      adminPasswordHash: globalConfig.adminPasswordHash,
     };
 
     // Generate Caddyfile
@@ -73,6 +75,7 @@ export class CaddyManager {
 
   /**
    * Start Caddy container
+   * Automatically configures CoreDNS as DNS server if available
    */
   async start(envVars: Record<string, string> = {}): Promise<{ success: boolean; message: string }> {
     // Check if Caddy is already running
@@ -94,8 +97,20 @@ export class CaddyManager {
       }
     }
 
-    // Generate compose file for Caddy
-    await this.generateComposeFile();
+    // Get CoreDNS IP address for DNS resolution
+    // This ensures Caddy can resolve domains for ACME DNS challenges
+    let corednsIP: string | null = null;
+    
+    // Try to get CoreDNS IP from running container
+    corednsIP = await docker.getContainerIP('coredns', 'tuition');
+    
+    // Fallback to static IP if container not found (CoreDNS configured with 10.0.7.2)
+    if (!corednsIP) {
+      corednsIP = '10.0.7.2';
+    }
+
+    // Generate compose file with DNS configuration
+    await this.generateComposeFile(corednsIP);
 
     // Start via docker-compose with environment variables
     const result = await this.composeManager.up('caddy', { 
@@ -184,31 +199,41 @@ export class CaddyManager {
 
   /**
    * Generate docker-compose.yaml for Caddy
+   * @param dnsServerIP - IP address of DNS server (CoreDNS) to use for resolution
    */
-  private async generateComposeFile(): Promise<void> {
+  private async generateComposeFile(dnsServerIP?: string): Promise<void> {
+    // Build Caddy service configuration
+    const caddyService: Record<string, unknown> = {
+      image: 'iarekylew00t/caddy-cloudflare:latest',
+      container_name: 'caddy',
+      restart: 'unless-stopped',
+      ports: [
+        '80:80',
+        '443:443',
+        '443:443/udp', // HTTP/3
+      ],
+      volumes: [
+        `${this.caddyfilePath}:/etc/caddy/Caddyfile:ro`,
+        `${join(this.dataPath, 'config')}:/config`,
+        `${join(this.dataPath, 'data')}:/data`,
+        `${join(this.dataPath, 'logs')}:/var/log/caddy`,
+      ],
+      networks: ['tuition'],
+      environment: {
+        CF_API_TOKEN: '${CF_API_TOKEN}',
+      },
+      cap_add: ['NET_ADMIN'], // Required for HTTP/3
+    };
+
+    // Configure DNS server if provided
+    // This ensures Caddy can resolve domains for ACME DNS challenges via CoreDNS
+    if (dnsServerIP) {
+      caddyService.dns = [dnsServerIP];
+    }
+
     const compose = {
       services: {
-        caddy: {
-          image: 'iarekylew00t/caddy-cloudflare:latest',
-          container_name: 'caddy',
-          restart: 'unless-stopped',
-          ports: [
-            '80:80',
-            '443:443',
-            '443:443/udp', // HTTP/3
-          ],
-          volumes: [
-            `${this.caddyfilePath}:/etc/caddy/Caddyfile:ro`,
-            `${join(this.dataPath, 'config')}:/config`,
-            `${join(this.dataPath, 'data')}:/data`,
-            `${join(this.dataPath, 'logs')}:/var/log/caddy`,
-          ],
-          networks: ['tuition'],
-          environment: {
-            CF_API_TOKEN: '${CF_API_TOKEN}',
-          },
-          cap_add: ['NET_ADMIN'], // Required for HTTP/3
-        },
+        caddy: caddyService,
       },
       networks: {
         tuition: {

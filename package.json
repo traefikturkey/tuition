@@ -20,6 +20,7 @@
     "@types/node": "^22.0.0",
     "@types/tar": "^6.1.13",
     "@types/blessed": "^0.1.25",
+    "bcrypt": "^5.1.1",
     "blessed": "^0.1.81",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
