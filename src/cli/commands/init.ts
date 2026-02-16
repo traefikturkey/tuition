@@ -53,8 +53,9 @@ export class InitCommand {
     console.log(chalk.gray(`Data directory: ${manager.getTuitionDir()}`));
     console.log(chalk.gray('\nNext steps:'));
     console.log(chalk.gray('  1. Review your configuration: tuition config show'));
-    console.log(chalk.gray('  2. Enable your first service: tuition service enable <name>'));
-    console.log(chalk.gray('  3. Start the infrastructure: tuition infra start'));
+    console.log(chalk.gray('  2. Start CoreDNS: tuition dns start'));
+    console.log(chalk.gray('  3. Start Caddy: tuition caddy start'));
+    console.log(chalk.gray('  4. Enable your first service: tuition service enable <name>'));
   }
 
   private async promptForConfig(): Promise<GlobalConfig> {
