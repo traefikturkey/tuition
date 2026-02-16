@@ -280,6 +280,15 @@ export function createCli(): Command {
       await cmd.regenerate(options);
     });
 
+  dnsCmd
+    .command('configure')
+    .description('Configure upstream DNS servers interactively')
+    .option('-p, --path <path>', 'Custom configuration path')
+    .action(async (options) => {
+      const cmd = new DnsCommand(options.path);
+      await cmd.configure();
+    });
+
   // Backup command group
   const backupCmd = program
     .command('backup')
