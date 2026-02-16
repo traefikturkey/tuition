@@ -105,15 +105,17 @@ export class CaddyManager {
     corednsIP = await docker.getContainerIP('coredns', 'tuition');
     
     // If CoreDNS not found on Docker network (using host networking),
-    // use host.docker.internal which resolves to the host's gateway IP
+    // use the Docker bridge gateway IP (host's IP on the tuition network)
     // CoreDNS with host networking listens on host port 54
     if (!corednsIP) {
-      corednsIP = 'host.docker.internal';
+      // Get the gateway IP from the tuition network (host's IP in the Docker network)
+      const gateway = await docker.getNetworkGateway('tuition');
+      corednsIP = gateway || '10.0.7.1'; // Fallback to default gateway
     }
 
     // Generate compose file with DNS configuration
-    // Note: When using host.docker.internal, we add :54 to the DNS config
-    // since CoreDNS is listening on host port 54
+    // Note: When CoreDNS uses host networking, it listens on host port 54
+    // Caddy reaches it via the Docker bridge gateway IP
     await this.generateComposeFile(corednsIP);
 
     // Start via docker-compose with environment variables
@@ -231,11 +233,13 @@ export class CaddyManager {
 
     // Configure DNS server if provided
     // This ensures Caddy can resolve domains for ACME DNS challenges via CoreDNS
-    // When using host.docker.internal, CoreDNS listens on host port 54
+    // When CoreDNS uses host networking, it listens on host port 54
+    // Caddy reaches it via the Docker bridge gateway (host's IP in the Docker network)
     if (dnsServerIP) {
-      if (dnsServerIP === 'host.docker.internal') {
-        // CoreDNS uses host networking on port 54
-        caddyService.dns = ['host.docker.internal:54'];
+      // Check if this is the Docker bridge gateway (host IP on tuition network)
+      // CoreDNS with host networking listens on port 54, not 53
+      if (dnsServerIP.includes('10.0.7.') || dnsServerIP === 'host.docker.internal') {
+        caddyService.dns = [`${dnsServerIP}:54`];
       } else {
         // Standard Docker network IP (port 53 default)
         caddyService.dns = [dnsServerIP];
