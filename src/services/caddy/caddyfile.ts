@@ -32,7 +32,10 @@ export class CaddyfileGenerator {
     lines.push('# Tuition Caddyfile');
     lines.push('# Auto-generated - do not edit manually');
     lines.push('');
-    lines.push(`{\n    email ${config.email}\n}`);
+    lines.push(`{`);
+    lines.push(`    admin 0.0.0.0:2019`);
+    lines.push(`    email ${config.email}`);
+    lines.push(`}`);
     lines.push('');
 
     // Wildcard certificate with DNS challenge
