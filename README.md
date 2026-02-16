@@ -131,6 +131,7 @@ tuition caddy start             # Start Caddy reverse proxy
 tuition caddy stop              # Stop Caddy
 tuition caddy status            # Show Caddy status + admin URL
 tuition caddy reload            # Reload Caddy config
+tuition caddy set-password      # Set admin UI password
 tuition dns start               # Start CoreDNS
 tuition dns stop                # Stop CoreDNS
 
@@ -194,9 +195,25 @@ https://tuition.example.com
 ```
 
 **First time setup:**
-1. Generate password: `docker exec -it caddy caddy hash-password`
-2. Edit `~/.tuition/Caddyfile` and add the hashed password
-3. Reload: `tuition caddy reload`
+```bash
+tuition caddy set-password
+```
+
+This will:
+- Prompt for a password (with confirmation)
+- Hash it securely using bcrypt
+- Save to your configuration
+- Update the Caddyfile automatically
+- Reload Caddy to apply changes
+
+**Check status:**
+```bash
+tuition caddy status
+```
+
+Shows:
+- ✓ Password protected (if configured)
+- ⚠ No password configured (if not set)
 
 The admin UI shows:
 - Active TLS certificates
@@ -223,17 +240,21 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
 **Error:** `could not determine zone for domain "_acme-challenge.example.com"`
 
-**Cause:** Domain not properly set up in Cloudflare
+**Cause:** Caddy cannot resolve DNS to complete ACME challenge
 
 **Fix:**
-1. Verify domain uses Cloudflare nameservers:
+1. Ensure CoreDNS is running: `tuition dns status`
+2. Restart Caddy to pick up CoreDNS: `tuition caddy restart`
+3. Verify domain uses Cloudflare nameservers:
    ```bash
    dig example.com NS
    ```
-2. Check Cloudflare token has correct permissions:
+4. Check Cloudflare token has correct permissions:
    - Zone:Read (all zones)
    - DNS:Edit (your specific zone)
-3. Verify token in config: `tuition config show`
+5. Verify token in config: `tuition config show`
+
+**Note:** Tuition automatically configures Caddy to use CoreDNS for DNS resolution, which resolves this issue.
 
 ### Docker Permission Denied
 

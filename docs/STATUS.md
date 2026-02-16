@@ -3,7 +3,7 @@
 **Version**: 0.1.0  
 **Branch**: `feature/initial-implementation`  
 **Status**: ✅ **COMPLETE - Production Ready**  
-**Date**: 2026-02-15
+**Date**: 2026-02-16
 
 ---
 
@@ -18,6 +18,20 @@ All 7 implementation phases have been completed successfully:
 - ✅ Phase 5: CoreDNS Internal DNS (port 53, zero-config)
 - ✅ Phase 6: Disaster Recovery (backup/restore, 3-2-1 strategy)
 - ✅ Phase 7: TUI & Documentation (Blessed interface, comprehensive docs)
+
+## 🆕 Recent Updates
+
+### CoreDNS Integration (2026-02-16)
+- Caddy now automatically uses CoreDNS for DNS resolution
+- Fixes Cloudflare ACME DNS-01 challenge issues (SERVFAIL errors)
+- CoreDNS assigned static IP (10.0.7.2) for reliability
+
+### Admin UI Password Protection (2026-02-16)
+- New command: `tuition caddy set-password`
+- bcrypt password hashing (10 salt rounds)
+- Password confirmation during setup
+- Status shows ✓ (protected) or ⚠ (unconfigured)
+- Optional setup during `tuition init`
 
 ---
 
@@ -87,6 +101,7 @@ Docker Network (tuition)
 | `tuition caddy reload` | Reload configuration (zero-downtime) |
 | `tuition caddy status` | Show Caddy status |
 | `tuition caddy regenerate` | Regenerate Caddyfile |
+| `tuition caddy set-password` | Set admin UI password (bcrypt) |
 | `tuition dns start` | Start CoreDNS |
 | `tuition dns stop` | Stop CoreDNS |
 | `tuition dns status` | Show CoreDNS status |
@@ -242,6 +257,7 @@ puid: 1000
 pgid: 1000
 dnsProvider: cloudflare
 cloudflareToken: <your-token>
+adminPasswordHash: $2b$10$...  # bcrypt hash for admin UI
 ```
 
 ### Service Configuration (`~/.tuition/config/services/<name>.yaml`)
@@ -372,4 +388,4 @@ Contributions welcome! Please ensure:
 **Tests**: 54/54 Passing ✅  
 **Compilation**: Zero Errors ✅
 
-*Last updated: 2026-02-15*
+*Last updated: 2026-02-16*
