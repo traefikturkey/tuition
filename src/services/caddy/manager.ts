@@ -101,15 +101,19 @@ export class CaddyManager {
     // This ensures Caddy can resolve domains for ACME DNS challenges
     let corednsIP: string | null = null;
     
-    // Try to get CoreDNS IP from running container
+    // Try to get CoreDNS IP from running container on Docker network
     corednsIP = await docker.getContainerIP('coredns', 'tuition');
     
-    // Fallback to static IP if container not found (CoreDNS configured with 10.0.7.2)
+    // If CoreDNS not found on Docker network (using host networking),
+    // use host.docker.internal which resolves to the host's gateway IP
+    // CoreDNS with host networking listens on host port 54
     if (!corednsIP) {
-      corednsIP = '10.0.7.2';
+      corednsIP = 'host.docker.internal';
     }
 
     // Generate compose file with DNS configuration
+    // Note: When using host.docker.internal, we add :54 to the DNS config
+    // since CoreDNS is listening on host port 54
     await this.generateComposeFile(corednsIP);
 
     // Start via docker-compose with environment variables
@@ -227,8 +231,15 @@ export class CaddyManager {
 
     // Configure DNS server if provided
     // This ensures Caddy can resolve domains for ACME DNS challenges via CoreDNS
+    // When using host.docker.internal, CoreDNS listens on host port 54
     if (dnsServerIP) {
-      caddyService.dns = [dnsServerIP];
+      if (dnsServerIP === 'host.docker.internal') {
+        // CoreDNS uses host networking on port 54
+        caddyService.dns = ['host.docker.internal:54'];
+      } else {
+        // Standard Docker network IP (port 53 default)
+        caddyService.dns = [dnsServerIP];
+      }
     }
 
     const compose = {
