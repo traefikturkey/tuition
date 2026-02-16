@@ -62,7 +62,8 @@ export class LifecycleManager {
    */
   private async updateDnsConfig(): Promise<void> {
     const services = await this.configManager.loadServices();
-    
+    const globalConfig = await this.configManager.loadGlobal();
+
     // Get enabled services
     const enabledServiceNames = Object.entries(services)
       .filter(([, config]) => config.enabled)
@@ -77,9 +78,23 @@ export class LifecycleManager {
       }
     }
 
-    // Regenerate CoreDNS config
-    await this.dnsManager.generateConfig(enabledServices);
-    
+    // Get Docker host IP for tuition hostname registration
+    const hostIp = await docker.getNetworkGateway('tuition');
+    const staticHosts: Record<string, string> = {};
+
+    if (hostIp) {
+      // Register tuition hostname (e.g., nxs-tuition.nexus-central.tech)
+      const tuitionHostname = `${globalConfig.hostname}.${globalConfig.domain}`;
+      staticHosts[tuitionHostname] = hostIp;
+    }
+
+    // Regenerate CoreDNS config with static hosts and upstream DNS
+    await this.dnsManager.generateConfig(
+      enabledServices,
+      staticHosts,
+      globalConfig.upstreamDns
+    );
+
     // Reload CoreDNS to apply changes
     await this.dnsManager.reload();
   }

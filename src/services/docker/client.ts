@@ -212,6 +212,19 @@ export class DockerClient {
   async info(): Promise<unknown> {
     return this.docker.info();
   }
+
+  /**
+   * Get network gateway IP address
+   */
+  async getNetworkGateway(name: string): Promise<string | null> {
+    try {
+      const network = this.docker.getNetwork(name);
+      const inspect = await network.inspect();
+      return inspect.IPAM?.Config?.[0]?.Gateway || null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // Export singleton

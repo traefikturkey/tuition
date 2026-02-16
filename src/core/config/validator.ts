@@ -58,6 +58,28 @@ export class ConfigValidator {
       });
     }
 
+    // Validate upstream DNS configuration
+    if (!config.upstreamDns || !config.upstreamDns.primary) {
+      errors.push({
+        field: 'upstreamDns.primary',
+        message: 'Primary DNS server is required',
+      });
+    } else if (!this.isValidIp(config.upstreamDns.primary)) {
+      errors.push({
+        field: 'upstreamDns.primary',
+        message: 'Primary DNS server must be a valid IP address',
+        value: config.upstreamDns.primary,
+      });
+    }
+
+    if (config.upstreamDns?.backup && !this.isValidIp(config.upstreamDns.backup)) {
+      errors.push({
+        field: 'upstreamDns.backup',
+        message: 'Backup DNS server must be a valid IP address',
+        value: config.upstreamDns.backup,
+      });
+    }
+
     return {
       valid: errors.length === 0,
       errors,
@@ -98,5 +120,17 @@ export class ConfigValidator {
   private isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  }
+
+  /**
+   * Validate IP address format (IPv4 or IPv6)
+   */
+  private isValidIp(ip: string): boolean {
+    // IPv4 regex
+    const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    // IPv6 regex (simplified)
+    const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$/;
+    
+    return ipv4Regex.test(ip) || ipv6Regex.test(ip);
   }
 }

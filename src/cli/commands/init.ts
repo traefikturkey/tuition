@@ -79,6 +79,38 @@ export class InitCommand {
     console.log(chalk.blue('\nDNS Provider (currently only Cloudflare is supported)'));
     const cloudflareToken = await ask('Cloudflare API Token: ');
 
+    // Upstream DNS Configuration
+    console.log(chalk.blue('\nUpstream DNS Configuration:'));
+    console.log(chalk.gray('  1) Google (8.8.8.8, 8.8.4.4)'));
+    console.log(chalk.gray('  2) Cloudflare (1.1.1.1, 1.0.0.1)'));
+    console.log(chalk.gray('  3) OpenDNS (208.67.222.222, 208.67.220.220)'));
+    console.log(chalk.gray('  4) Custom (default)'));
+    
+    const dnsChoice = await ask('\nSelect option [4]: ') || '4';
+    
+    let primaryDns: string;
+    let backupDns: string | undefined;
+    
+    switch (dnsChoice.trim()) {
+      case '1':
+        primaryDns = '8.8.8.8';
+        backupDns = '8.8.4.4';
+        break;
+      case '2':
+        primaryDns = '1.1.1.1';
+        backupDns = '1.0.0.1';
+        break;
+      case '3':
+        primaryDns = '208.67.222.222';
+        backupDns = '208.67.220.220';
+        break;
+      default:
+        primaryDns = await ask('Primary DNS server: ');
+        const backupInput = await ask('Backup DNS server (optional): ');
+        backupDns = backupInput.trim() || undefined;
+        break;
+    }
+
     rl.close();
 
     return {
@@ -90,6 +122,10 @@ export class InitCommand {
       pgid: 1000,
       dnsProvider: 'cloudflare',
       cloudflareToken: cloudflareToken.trim(),
+      upstreamDns: {
+        primary: primaryDns.trim(),
+        backup: backupDns?.trim(),
+      },
     };
   }
 

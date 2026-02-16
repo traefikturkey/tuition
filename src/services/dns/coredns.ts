@@ -44,10 +44,11 @@ export class CoreDnsManager {
    */
   async generateConfig(
     enabledServices: ServiceDefinition[],
-    staticHosts: Record<string, string> = {}
+    staticHosts: Record<string, string> = {},
+    upstreamDns?: { primary: string; backup?: string }
   ): Promise<string> {
-    const corefile = this.buildCorefile(enabledServices, staticHosts);
-    
+    const corefile = this.buildCorefile(enabledServices, staticHosts, upstreamDns);
+
     await writeFile(
       join(this.configPath, 'Corefile'),
       corefile,
@@ -70,7 +71,8 @@ export class CoreDnsManager {
    */
   private buildCorefile(
     services: ServiceDefinition[],
-    staticHosts: Record<string, string>
+    staticHosts: Record<string, string>,
+    upstreamDns?: { primary: string; backup?: string }
   ): string {
     const lines: string[] = [];
 
@@ -84,7 +86,10 @@ export class CoreDnsManager {
     lines.push('    }');
     lines.push('');
     lines.push('    # Forward to external DNS');
-    lines.push('    forward . 8.8.8.8 8.8.4.4 {');
+    const upstreamServers = upstreamDns
+      ? [upstreamDns.primary, upstreamDns.backup].filter(Boolean).join(' ')
+      : '8.8.8.8 8.8.4.4';
+    lines.push(`    forward . ${upstreamServers} {`);
     lines.push('        health_check 5s');
     lines.push('    }');
     lines.push('');

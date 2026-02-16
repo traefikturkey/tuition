@@ -3,6 +3,11 @@
  */
 
 // Configuration tiers
+export interface UpstreamDnsConfig {
+  primary: string;
+  backup?: string;
+}
+
 export interface GlobalConfig {
   hostname: string;
   domain: string;
@@ -12,6 +17,7 @@ export interface GlobalConfig {
   pgid: number;
   dnsProvider: 'cloudflare';
   cloudflareToken?: string;
+  upstreamDns: UpstreamDnsConfig;
 }
 
 export interface InfrastructureConfig {
