@@ -97,26 +97,10 @@ export class CaddyManager {
       }
     }
 
-    // Get CoreDNS IP address for DNS resolution
-    // This ensures Caddy can resolve domains for ACME DNS challenges
-    let corednsIP: string | null = null;
-    
-    // Try to get CoreDNS IP from running container on Docker network
-    corednsIP = await docker.getContainerIP('coredns', 'tuition');
-    
-    // If CoreDNS not found on Docker network (using host networking),
-    // use the Docker bridge gateway IP (host's IP on the tuition network)
-    // CoreDNS with host networking listens on host port 54
-    if (!corednsIP) {
-      // Get the gateway IP from the tuition network (host's IP in the Docker network)
-      const gateway = await docker.getNetworkGateway('tuition');
-      corednsIP = gateway || '10.0.7.1'; // Fallback to default gateway
-    }
-
-    // Generate compose file with DNS configuration
-    // Note: When CoreDNS uses host networking, it listens on host port 54
-    // Caddy reaches it via the Docker bridge gateway IP
-    await this.generateComposeFile(corednsIP);
+    // Generate compose file
+    // Note: We don't configure Docker DNS since CoreDNS uses host networking on port 54,
+    // and Docker's --dns flag only accepts IP addresses (not IP:port)
+    await this.generateComposeFile();
 
     // Start via docker-compose with environment variables
     const result = await this.composeManager.up('caddy', { 
@@ -205,9 +189,8 @@ export class CaddyManager {
 
   /**
    * Generate docker-compose.yaml for Caddy
-   * @param dnsServerIP - IP address of DNS server (CoreDNS) to use for resolution
    */
-  private async generateComposeFile(dnsServerIP?: string): Promise<void> {
+  private async generateComposeFile(): Promise<void> {
     // Build Caddy service configuration
     const caddyService: Record<string, unknown> = {
       image: 'iarekylew00t/caddy-cloudflare:latest',
@@ -231,20 +214,11 @@ export class CaddyManager {
       cap_add: ['NET_ADMIN'], // Required for HTTP/3
     };
 
-    // Configure DNS server if provided
-    // This ensures Caddy can resolve domains for ACME DNS challenges via CoreDNS
-    // When CoreDNS uses host networking, it listens on host port 54
-    // Caddy reaches it via the Docker bridge gateway (host's IP in the Docker network)
-    if (dnsServerIP) {
-      // Check if this is the Docker bridge gateway (host IP on tuition network)
-      // CoreDNS with host networking listens on port 54, not 53
-      if (dnsServerIP.includes('10.0.7.') || dnsServerIP === 'host.docker.internal') {
-        caddyService.dns = [`${dnsServerIP}:54`];
-      } else {
-        // Standard Docker network IP (port 53 default)
-        caddyService.dns = [dnsServerIP];
-      }
-    }
+    // Note: Docker's dns configuration only accepts IP addresses (not IP:port)
+    // Since CoreDNS uses host networking on port 54 (to avoid conflict with systemd-resolved on 53),
+    // we cannot use Docker's native DNS configuration. Caddy will use Docker's default DNS resolver
+    // (127.0.0.11) which forwards to the host's configured DNS servers.
+    // For ACME DNS challenges, Caddy uses the Cloudflare DNS plugin which handles resolution internally.
 
     const compose = {
       services: {
