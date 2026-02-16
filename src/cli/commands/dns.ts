@@ -59,7 +59,7 @@ export class DnsCommand {
 
     if (result.success) {
       console.log(chalk.green(`✓ ${result.message}`));
-      console.log(chalk.gray('Internal DNS server running on port 53'));
+      console.log(chalk.gray('Internal DNS server running on port 54'));
     } else {
       console.log(chalk.red(`✗ ${result.message}`));
     }
@@ -94,7 +94,7 @@ export class DnsCommand {
     console.log(`  Host entries: ${status.hosts}`);
     
     if (status.running) {
-      console.log(chalk.gray('\n  Internal DNS available on port 53'));
+      console.log(chalk.gray('\n  Internal DNS available on port 54'));
       console.log(chalk.gray('  Configure your system to use 127.0.0.1 as DNS server'));
     }
     
