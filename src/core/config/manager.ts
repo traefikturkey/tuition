@@ -3,7 +3,7 @@
  * Handles loading, validation, and persistence of tiered configuration
  */
 
-import { readFile, writeFile, mkdir, access } from 'fs/promises';
+import { readFile, writeFile, mkdir, access, readdir } from 'fs/promises';
 import { constants } from 'fs';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { join } from 'path';
@@ -119,12 +119,22 @@ export class ConfigManager {
     const servicesDir = join(this.configPath, 'services');
 
     try {
-      const files = await readFile(servicesDir, 'utf-8');
-      // This would need proper directory reading, simplified here
-      return services;
+      const files = await readdir(servicesDir);
+      
+      for (const file of files) {
+        if (file.endsWith('.yaml') || file.endsWith('.yml')) {
+          const name = file.replace(/\.ya?ml$/, '');
+          const config = await this.loadService(name);
+          if (config) {
+            services[name] = config;
+          }
+        }
+      }
     } catch {
-      return services;
+      // Directory doesn't exist or other error
     }
+    
+    return services;
   }
 
   /**

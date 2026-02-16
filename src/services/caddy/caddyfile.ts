@@ -132,8 +132,11 @@ export class CaddyfileGenerator {
       }
     }
 
+    // Remove ${DOMAIN} placeholder and any trailing dot
+    const domain = caddyDomain.replace(/\.?\$\{DOMAIN\}/g, '');
+
     return {
-      domain: caddyDomain.replace(/\$\{DOMAIN\}/g, ''),
+      domain,
       service: service.name,
       port,
       tls: true,
