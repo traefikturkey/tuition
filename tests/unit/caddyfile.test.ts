@@ -32,7 +32,7 @@ describe('CaddyfileGenerator', () => {
       expect(caddyfile).toContain('admin@example.com');
       expect(caddyfile).toContain('*.example.com');
       expect(caddyfile).toContain('dns cloudflare');
-      expect(caddyfile).toContain('api_token test-token');
+      expect(caddyfile).toContain('api_token {env.CF_API_TOKEN}');
       expect(caddyfile).toContain('pihole.example.com');
       expect(caddyfile).toContain('reverse_proxy pihole:80');
     });

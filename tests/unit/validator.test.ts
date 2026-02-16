@@ -20,6 +20,10 @@ describe('ConfigValidator', () => {
         pgid: 1000,
         dnsProvider: 'cloudflare',
         cloudflareToken: 'test-token',
+        upstreamDns: {
+          primary: '8.8.8.8',
+          backup: '8.8.4.4',
+        },
       };
 
       const result = validator.validateGlobal(config);
