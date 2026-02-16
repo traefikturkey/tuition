@@ -79,7 +79,8 @@ export class CoreDnsManager {
     lines.push('# Tuition CoreDNS Configuration');
     lines.push('# Auto-generated - do not edit manually');
     lines.push('');
-    lines.push('. {');
+    lines.push('# Listen on port 54 to avoid conflict with systemd-resolved on port 53');
+    lines.push('.:54 {');
     lines.push('    # Hosts file for static and container entries');
     lines.push('    hosts /etc/coredns/hosts {');
     lines.push(`        fallthrough`);
