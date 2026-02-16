@@ -19,6 +19,7 @@ export interface CaddyConfig {
   dnsProvider: string;
   dnsCredentials: Record<string, string>;
   routes: CaddyRoute[];
+  adminPasswordHash?: string;
 }
 
 export class CaddyfileGenerator {
@@ -56,8 +57,12 @@ export class CaddyfileGenerator {
     // Admin UI route
     lines.push(`tuition.${config.domain} {`);
     lines.push(`    basic_auth {`);
-    lines.push(`        # TODO: Generate with: caddy hash-password`);
-    lines.push(`        # admin <hashed-password>`);
+    if (config.adminPasswordHash) {
+      lines.push(`        admin ${config.adminPasswordHash}`);
+    } else {
+      lines.push(`        # Admin UI password not configured`);
+      lines.push(`        # Run: tuition caddy set-password`);
+    }
     lines.push(`    }`);
     lines.push(`    reverse_proxy caddy:2019`);
     lines.push(`}`);

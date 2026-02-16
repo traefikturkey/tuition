@@ -111,6 +111,30 @@ export class InitCommand {
         break;
     }
 
+    // Admin UI Password Configuration
+    console.log(chalk.blue('\nAdmin UI Configuration:'));
+    const setPassword = await ask(
+      chalk.yellow('Configure admin UI password? (optional) [y/N]: ')
+    );
+    
+    let adminPasswordHash: string | undefined;
+    
+    if (setPassword.toLowerCase() === 'y') {
+      const { promptPassword, hashPassword } = await import('../../utils/password.js');
+      
+      const password = await promptPassword('Enter admin password: ');
+      const confirm = await promptPassword('Confirm password: ');
+      
+      if (password === confirm && password.length > 0) {
+        adminPasswordHash = await hashPassword(password);
+        console.log(chalk.green('✓ Admin password configured'));
+      } else if (password !== confirm) {
+        console.log(chalk.yellow('⚠ Passwords did not match. Skipping admin password setup.'));
+      } else {
+        console.log(chalk.yellow('⚠ Password cannot be empty. Skipping admin password setup.'));
+      }
+    }
+
     rl.close();
 
     return {
@@ -126,6 +150,7 @@ export class InitCommand {
         primary: primaryDns.trim(),
         backup: backupDns?.trim(),
       },
+      adminPasswordHash,
     };
   }
 

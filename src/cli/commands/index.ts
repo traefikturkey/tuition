@@ -232,11 +232,20 @@ export function createCli(): Command {
 
   caddyCmd
     .command('hash-password')
-    .description('Generate password hash for admin UI')
+    .description('Generate password hash for admin UI (legacy: use set-password)')
     .option('-p, --path <path>', 'Custom configuration path')
     .action(async (options) => {
       const cmd = new CaddyCommand(options.path);
       await cmd.hashPassword(options);
+    });
+
+  caddyCmd
+    .command('set-password')
+    .description('Set or update admin UI password')
+    .option('-p, --path <path>', 'Custom configuration path')
+    .action(async (options) => {
+      const cmd = new CaddyCommand(options.path);
+      await cmd.setPassword(options);
     });
 
   // DNS command group

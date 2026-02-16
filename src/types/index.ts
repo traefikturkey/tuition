@@ -18,6 +18,7 @@ export interface GlobalConfig {
   dnsProvider: 'cloudflare';
   cloudflareToken?: string;
   upstreamDns: UpstreamDnsConfig;
+  adminPasswordHash?: string;  // bcrypt hash for Caddy admin UI
 }
 
 export interface InfrastructureConfig {
