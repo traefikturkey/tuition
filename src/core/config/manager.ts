@@ -8,6 +8,8 @@ import { constants } from 'fs';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { join } from 'path';
 import os from 'os';
+import { randomInt } from 'crypto';
+import { chmod } from 'fs/promises';
 import type {
   FullConfig,
   GlobalConfig,
@@ -160,7 +162,7 @@ export class ConfigManager {
   async saveGlobal(config: GlobalConfig): Promise<void> {
     const path = join(this.configPath, 'global.yaml');
     const yaml = stringifyYaml(config);
-    await writeFile(path, yaml, 'utf-8');
+    await this.writeSecureFile(path, yaml);
   }
 
   /**
@@ -169,7 +171,7 @@ export class ConfigManager {
   async saveInfrastructure(config: InfrastructureConfig): Promise<void> {
     const path = join(this.configPath, 'infrastructure.yaml');
     const yaml = stringifyYaml(config);
-    await writeFile(path, yaml, 'utf-8');
+    await this.writeSecureFile(path, yaml);
   }
 
   /**
@@ -178,7 +180,7 @@ export class ConfigManager {
   async saveService(name: string, config: ServiceConfig): Promise<void> {
     const path = join(this.configPath, 'services', `${name}.yaml`);
     const yaml = stringifyYaml(config);
-    await writeFile(path, yaml, 'utf-8');
+    await this.writeSecureFile(path, yaml);
   }
 
   /**
@@ -189,7 +191,7 @@ export class ConfigManager {
     let password = '';
     
     for (let i = 0; i < length; i++) {
-      const randomIndex = Math.floor(Math.random() * charset.length);
+      const randomIndex = randomInt(0, charset.length);
       password += charset[randomIndex];
     }
     
@@ -208,5 +210,18 @@ export class ConfigManager {
    */
   getConfigPath(): string {
     return this.configPath;
+  }
+
+  /**
+   * Write config files with restrictive permissions when supported by OS/filesystem
+   */
+  private async writeSecureFile(path: string, content: string): Promise<void> {
+    await writeFile(path, content, { encoding: 'utf-8', mode: 0o600 });
+
+    try {
+      await chmod(path, 0o600);
+    } catch {
+      // Ignore on filesystems/OSes where chmod semantics are limited
+    }
   }
 }

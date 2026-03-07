@@ -5,6 +5,7 @@
 import { BackupManager } from '../../services/backup/manager.js';
 import { ConfigManager } from '../../core/config/manager.js';
 import chalk from 'chalk';
+import { isAbsolute, join } from 'path';
 
 export class BackupCommand {
   private backup: BackupManager;
@@ -116,8 +117,8 @@ export class BackupCommand {
     }
 
     // If path is relative, assume it's in backup directory
-    if (!backupPath.startsWith('/') && !backupPath.startsWith('\\')) {
-      backupPath = `${this.config.getTuitionDir()}/backups/${backupPath}`;
+    if (!isAbsolute(backupPath)) {
+      backupPath = join(this.config.getTuitionDir(), 'backups', backupPath);
     }
 
     if (options.dryRun) {
@@ -169,8 +170,8 @@ export class BackupCommand {
     }
 
     // If path is relative, assume it's in backup directory
-    if (!backupPath.startsWith('/') && !backupPath.startsWith('\\')) {
-      backupPath = `${this.config.getTuitionDir()}/backups/${backupPath}`;
+    if (!isAbsolute(backupPath)) {
+      backupPath = join(this.config.getTuitionDir(), 'backups', backupPath);
     }
 
     console.log(chalk.blue(`Deleting backup...\n`));

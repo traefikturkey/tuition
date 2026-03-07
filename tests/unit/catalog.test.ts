@@ -46,6 +46,20 @@ describe('ServiceCatalog', () => {
       expect(joyride).toBeDefined();
       expect(joyride?.category).toBe('media');
     });
+
+    it('should include openspeedtest service', async () => {
+      const services = await catalog.getAll();
+      const openspeedtest = services.find(s => s.name === 'openspeedtest');
+      expect(openspeedtest).toBeDefined();
+      expect(openspeedtest?.category).toBe('development');
+    });
+
+    it('should include webtop service', async () => {
+      const services = await catalog.getAll();
+      const webtop = services.find(s => s.name === 'webtop');
+      expect(webtop).toBeDefined();
+      expect(webtop?.category).toBe('development');
+    });
   });
 
   describe('get', () => {

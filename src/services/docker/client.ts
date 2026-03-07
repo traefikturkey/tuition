@@ -242,7 +242,7 @@ export class DockerClient {
           // Extract IP from the CIDR notation (e.g., "10.0.7.2/24" -> "10.0.7.2")
           const ipWithCidr = containerInfo.IPv4Address;
           if (ipWithCidr) {
-            return ipWithCidr.split('/')[0];
+            return ipWithCidr.split('/')[0] || null;
           }
         }
       }

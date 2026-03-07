@@ -2,8 +2,8 @@
 
 **Version**: 0.1.0  
 **Branch**: `feature/initial-implementation`  
-**Status**: ✅ **COMPLETE - Production Ready**  
-**Date**: 2026-02-16
+**Status**: 🚧 **ACTIVE HARDENING - Implementation Ongoing**  
+**Date**: 2026-03-06
 
 ---
 
@@ -20,6 +20,19 @@ All 7 implementation phases have been completed successfully:
 - ✅ Phase 7: TUI & Documentation (Blessed interface, comprehensive docs)
 
 ## 🆕 Recent Updates
+
+### Security, Logging, and Test Hardening (2026-03-06)
+- Added backup path validation to block restore/delete outside configured backup directory
+- Added Windows-safe absolute path handling for backup restore/delete CLI paths
+- Added sensitive value redaction for `tuition config show`
+- Switched generated secret path to cryptographically secure randomness
+- Added restrictive config file write permissions (best-effort `0600` semantics)
+- Added integration tests for CLI security behavior
+- Introduced shared logger utility and adopted it in core catalog/lifecycle warning paths
+- Extended logger usage in backup restore warning path
+- Added low-impact service definitions: `openspeedtest`, `webtop`
+- Added unit tests for lifecycle manager and service command flows
+- Updated `make test` to run Bun tests directly for deterministic cross-platform behavior
 
 ### CoreDNS Integration (2026-02-16)
 - Caddy now automatically uses CoreDNS for DNS resolution
@@ -39,14 +52,14 @@ All 7 implementation phases have been completed successfully:
 
 | Metric | Value |
 |--------|-------|
-| **Source Files** | 22 TypeScript modules |
-| **Test Files** | 6 test suites (54 tests) |
-| **Service Definitions** | 3 YAML files |
+| **Source Files** | 25 TypeScript modules |
+| **Test Files** | 14 test suites (116 tests) |
+| **Service Definitions** | 8 YAML files |
 | **Documentation** | 4 markdown files |
-| **Total Lines of Code** | ~3,800 lines |
+| **Total Lines of Code** | ~4,200 lines |
 | **Test Coverage** | Core modules covered |
 | **Compilation Status** | Zero errors ✅ |
-| **Test Status** | 54/54 passing ✅ |
+| **Test Status** | 116/116 passing ✅ |
 
 ---
 
@@ -136,7 +149,7 @@ bun test tests/unit/config.test.ts
 bun test --coverage
 ```
 
-### Test Suites (54 tests total)
+### Test Suites (116 tests total)
 
 | Suite | Tests | Coverage |
 |-------|-------|----------|
@@ -147,7 +160,7 @@ bun test --coverage
 | Docker Compose | 5 | Compose file generation |
 | Backup Manager | 8 | Archive creation, restoration |
 
-**All tests passing**: 54/54 ✅
+**All tests passing**: 116/116 ✅
 
 ---
 

@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { BackupManager } from '../../src/services/backup/manager.js';
 import { ConfigManager } from '../../src/core/config/manager.js';
-import { mkdtemp, rm, writeFile, mkdir } from 'fs/promises';
+import { mkdtemp, rm, writeFile, mkdir, stat } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -127,6 +127,41 @@ describe('BackupManager', () => {
 
       const deleteResult = await backupManager.deleteBackup(createResult.backupPath!);
       expect(deleteResult.success).toBe(true);
+    });
+
+    it('should reject deleting backups outside the backup directory', async () => {
+      const outsidePath = join(tempDir, 'outside-backup.tar.gz');
+      await writeFile(outsidePath, 'test', 'utf-8');
+
+      const deleteResult = await backupManager.deleteBackup(outsidePath);
+      expect(deleteResult.success).toBe(false);
+      expect(deleteResult.message).toContain('outside the configured backup directory');
+
+      const outsideStats = await stat(outsidePath);
+      expect(outsideStats.size).toBeGreaterThan(0);
+    });
+
+    it('should reject non-backup file extensions for delete', async () => {
+      const invalidPath = join(tempDir, 'backups', 'not-a-backup.txt');
+      await writeFile(invalidPath, 'test', 'utf-8');
+
+      const deleteResult = await backupManager.deleteBackup(invalidPath);
+      expect(deleteResult.success).toBe(false);
+      expect(deleteResult.message).toContain('Invalid backup file extension');
+    });
+  });
+
+  describe('restoreBackup', () => {
+    it('should reject restoring backups outside the backup directory', async () => {
+      const outsidePath = join(tempDir, 'outside-backup.tar.gz');
+      await writeFile(outsidePath, 'test', 'utf-8');
+
+      const restoreResult = await backupManager.restoreBackup(outsidePath, {
+        dryRun: true,
+      });
+
+      expect(restoreResult.success).toBe(false);
+      expect(restoreResult.message).toContain('outside the configured backup directory');
     });
   });
 });

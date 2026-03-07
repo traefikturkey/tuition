@@ -47,11 +47,7 @@ build:
 
 # Run tests
 test:
-	@if command -v bun >/dev/null 2>&1; then \
-		bun test; \
-	else \
-		npx tsx --test tests/**/*.test.ts; \
-	fi
+	@bun test
 
 # TypeScript check
 lint:

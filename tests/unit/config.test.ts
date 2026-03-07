@@ -71,6 +71,10 @@ describe('ConfigManager', () => {
         pgid: 1001,
         dnsProvider: 'cloudflare',
         cloudflareToken: 'test-token',
+        upstreamDns: {
+          primary: '1.1.1.1',
+          backup: '1.0.0.1',
+        },
       });
 
       const config = await configManager.loadGlobal();

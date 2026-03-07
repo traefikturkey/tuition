@@ -8,6 +8,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { parse as parseYaml } from 'yaml';
 import type { ServiceDefinition, ServiceCategory } from '../../types/index.js';
+import { logger } from '../../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -40,7 +41,7 @@ export class ServiceCatalog {
           }
         }
       } catch (error) {
-        console.warn(`Failed to load category ${category}: ${error}`);
+        logger.warn('catalog.loader', `Failed to load category ${category}: ${error}`);
       }
     }
 
@@ -70,7 +71,7 @@ export class ServiceCatalog {
       const parsed = parseYaml(content) as ServiceDefinition;
       return parsed;
     } catch (error) {
-      console.warn(`Failed to load service from ${path}: ${error}`);
+      logger.warn('catalog.loader', `Failed to load service from ${path}: ${error}`);
       return null;
     }
   }

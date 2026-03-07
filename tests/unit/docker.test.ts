@@ -3,7 +3,8 @@
  */
 
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { DockerClient, ContainerStatus } from '../../src/services/docker/client.js';
+import { DockerClient } from '../../src/services/docker/client.js';
+import type { ContainerStatus } from '../../src/services/docker/client.js';
 
 describe('DockerClient', () => {
   let client: DockerClient;
@@ -52,8 +53,8 @@ describe('DockerClient', () => {
       expect(result.status).toBe('Up 5 minutes (healthy)');
       expect(result.health).toBe('healthy');
       expect(result.ports).toHaveLength(1);
-      expect(result.ports[0].privatePort).toBe(80);
-      expect(result.ports[0].publicPort).toBe(8080);
+      expect(result.ports[0]?.privatePort).toBe(80);
+      expect(result.ports[0]?.publicPort).toBe(8080);
     });
 
     it('should handle container without health status', () => {

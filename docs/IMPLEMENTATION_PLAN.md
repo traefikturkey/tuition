@@ -4,6 +4,19 @@
 
 This document outlines the phased implementation strategy for Tuition, a terminal-based homelab management tool. The plan prioritizes delivering core functionality quickly while maintaining quality and adhering to the disaster recovery philosophy.
 
+### Current Implementation Delta (2026-03-06)
+
+- Security hardening implemented for backup restore/delete path containment
+- Backup CLI path handling updated for Windows-safe absolute path resolution
+- Sensitive config output redaction implemented for CLI `config show`
+- Secure secret generation updated to cryptographic randomness
+- Config persistence now uses restrictive file permissions where supported
+- Logging standardization started with shared logger in core catalog/lifecycle paths
+- Logging usage extended into backup restore warning path
+- Integration coverage added for CLI security behavior
+- Additional unit coverage added for lifecycle manager and service command flows
+- New low-impact service definitions added: `openspeedtest`, `webtop`
+
 ---
 
 ## Technology Decisions
@@ -14,7 +27,7 @@ Based on the Decision Points in the PRD:
 |----------|--------|-----------|
 | **Language** | **TypeScript/Bun** | Fast runtime, modern ecosystem, excellent for CLI/TUI tools, good Docker API libraries |
 | **UI Approach** | **Hybrid (CLI + TUI)** | CLI for scripting/automation, TUI for discoverability and guided workflows |
-| **Reverse Proxy** | **Traefik** | Native Docker label support, dynamic discovery, widely used in homelab community |
+| **Reverse Proxy** | **Caddy** | Automatic HTTPS, straightforward Caddyfile generation, Cloudflare DNS challenge support |
 | **Config Format** | **YAML** | Docker ecosystem standard, familiar to target users, human-readable |
 | **Service Catalog** | **Bundled with tool** | Version-locked compatibility, simpler distribution, controlled quality |
 | **Update Strategy** | **Notified + User Action** | Awareness without surprises, allows breaking change review |

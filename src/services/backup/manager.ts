@@ -8,10 +8,11 @@ import { readFile, writeFile, mkdir, readdir, stat, rm } from 'fs/promises';
 import { createGzip } from 'zlib';
 import { promisify } from 'util';
 import { pipeline } from 'stream';
-import { join } from 'path';
+import { join, relative, resolve } from 'path';
 import { spawn } from 'child_process';
 import * as tar from 'tar';
 import type { ConfigManager } from '../../core/config/manager.js';
+import { logger } from '../../utils/logger.js';
 
 const pipelineAsync = promisify(pipeline);
 
@@ -195,13 +196,23 @@ export class BackupManager {
     restored?: string[];
   }> {
     try {
+      const validation = this.validateBackupPath(backupPath);
+      if (!validation.success) {
+        return {
+          success: false,
+          message: validation.message,
+        };
+      }
+
+      const resolvedBackupPath = validation.path!;
+
       // Verify backup exists
       try {
-        await stat(backupPath);
+        await stat(resolvedBackupPath);
       } catch {
         return {
           success: false,
-          message: `Backup file not found: ${backupPath}`,
+          message: `Backup file not found: ${resolvedBackupPath}`,
         };
       }
 
@@ -211,9 +222,9 @@ export class BackupManager {
 
       // Extract backup
       await tar.extract({
-        file: backupPath,
+        file: resolvedBackupPath,
         cwd: tempDir,
-        gzip: backupPath.endsWith('.gz'),
+        gzip: resolvedBackupPath.endsWith('.gz'),
       });
 
       // Read metadata
@@ -244,7 +255,7 @@ export class BackupManager {
       // Confirm restoration if not forced
       if (!options.force) {
         // Would prompt user here in interactive mode
-        console.log(`Warning: This will restore backup from ${metadata.createdAt}`);
+        logger.warn('backup.manager', `Restore requested without force for backup from ${metadata.createdAt}`);
       }
 
       const restored: string[] = [];
@@ -398,10 +409,20 @@ export class BackupManager {
     message: string;
   }> {
     try {
-      await rm(backupPath);
+      const validation = this.validateBackupPath(backupPath);
+      if (!validation.success) {
+        return {
+          success: false,
+          message: validation.message,
+        };
+      }
+
+      const resolvedBackupPath = validation.path!;
+      await rm(resolvedBackupPath);
+
       return {
         success: true,
-        message: `Deleted backup: ${backupPath}`,
+        message: `Deleted backup: ${resolvedBackupPath}`,
       };
     } catch (error) {
       return {
@@ -462,5 +483,43 @@ export class BackupManager {
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  /**
+   * Validate backup path to ensure it stays within configured backup directory
+   */
+  private validateBackupPath(pathValue: string): {
+    success: boolean;
+    path?: string;
+    message: string;
+  } {
+    const resolvedBackupDir = resolve(this.backupDir);
+    const resolvedPath = resolve(pathValue);
+    const pathWithinBackupDir = relative(resolvedBackupDir, resolvedPath);
+
+    if (
+      pathWithinBackupDir.startsWith('..') ||
+      pathWithinBackupDir === ''
+    ) {
+      return {
+        success: false,
+        message: 'Backup path is outside the configured backup directory',
+      };
+    }
+
+    const lower = resolvedPath.toLowerCase();
+    const isValidExtension = lower.endsWith('.tar') || lower.endsWith('.tar.gz');
+    if (!isValidExtension) {
+      return {
+        success: false,
+        message: 'Invalid backup file extension. Expected .tar or .tar.gz',
+      };
+    }
+
+    return {
+      success: true,
+      path: resolvedPath,
+      message: 'Valid backup path',
+    };
   }
 }

@@ -166,8 +166,13 @@ export class CaddyManager {
     configValid: boolean;
     routes: number;
   }> {
-    const container = await docker.getContainer('caddy');
-    const running = container !== null && container.state === 'running';
+    let running = false;
+    try {
+      const container = await docker.getContainer('caddy');
+      running = container !== null && container.state === 'running';
+    } catch {
+      running = false;
+    }
 
     // Count routes in Caddyfile
     let routes = 0;

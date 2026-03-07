@@ -215,8 +215,13 @@ export class CoreDnsManager {
     running: boolean;
     hosts: number;
   }> {
-    const container = await docker.getContainer('coredns');
-    const running = container !== null && container.state === 'running';
+    let running = false;
+    try {
+      const container = await docker.getContainer('coredns');
+      running = container !== null && container.state === 'running';
+    } catch {
+      running = false;
+    }
 
     let hosts = 0;
     try {

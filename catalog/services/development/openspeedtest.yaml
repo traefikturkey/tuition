@@ -1,0 +1,21 @@
+name: openspeedtest
+category: development
+description: Lightweight network speed test web app for local diagnostics
+upstreamUrl: https://github.com/openspeedtest/Speed-Test
+image: openspeedtest/latest:latest
+
+ports:
+  - host: 3001
+    container: 3000
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+
+labels:
+  caddy: openspeedtest.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 3000}}"
+
+resourceLimits:
+  cpus: 0.25
+  memory: 128M

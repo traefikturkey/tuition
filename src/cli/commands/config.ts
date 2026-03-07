@@ -5,6 +5,35 @@
 import { ConfigManager } from '../../core/config/manager.js';
 import chalk from 'chalk';
 
+const SENSITIVE_KEY_PATTERN = /(token|password|secret|key|hash)/i;
+
+export function redactSensitiveValues<T>(value: T): T {
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(item => redactSensitiveValues(item)) as T;
+  }
+
+  if (typeof value === 'object') {
+    const input = value as Record<string, unknown>;
+    const output: Record<string, unknown> = {};
+
+    for (const [key, nestedValue] of Object.entries(input)) {
+      if (SENSITIVE_KEY_PATTERN.test(key)) {
+        output[key] = '[REDACTED]';
+      } else {
+        output[key] = redactSensitiveValues(nestedValue);
+      }
+    }
+
+    return output as T;
+  }
+
+  return value;
+}
+
 export class ConfigCommand {
   async show(options: { path?: string }): Promise<void> {
     const manager = new ConfigManager(options.path);
@@ -16,18 +45,19 @@ export class ConfigCommand {
     }
 
     const config = await manager.load();
+    const redactedConfig = redactSensitiveValues(config);
 
     console.log(chalk.blue('Global Configuration:\n'));
-    console.log(chalk.gray(JSON.stringify(config.global, null, 2)));
+    console.log(chalk.gray(JSON.stringify(redactedConfig.global, null, 2)));
 
-    if (config.infrastructure) {
+    if (redactedConfig.infrastructure) {
       console.log(chalk.blue('\nInfrastructure Configuration:\n'));
-      console.log(chalk.gray(JSON.stringify(config.infrastructure, null, 2)));
+      console.log(chalk.gray(JSON.stringify(redactedConfig.infrastructure, null, 2)));
     }
 
-    if (Object.keys(config.services).length > 0) {
+    if (Object.keys(redactedConfig.services).length > 0) {
       console.log(chalk.blue('\nService Configurations:\n'));
-      for (const [name, serviceConfig] of Object.entries(config.services)) {
+      for (const [name, serviceConfig] of Object.entries(redactedConfig.services)) {
         console.log(chalk.gray(`${name}:`));
         console.log(chalk.gray(JSON.stringify(serviceConfig, null, 2)));
       }

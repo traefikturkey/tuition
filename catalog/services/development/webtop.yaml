@@ -1,0 +1,27 @@
+name: webtop
+category: development
+description: Browser-accessible Linux desktop for lightweight remote admin tasks
+upstreamUrl: https://github.com/linuxserver/docker-webtop
+image: lscr.io/linuxserver/webtop:latest
+
+ports:
+  - host: 3002
+    container: 3000
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  PUID: ${PUID}
+  PGID: ${PGID}
+
+volumes:
+  - host: ./data/webtop/config
+    container: /config
+
+labels:
+  caddy: webtop.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 3000}}"
+
+resourceLimits:
+  cpus: 0.5
+  memory: 512M

@@ -14,6 +14,7 @@ import { docker } from '../../services/docker/client.js';
 import { CaddyManager } from '../../services/caddy/manager.js';
 import { CoreDnsManager } from '../../services/dns/coredns.js';
 import type { ServiceDefinition, ServiceConfig } from '../../types/index.js';
+import { logger } from '../../utils/logger.js';
 
 export type ServiceState = 'available' | 'enabled' | 'running' | 'stopped' | 'disabled';
 
@@ -236,14 +237,14 @@ export class LifecycleManager {
     try {
       await this.updateCaddyConfig();
     } catch (error) {
-      console.warn(`Warning: Failed to update Caddy configuration: ${error}`);
+      logger.warn('lifecycle.manager', `Failed to update Caddy configuration: ${error}`);
     }
 
     // Update CoreDNS configuration
     try {
       await this.updateDnsConfig();
     } catch (error) {
-      console.warn(`Warning: Failed to update CoreDNS configuration: ${error}`);
+      logger.warn('lifecycle.manager', `Failed to update CoreDNS configuration: ${error}`);
     }
 
     return {
@@ -291,14 +292,14 @@ export class LifecycleManager {
     try {
       await this.updateCaddyConfig();
     } catch (error) {
-      console.warn(`Warning: Failed to update Caddy configuration: ${error}`);
+      logger.warn('lifecycle.manager', `Failed to update Caddy configuration: ${error}`);
     }
 
     // Update CoreDNS configuration
     try {
       await this.updateDnsConfig();
     } catch (error) {
-      console.warn(`Warning: Failed to update CoreDNS configuration: ${error}`);
+      logger.warn('lifecycle.manager', `Failed to update CoreDNS configuration: ${error}`);
     }
 
     return {
