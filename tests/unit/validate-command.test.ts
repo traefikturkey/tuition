@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { mkdtemp, rm } from 'fs/promises';
+import { mkdtemp, rm, writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { ValidateCommand } from '../../src/cli/commands/validate.js';
@@ -14,6 +14,7 @@ describe('ValidateCommand', () => {
   let configPath: string;
   let captured: string[];
   let originalLog: typeof console.log;
+  const originalLoadGlobal = ConfigManager.prototype.loadGlobal;
 
   beforeEach(async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'tuition-validate-command-test-'));
@@ -27,6 +28,7 @@ describe('ValidateCommand', () => {
   });
 
   afterEach(async () => {
+    ConfigManager.prototype.loadGlobal = originalLoadGlobal;
     console.log = originalLog;
     await rm(tempDir, { recursive: true, force: true });
   });
@@ -87,5 +89,65 @@ describe('ValidateCommand', () => {
 
     expect(result).toBe(false);
     expect(captured.join('\n')).toContain('Global configuration has errors');
+  });
+
+  it('returns false when global configuration cannot be loaded', async () => {
+    const manager = new ConfigManager(configPath);
+    await manager.initialize();
+    await manager.saveGlobal({
+      hostname: 'test-host',
+      domain: 'example.com',
+      adminEmail: 'admin@example.com',
+      timezone: 'UTC',
+      puid: 1000,
+      pgid: 1000,
+      dnsProvider: 'cloudflare',
+      cloudflareToken: 'cf-token',
+      upstreamDns: {
+        primary: '1.1.1.1',
+      },
+    });
+
+    ConfigManager.prototype.loadGlobal = async () => {
+      throw new Error('boom');
+    };
+
+    const command = new ValidateCommand();
+    const result = await command.execute({ path: configPath });
+
+    expect(result).toBe(false);
+    expect(captured.join('\n')).toContain('Failed to load global configuration');
+  });
+
+  it('returns false when a service config has an invalid service name', async () => {
+    const manager = new ConfigManager(configPath);
+    await manager.initialize();
+    await manager.saveGlobal({
+      hostname: 'test-host',
+      domain: 'example.com',
+      adminEmail: 'admin@example.com',
+      timezone: 'UTC',
+      puid: 1000,
+      pgid: 1000,
+      dnsProvider: 'cloudflare',
+      cloudflareToken: 'cf-token',
+      upstreamDns: {
+        primary: '1.1.1.1',
+      },
+    });
+
+    const servicesPath = join(configPath, 'services');
+    await mkdir(servicesPath, { recursive: true });
+    await writeFile(
+      join(servicesPath, 'BadService.yaml'),
+      ['enabled: true', 'imageTag: latest'].join('\n'),
+      'utf-8'
+    );
+
+    const command = new ValidateCommand();
+    const result = await command.execute({ path: configPath });
+
+    expect(result).toBe(false);
+    expect(captured.join('\n')).toContain('BadService');
   });
 });

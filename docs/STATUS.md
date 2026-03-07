@@ -33,6 +33,7 @@ All 7 implementation phases have been completed successfully:
 - Added low-impact service definitions: `openspeedtest`, `webtop`
 - Added unit tests for lifecycle manager and service command flows
 - Added CLI dispatch and parser registration smoke tests
+- Added deeper config/validate command behavior coverage for failure branches
 - Updated `make test` to run Bun tests directly for deterministic cross-platform behavior
 
 ### CoreDNS Integration (2026-02-16)
@@ -54,13 +55,13 @@ All 7 implementation phases have been completed successfully:
 | Metric | Value |
 |--------|-------|
 | **Source Files** | 25 TypeScript modules |
-| **Test Files** | 21 test suites (142 tests) |
+| **Test Files** | 22 test suites (149 tests) |
 | **Service Definitions** | 8 YAML files |
 | **Documentation** | 4 markdown files |
 | **Total Lines of Code** | ~4,200 lines |
 | **Test Coverage** | Core modules covered |
 | **Compilation Status** | Zero errors ✅ |
-| **Test Status** | 142/142 passing ✅ |
+| **Test Status** | 149/149 passing ✅ |
 
 ---
 
@@ -150,7 +151,7 @@ bun test tests/unit/config.test.ts
 bun test --coverage
 ```
 
-### Test Suites (142 tests total)
+### Test Suites (149 tests total)
 
 | Suite | Tests | Coverage |
 |-------|-------|----------|
@@ -161,7 +162,7 @@ bun test --coverage
 | Docker Compose | 5 | Compose file generation |
 | Backup Manager | 8 | Archive creation, restoration |
 
-**All tests passing**: 142/142 ✅
+**All tests passing**: 149/149 ✅
 
 ---
 
