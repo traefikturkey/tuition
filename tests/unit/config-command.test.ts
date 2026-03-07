@@ -46,4 +46,20 @@ describe("ConfigCommand redaction", () => {
     expect(redactSensitiveValues(true)).toBe(true);
     expect(redactSensitiveValues(null)).toBe(null);
   });
+
+  it("should redact sensitive keys in top-level arrays and preserve undefined entries", () => {
+    const input = [
+      { clientSecret: "secret-1", name: "svc1" },
+      undefined,
+      { apiKey: "secret-2", name: "svc2" },
+    ];
+
+    const result = redactSensitiveValues(input);
+
+    expect(result[0]?.clientSecret).toBe("[REDACTED]");
+    expect(result[0]?.name).toBe("svc1");
+    expect(result[1]).toBeUndefined();
+    expect(result[2]?.apiKey).toBe("[REDACTED]");
+    expect(result[2]?.name).toBe("svc2");
+  });
 });

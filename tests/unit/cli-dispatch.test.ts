@@ -93,6 +93,35 @@ describe("CLI command dispatch", () => {
     expect(receivedOptions.path).toBe("/tmp/restore-config");
   });
 
+  it("dispatches backup create with parsed compression and volume flags", async () => {
+    let receivedOptions: { includeVolumes?: boolean; noCompression?: boolean } = {};
+
+    patchSet.patch(
+      BackupCommand.prototype,
+      "create",
+      async (options: { includeVolumes?: boolean; noCompression?: boolean }) => {
+        receivedOptions = options;
+      }
+    );
+
+    const cli = createCli();
+    await cli.parseAsync([
+      "node",
+      "tuition",
+      "backup",
+      "create",
+      "--include-volumes",
+      "--no-compression",
+      "--path",
+      "/tmp/backup-config",
+    ]);
+
+    expect(receivedOptions).toEqual({
+      includeVolumes: true,
+      noCompression: true,
+    });
+  });
+
   it("dispatches service logs with numeric tail parsing and follow flag", async () => {
     let receivedName = "";
     let receivedOptions: { tail?: number; follow?: boolean } = {};

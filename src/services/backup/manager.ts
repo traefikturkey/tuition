@@ -8,7 +8,7 @@ import { readFile, writeFile, mkdir, readdir, stat, rm } from "fs/promises";
 import { createGzip } from "zlib";
 import { promisify } from "util";
 import { pipeline } from "stream";
-import { join, relative, resolve } from "path";
+import { basename, join, relative, resolve } from "path";
 import { spawn } from "child_process";
 import * as tar from "tar";
 import type { ConfigManager } from "../../core/config/manager.js";
@@ -131,8 +131,8 @@ export class BackupManager {
         await mkdir(composeDest, { recursive: true });
         for (const file of composeFiles) {
           const content = await readFile(file, "utf-8");
-          const basename = file.split("/").pop() || file.split("\\").pop() || "compose.yaml";
-          await writeFile(join(composeDest, basename), content, "utf-8");
+          const composeFileName = basename(file) || "compose.yaml";
+          await writeFile(join(composeDest, composeFileName), content, "utf-8");
         }
         backupContents.push("compose-files");
       }

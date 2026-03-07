@@ -86,6 +86,56 @@ describe("ConfigCommand behavior", () => {
     expect(output).not.toContain("token-123");
   });
 
+  it("shows only the global section when infrastructure and services are empty", async () => {
+    ConfigManager.prototype.exists = async () => true;
+    ConfigManager.prototype.load = async () => ({
+      global: {
+        hostname: "test-host",
+        domain: "example.com",
+      },
+      infrastructure: undefined,
+      services: {},
+    } as never);
+
+    const command = new ConfigCommand();
+    await command.show({});
+
+    const output = captured.join("\n");
+    expect(output).toContain("Global Configuration:");
+    expect(output).not.toContain("Infrastructure Configuration:");
+    expect(output).not.toContain("Service Configurations:");
+  });
+
+  it("shows infrastructure and multiple service configurations when present", async () => {
+    ConfigManager.prototype.exists = async () => true;
+    ConfigManager.prototype.load = async () => ({
+      global: {
+        hostname: "test-host",
+        domain: "example.com",
+      },
+      infrastructure: {
+        reverseProxy: "caddy",
+      },
+      services: {
+        whoami: {
+          enabled: true,
+        },
+        redis: {
+          enabled: false,
+        },
+      },
+    } as never);
+
+    const command = new ConfigCommand();
+    await command.show({});
+
+    const output = captured.join("\n");
+    expect(output).toContain("Infrastructure Configuration:");
+    expect(output).toContain("Service Configurations:");
+    expect(output).toContain("whoami:");
+    expect(output).toContain("redis:");
+  });
+
   it("prints invalid key format for malformed set key", async () => {
     ConfigManager.prototype.exists = async () => true;
 
@@ -134,6 +184,67 @@ describe("ConfigCommand behavior", () => {
 
     expect((saved as { puid: number }).puid).toBe(2000);
     expect(captured.join("\n")).toContain("Set global.puid = 2000");
+  });
+
+  it("sets global boolean false values and preserves plain strings", async () => {
+    ConfigManager.prototype.exists = async () => true;
+
+    const globalConfig = {
+      hostname: "test-host",
+      domain: "example.com",
+      adminEmail: "admin@example.com",
+      timezone: "UTC",
+      puid: 1000,
+      pgid: 1000,
+      dnsProvider: "cloudflare" as const,
+      cloudflareToken: "token",
+      upstreamDns: {
+        primary: "1.1.1.1",
+      },
+    };
+
+    const saves: unknown[] = [];
+
+    ConfigManager.prototype.loadGlobal = async () => ({ ...globalConfig });
+    ConfigManager.prototype.saveGlobal = async (config) => {
+      saves.push(config);
+    };
+
+    const command = new ConfigCommand();
+    await command.set("global.puid", "false", {});
+    await command.set("global.domain", "example.internal", {});
+
+    expect((saves[0] as { puid: boolean }).puid).toBe(false);
+    expect((saves[1] as { domain: string }).domain).toBe("example.internal");
+  });
+
+  it("sets global true values as booleans", async () => {
+    ConfigManager.prototype.exists = async () => true;
+
+    ConfigManager.prototype.loadGlobal = async () => ({
+      hostname: "test-host",
+      domain: "example.com",
+      adminEmail: "admin@example.com",
+      timezone: "UTC",
+      puid: 1000,
+      pgid: 1000,
+      dnsProvider: "cloudflare" as const,
+      cloudflareToken: "token",
+      upstreamDns: {
+        primary: "1.1.1.1",
+      },
+    });
+
+    let saved: unknown;
+    ConfigManager.prototype.saveGlobal = async (config) => {
+      saved = config;
+    };
+
+    const command = new ConfigCommand();
+    await command.set("global.puid", "true", {});
+
+    expect((saved as { puid: boolean }).puid).toBe(true);
+    expect(captured.join("\n")).toContain("Set global.puid = true");
   });
 
   it("prints unknown section for unsupported config section", async () => {

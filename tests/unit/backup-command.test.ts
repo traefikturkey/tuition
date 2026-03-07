@@ -45,7 +45,6 @@ describe("BackupCommand", () => {
       includeDatabases: boolean;
       includeVolumes: boolean;
       compression: boolean;
-      destination?: string;
     };
 
     const commandMock = command as unknown as {
@@ -94,7 +93,6 @@ describe("BackupCommand", () => {
     expect(received?.includeDatabases).toBe(true);
     expect(received?.includeVolumes).toBe(true);
     expect(received?.compression).toBe(false);
-    expect(received?.destination).toBe("/tmp/backups");
   });
 
   it("prints invalid backup number for restore index out of range", async () => {

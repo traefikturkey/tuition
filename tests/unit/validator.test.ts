@@ -131,6 +131,23 @@ describe("ConfigValidator", () => {
       expect(result.errors.some((e) => e.field === "upstreamDns.primary" && e.message.includes("required"))).toBe(true);
     });
 
+    it("should fail when upstream DNS configuration is missing entirely", () => {
+      const config = {
+        hostname: "test",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "token",
+      } as GlobalConfig;
+
+      const result = validator.validateGlobal(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === "upstreamDns.primary")).toBe(true);
+    });
+
     it("should fail on invalid primary and backup upstream DNS addresses", () => {
       const config = {
         hostname: "test",
@@ -173,6 +190,45 @@ describe("ConfigValidator", () => {
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
+
+    it("should accept full IPv6 addresses in upstream DNS", () => {
+      const config: GlobalConfig = {
+        hostname: "test-server",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "test-token",
+        upstreamDns: {
+          primary: "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+        },
+      };
+
+      const result = validator.validateGlobal(config);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("does not require a cloudflare token for other DNS providers", () => {
+      const config = {
+        hostname: "test-server",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "manual",
+        upstreamDns: {
+          primary: "1.1.1.1",
+        },
+      } as unknown as GlobalConfig;
+
+      const result = validator.validateGlobal(config);
+      expect(result.valid).toBe(true);
+      expect(result.errors.some((e) => e.field === "cloudflareToken")).toBe(false);
+    });
   });
 
   describe("validateService", () => {
@@ -207,6 +263,19 @@ describe("ConfigValidator", () => {
     it("should accept service names with numbers", () => {
       const result = validator.validateService("service-123", { enabled: true });
       expect(result.valid).toBe(true);
+    });
+
+    it("exposes helper validation behavior for email and IP formats", () => {
+      const internals = validator as unknown as {
+        isValidEmail: (email: string) => boolean;
+        isValidIp: (ip: string) => boolean;
+      };
+
+      expect(internals.isValidEmail("admin@example.com")).toBe(true);
+      expect(internals.isValidEmail("invalid-email")).toBe(false);
+      expect(internals.isValidIp("8.8.8.8")).toBe(true);
+      expect(internals.isValidIp("2001:0db8:85a3:0000:0000:8a2e:0370:7334")).toBe(true);
+      expect(internals.isValidIp("not-an-ip")).toBe(false);
     });
   });
 });

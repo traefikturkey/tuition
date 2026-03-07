@@ -126,6 +126,72 @@ describe("DnsCommand", () => {
     expect(output).toContain("CoreDNS started successfully");
   });
 
+  it("loads enabled service definitions before starting CoreDNS", async () => {
+    let generatedServices: Array<{ name: string }> | undefined;
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        exists: () => Promise<boolean>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+        loadGlobal: () => Promise<{ upstreamDns: { primary: string; backup?: string } }>;
+      };
+      dns: {
+        generateConfig: (
+          enabledServices: Array<{ name: string }>,
+          staticHosts: Record<string, string>,
+          upstreamDns?: { primary: string; backup?: string }
+        ) => Promise<void>;
+        start: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      exists: async () => true,
+      loadServices: async () => ({
+        whoami: { enabled: true },
+        redis: { enabled: false },
+        missing: { enabled: true },
+      }),
+      loadGlobal: async () => ({
+        upstreamDns: {
+          primary: "1.1.1.1",
+        },
+      }),
+    };
+    commandMock.dns = {
+      generateConfig: async (enabledServices) => {
+        generatedServices = enabledServices;
+      },
+      start: async () => ({ success: true, message: "CoreDNS started successfully" }),
+    };
+    patchSet.patch(catalog, "get", async (name: string) => {
+      if (name === "whoami") {
+        return {
+          name,
+          category: "development",
+          description: "service",
+          image: "test:latest",
+        } as never;
+      }
+
+      return undefined;
+    });
+
+    await command.start({});
+
+    expect(generatedServices).toEqual([
+      {
+        name: "whoami",
+        category: "development",
+        description: "service",
+        image: "test:latest",
+      },
+    ]);
+    expect(consoleCapture.output.join("\n")).toContain("Generated CoreDNS config for 1 services");
+  });
+
   it("shows reload failure message during regenerate", async () => {
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
@@ -178,6 +244,24 @@ describe("DnsCommand", () => {
 
     const output = consoleCapture.output.join("\n");
     expect(output).toContain("stop failed");
+  });
+
+  it("shows success output when stop succeeds", async () => {
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      dns: {
+        stop: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.dns = {
+      stop: async () => ({ success: true, message: "stopped cleanly" }),
+    };
+
+    await command.stop({});
+
+    expect(consoleCapture.output.join("\n")).toContain("stopped cleanly");
   });
 
   it("shows running status details when CoreDNS is up", async () => {
@@ -254,6 +338,108 @@ describe("DnsCommand", () => {
 
     const output = consoleCapture.output.join("\n");
     expect(output).toContain("CoreDNS config regenerated and reloaded");
+  });
+
+  it("regenerate uses enabled service definitions from the catalog", async () => {
+    let generatedServices: Array<{ name: string }> | undefined;
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+        loadGlobal: () => Promise<{ upstreamDns: { primary: string; backup?: string } }>;
+      };
+      dns: {
+        generateConfig: (
+          enabledServices: Array<{ name: string }>,
+          staticHosts: Record<string, string>,
+          upstreamDns?: { primary: string; backup?: string }
+        ) => Promise<void>;
+        reload: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadServices: async () => ({
+        whoami: { enabled: true },
+        redis: { enabled: false },
+      }),
+      loadGlobal: async () => ({
+        upstreamDns: { primary: "1.1.1.1", backup: "1.0.0.1" },
+      }),
+    };
+    commandMock.dns = {
+      generateConfig: async (enabledServices) => {
+        generatedServices = enabledServices;
+      },
+      reload: async () => ({ success: true, message: "reloaded" }),
+    };
+    patchSet.patch(catalog, "get", async (name: string) => ({
+      name,
+      category: "development",
+      description: "service",
+      image: "test:latest",
+    }) as never);
+
+    await command.regenerate({});
+
+    expect(generatedServices).toHaveLength(1);
+    expect(generatedServices?.[0]?.name).toBe("whoami");
+    expect(consoleCapture.output.join("\n")).toContain("Regenerating CoreDNS config for 1 services...");
+  });
+
+  it("saves the Google preset and reloads CoreDNS", async () => {
+    const interfaceMock = mockReadlineAnswers(["1"]);
+    let savedConfig:
+      | {
+          upstreamDns?: { primary: string; backup?: string };
+        }
+      | undefined;
+
+    const commandMock = command as unknown as {
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<Record<string, unknown> & { upstreamDns?: { primary: string; backup?: string } }>;
+        saveGlobal: (config: Record<string, unknown>) => Promise<void>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+      };
+      dns: {
+        generateConfig: (
+          enabledServices: unknown[],
+          staticHosts: Record<string, string>,
+          upstreamDns?: { primary: string; backup?: string }
+        ) => Promise<void>;
+        reload: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({
+        hostname: "lab",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "token",
+      }),
+      saveGlobal: async (config) => {
+        savedConfig = config as typeof savedConfig;
+      },
+      loadServices: async () => ({}),
+    };
+    commandMock.dns = {
+      generateConfig: async () => undefined,
+      reload: async () => ({ success: true, message: "reloaded" }),
+    };
+
+    await command.configure();
+
+    expect(interfaceMock.wasClosed()).toBe(true);
+    expect(savedConfig?.upstreamDns).toEqual({ primary: "8.8.8.8", backup: "8.8.4.4" });
   });
 
   it("shows not initialized message when configure is called before init", async () => {

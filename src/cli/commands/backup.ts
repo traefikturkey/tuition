@@ -41,7 +41,6 @@ export class BackupCommand {
       includeDatabases: true,
       includeVolumes: options.includeVolumes || false,
       compression: !options.noCompression,
-      ...(options.path ? { destination: options.path } : {}),
     });
 
     if (result.success) {

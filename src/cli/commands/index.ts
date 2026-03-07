@@ -311,7 +311,10 @@ export function createCli(): Command {
     .option('-p, --path <path>', 'Custom configuration path')
     .action(async (options) => {
       const cmd = new BackupCommand(options.path);
-      await cmd.create(options);
+      await cmd.create({
+        includeVolumes: options.includeVolumes,
+        noCompression: options.compression === false,
+      });
     });
 
   backupCmd

@@ -125,6 +125,88 @@ describe("CaddyCommand", () => {
     expect(output).toContain("Caddy started successfully");
   });
 
+  it("loads enabled service definitions before starting caddy", async () => {
+    let generatedServices: Array<{ name: string }> | undefined;
+    let receivedEnv: Record<string, string> | undefined;
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<{
+          domain: string;
+          hostname: string;
+          timezone: string;
+          puid: number;
+          pgid: number;
+          cloudflareToken?: string;
+        }>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+      };
+      caddy: {
+        generateConfig: (config: unknown, services: Array<{ name: string }>) => Promise<void>;
+        start: (env: Record<string, string>) => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({
+        domain: "example.com",
+        hostname: "host",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+      }),
+      loadServices: async () => ({
+        whoami: { enabled: true },
+        redis: { enabled: false },
+        missing: { enabled: true },
+      }),
+    };
+    commandMock.caddy = {
+      generateConfig: async (_config, services) => {
+        generatedServices = services;
+      },
+      start: async (env) => {
+        receivedEnv = env;
+        return { success: true, message: "started" };
+      },
+    };
+    patchSet.patch(catalog, "get", async (name: string) => {
+      if (name === "whoami") {
+        return {
+          name,
+          category: "development",
+          description: "service",
+          image: "test:latest",
+        } as never;
+      }
+
+      return undefined;
+    });
+
+    await command.start({});
+
+    expect(generatedServices).toEqual([
+      {
+        name: "whoami",
+        category: "development",
+        description: "service",
+        image: "test:latest",
+      },
+    ]);
+    expect(receivedEnv).toEqual({
+      DOMAIN: "example.com",
+      HOSTNAME: "host",
+      TZ: "UTC",
+      PUID: "1000",
+      PGID: "1000",
+    });
+    expect(consoleCapture.output.join("\n")).toContain("Generated Caddyfile with 1 routes");
+  });
+
   it("shows failure output when stop fails", async () => {
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
@@ -190,6 +272,116 @@ describe("CaddyCommand", () => {
 
     expect(receivedEnv?.CF_API_TOKEN).toBe("token-xyz");
     expect(consoleCapture.output.join("\n")).toContain("restarted");
+  });
+
+  it("reload regenerates config using enabled service definitions", async () => {
+    let generatedServices: Array<{ name: string }> | undefined;
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadGlobal: () => Promise<{
+          domain: string;
+          hostname: string;
+          timezone: string;
+          puid: number;
+          pgid: number;
+        }>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+      };
+      caddy: {
+        generateConfig: (config: unknown, services: Array<{ name: string }>) => Promise<void>;
+        reload: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadGlobal: async () => ({
+        domain: "example.com",
+        hostname: "host",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+      }),
+      loadServices: async () => ({
+        whoami: { enabled: true },
+        redis: { enabled: false },
+      }),
+    };
+    commandMock.caddy = {
+      generateConfig: async (_config, services) => {
+        generatedServices = services;
+      },
+      reload: async () => ({ success: true, message: "reloaded" }),
+    };
+    patchSet.patch(catalog, "get", async (name: string) => ({
+      name,
+      category: "development",
+      description: "service",
+      image: "test:latest",
+    }) as never);
+
+    await command.reload({});
+
+    expect(generatedServices).toHaveLength(1);
+    expect(generatedServices?.[0]?.name).toBe("whoami");
+    expect(consoleCapture.output.join("\n")).toContain("reloaded");
+  });
+
+  it("restart regenerates config using enabled service definitions", async () => {
+    let generatedServices: Array<{ name: string }> | undefined;
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadGlobal: () => Promise<{
+          domain: string;
+          hostname: string;
+          timezone: string;
+          puid: number;
+          pgid: number;
+        }>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+      };
+      caddy: {
+        generateConfig: (config: unknown, services: Array<{ name: string }>) => Promise<void>;
+        restart: (env: Record<string, string>) => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadGlobal: async () => ({
+        domain: "example.com",
+        hostname: "host",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+      }),
+      loadServices: async () => ({
+        whoami: { enabled: true },
+        redis: { enabled: false },
+      }),
+    };
+    commandMock.caddy = {
+      generateConfig: async (_config, services) => {
+        generatedServices = services;
+      },
+      restart: async () => ({ success: true, message: "restarted with routes" }),
+    };
+    patchSet.patch(catalog, "get", async (name: string) => ({
+      name,
+      category: "development",
+      description: "service",
+      image: "test:latest",
+    }) as never);
+
+    await command.restart({});
+
+    expect(generatedServices).toHaveLength(1);
+    expect(generatedServices?.[0]?.name).toBe("whoami");
+    expect(consoleCapture.output.join("\n")).toContain("restarted with routes");
   });
 
   it("shows failure output when reload fails", async () => {

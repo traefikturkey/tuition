@@ -16,23 +16,22 @@ available if the session closes.
 - `bun test --coverage` passes
 - `make lint` passes
 - Current overall line coverage: **99.65%**
-- Current overall function coverage: **96.16%**
-- 321 tests passing across 28 files
-- No `tests/e2e/` suite exists yet
+- Current overall function coverage: **96.93%**
+- 358 tests passing across 30 files
+- Thin `tests/e2e/` smoke coverage now exists for CLI and TUI entry flows
 
 ### Lowest-Coverage Source Files
 
-- `src/cli/commands/caddy.ts` - 100.00% lines / 79.31% functions
 - `src/cli/commands/config.ts` - 100.00% lines / 85.71% functions
-- `src/core/config/validator.ts` - 100.00% lines / 80.00% functions
-- `src/services/backup/manager.ts` - 100.00% lines / 94.44% functions
-- `src/cli/commands/dns.ts` - 100.00% lines / 82.61% functions
+- `src/core/config/validator.ts` - 100.00% lines / 97.14% functions
+- `src/cli/commands/validate.ts` - 100.00% lines / 66.67% functions
 
 ### Recently Closed Gaps
 
 - `src/core/config/manager.ts` - 100.00% lines
 - `src/core/lifecycle/manager.ts` - 100.00% lines
 - `src/core/state/detector.ts` - 100.00% lines
+- `src/services/backup/manager.ts` - 100.00% lines / 100.00% functions
 - `src/tui/app.ts` - 100.00% lines
 - `src/tui/views/service-browser.ts` - 100.00% lines
 
@@ -41,7 +40,7 @@ available if the session closes.
 - `src/cli/commands/backup.ts` - 100.00% lines
 - `src/cli/commands/caddy.ts` - 100.00% lines
 - `src/cli/commands/config.ts` - 100.00% lines
-- `src/cli/commands/dns.ts` - 100.00% lines
+- `src/cli/commands/dns.ts` - 100.00% lines / 100.00% functions
 - `src/cli/commands/index.ts` - 100.00% lines
 - `src/cli/commands/init.ts` - 100.00% lines
 - `src/cli/commands/service.ts` - 100.00% lines
@@ -111,18 +110,18 @@ available if the session closes.
 
 ### 9. Integration Expansion
 
-- [~] Add `init -> validate -> config show` integration flow
-- [ ] Add `service enable -> caddy regenerate -> dns regenerate` integration flow
+- [x] Add `init -> validate -> config show` integration flow
+- [x] Add `service enable -> caddy regenerate -> dns regenerate` integration flow
 - [x] Add `backup create -> list -> restore` integration flow
-- [~] Add failure propagation integration tests for command-to-manager wiring
+- [x] Add failure propagation integration tests for command-to-manager wiring
 
 ### 10. End-to-End Coverage
 
-- [ ] Create `tests/e2e/`
-- [ ] Add first-run initialization e2e test
-- [ ] Add simple service enablement e2e test
-- [ ] Add backup walkthrough e2e test
-- [ ] Add TUI launch and first-screen e2e test
+- [x] Create `tests/e2e/`
+- [x] Add first-run initialization e2e test
+- [x] Add simple service enablement e2e test
+- [x] Add backup walkthrough e2e test
+- [x] Add TUI launch and first-screen e2e test
 
 ### 11. Future Real-Docker and Full E2E Work
 
@@ -132,18 +131,29 @@ available if the session closes.
 
 ## Immediate Execution Order
 
-1. Continue expanding integration coverage in existing files
-2. Add more command-to-manager failure-propagation integration coverage
-3. Decide whether to raise function coverage in low-branch command/config files
-4. Add initial e2e coverage
-5. Plan minimal `tests/e2e/` scaffolding without new heavy Docker dependencies
+1. Decide whether to keep pushing function coverage in `config.ts`, `backup/manager.ts`, and `validate.ts`
+2. Add clearer hotspot reporting for uncovered branches and low-function files
+3. Plan Docker-backed integration coverage for lifecycle, Caddy, DNS, and backup
+4. Expand the thin e2e layer only where it exposes real parser or lifecycle regressions
+5. Keep using Windows-path cases in backup coverage to guard cross-platform behavior
 
 ## Latest Progress Notes
 
 - Service-manager process helper branches are now covered deterministically through internal spawn seams rather than module-level process mocks.
 - `src/services/docker/compose.ts`, `src/services/caddy/manager.ts`, and `src/services/dns/coredns.ts` are now at **100% line coverage**.
-- Integration coverage has started expanding beyond isolated happy paths with a saved-config → validate → config-show round-trip in `tests/integration/multi-command-flow.test.ts`.
+- Integration coverage now includes saved-config → validate → config-show and service-enable → caddy-regenerate → dns-regenerate command flows in `tests/integration/multi-command-flow.test.ts`.
 - Added a real `BackupCommand` integration round-trip covering create → list → dry-run restore in `tests/integration/multi-command-flow.test.ts`.
-- Added a real restore failure-propagation integration case using a corrupt backup archive in `tests/integration/multi-command-flow.test.ts`.
-- Fixed a real regression in `src/cli/commands/backup.ts` where `create()` could overwrite the backup manager default destination with `undefined`.
+- Added real failure-propagation integration cases for backup restore, Caddy regenerate, and DNS regenerate in `tests/integration/multi-command-flow.test.ts`.
+- Added thin CLI and TUI smoke suites in `tests/e2e/cli-smoke.e2e.test.ts` and `tests/e2e/tui-smoke.e2e.test.ts`, including a real `service enable --no-start` parser flow.
+- Added real `config set` persistence coverage through both the CLI parser and command-level integration flows.
+- Fixed a real CLI parser regression in `src/cli/commands/index.ts` so `backup create --no-compression` now maps correctly into `BackupCommand.create()`.
+- Fixed a real backup command bug in `src/cli/commands/backup.ts` where the CLI config path could be treated as the backup destination.
+- Fixed a real Windows backup bug in `src/services/backup/manager.ts` where compose files were archived using an incorrect basename derived from a full absolute path.
+- `src/cli/commands/caddy.ts` is now at **100% function coverage** after adding tests that exercise enabled-service discovery during start, restart, and reload.
+- Added focused branch tests for `ConfigCommand`, `ConfigValidator`, `BackupManager`, and `ValidateCommand`, improving the full-suite baseline to **344 passing tests** and raising `tests/unit/validator.test.ts` to **97.14% function coverage**.
+- Added more `BackupManager` and `ValidateCommand` branch tests plus parser/integration coverage for `ConfigCommand`, bringing the baseline to **349 passing tests**.
+- Added focused `DnsCommand` tests for enabled-service discovery, successful stop, and preset DNS selection, bringing `src/cli/commands/dns.ts` to **100% function coverage** and the full-suite baseline to **354 passing tests**.
 - `src/services/caddy/caddyfile.ts` is now at **100% line coverage** after covering the labels-without-caddy branch found through LCOV output.
+- Added backup restoration and ordering tests that brought `src/services/backup/manager.ts` to **100% function coverage** and raised the full-suite baseline to **355 passing tests**.
+- Added a multi-service `ConfigCommand.show()` behavior test; the suite is now at **356 passing tests**, while `src/cli/commands/config.ts` and `src/cli/commands/validate.ts` still appear capped by Bun's function-accounting rather than missing line coverage.
+- Added another focused pass for `ConfigCommand` redaction and multi-error `ValidateCommand` reporting, raising the suite to **358 passing tests** without changing the reported function percentages for `src/cli/commands/config.ts` or `src/cli/commands/validate.ts`.

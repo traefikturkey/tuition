@@ -13,19 +13,30 @@ import { ConfigValidator } from "../../src/core/config/validator.js";
 import { ValidateCommand } from "../../src/cli/commands/validate.js";
 import { ConfigCommand } from "../../src/cli/commands/config.js";
 import { BackupCommand } from "../../src/cli/commands/backup.js";
+import { ServiceCommand } from "../../src/cli/commands/service.js";
+import { CaddyCommand } from "../../src/cli/commands/caddy.js";
+import { DnsCommand } from "../../src/cli/commands/dns.js";
+import { catalog } from "../../src/core/catalog/loader.js";
+import { LifecycleManager } from "../../src/core/lifecycle/manager.js";
+import { CaddyManager } from "../../src/services/caddy/manager.js";
+import { CoreDnsManager } from "../../src/services/dns/coredns.js";
+import { createPatchSet } from "../helpers/test-utils.js";
 
 describe("Multi-command flow integration", () => {
   let tempDir: string;
   let configPath: string;
   let manager: ConfigManager;
+  let patchSet: ReturnType<typeof createPatchSet>;
 
   beforeEach(async () => {
     tempDir = await mkdtemp(join(tmpdir(), "tuition-flow-test-"));
     configPath = join(tempDir, "config");
     manager = new ConfigManager(configPath);
+    patchSet = createPatchSet();
   });
 
   afterEach(async () => {
+    patchSet.restore();
     await rm(tempDir, { recursive: true, force: true });
   });
 
@@ -135,6 +146,30 @@ describe("Multi-command flow integration", () => {
 
     expect(reloaded.hostname).toBe("host1");
     expect(reloaded.domain).toBe("home.local");
+  });
+
+  it("config set persists command-driven changes across reload", async () => {
+    await manager.initialize();
+    await manager.saveGlobal({
+      hostname: "host1",
+      domain: "home.local",
+      timezone: "UTC",
+      adminEmail: "a@b.com",
+      puid: 1000,
+      pgid: 1000,
+      dnsProvider: "cloudflare" as const,
+      upstreamDns: { primary: "1.1.1.1" },
+    });
+
+    const configCommand = new ConfigCommand();
+    await configCommand.set("global.domain", "example.internal", { path: configPath });
+    await configCommand.set("global.pgid", "2000", { path: configPath });
+
+    const manager2 = new ConfigManager(configPath);
+    const reloaded = await manager2.loadGlobal();
+
+    expect(reloaded.domain).toBe("example.internal");
+    expect(reloaded.pgid).toBe(2000);
   });
 
   it("validate then config show reflects the same saved configuration", async () => {
@@ -250,6 +285,167 @@ describe("Multi-command flow integration", () => {
       const output = captured.join("\n");
       expect(output).toContain("Performing dry run...");
       expect(output).toContain("Failed to restore backup:");
+    } finally {
+      console.log = originalLog;
+    }
+  });
+
+  it("service enable then caddy and dns regenerate reuse the saved enabled services", async () => {
+    await manager.initialize();
+    await manager.saveGlobal({
+      hostname: "homelab",
+      domain: "example.com",
+      timezone: "UTC",
+      adminEmail: "admin@example.com",
+      puid: 1000,
+      pgid: 1000,
+      dnsProvider: "cloudflare",
+      cloudflareToken: "token-123",
+      upstreamDns: { primary: "1.1.1.1", backup: "1.0.0.1" },
+    });
+
+    patchSet.patch(catalog, "get", async (name: string) => {
+      if (name !== "whoami") {
+        return null as never;
+      }
+
+      return {
+        name,
+        category: "development",
+        description: "HTTP echo service",
+        image: "traefik/whoami:latest",
+        labels: {
+          caddy: "whoami.${DOMAIN}",
+          "caddy.reverse_proxy": "{{upstreams 80}}",
+          "dns.hostname": "whoami.internal",
+        },
+      } as never;
+    });
+
+    patchSet.patch(
+      LifecycleManager.prototype as unknown as {
+        updateCaddyConfig: () => Promise<void>;
+        updateDnsConfig: () => Promise<void>;
+      },
+      "updateCaddyConfig",
+      async () => undefined
+    );
+    patchSet.patch(
+      LifecycleManager.prototype as unknown as {
+        updateCaddyConfig: () => Promise<void>;
+        updateDnsConfig: () => Promise<void>;
+      },
+      "updateDnsConfig",
+      async () => undefined
+    );
+
+    let caddyServices: Array<{ name: string }> | undefined;
+    let dnsServices: Array<{ name: string }> | undefined;
+
+    patchSet.patch(CaddyManager.prototype, "initialize", async () => undefined);
+    patchSet.patch(CaddyManager.prototype, "generateConfig", async (_config, services) => {
+      caddyServices = services as Array<{ name: string }>;
+      return "generated";
+    });
+    patchSet.patch(CaddyManager.prototype, "reload", async () => ({
+      success: true,
+      message: "reloaded",
+    }));
+
+    patchSet.patch(CoreDnsManager.prototype, "initialize", async () => undefined);
+    patchSet.patch(CoreDnsManager.prototype, "generateConfig", async (services) => {
+      dnsServices = services as Array<{ name: string }>;
+      return "generated";
+    });
+    patchSet.patch(CoreDnsManager.prototype, "reload", async () => ({
+      success: true,
+      message: "reloaded",
+    }));
+
+    const service = new ServiceCommand(configPath);
+    const caddy = new CaddyCommand(configPath);
+    const dns = new DnsCommand(configPath);
+    const captured: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args: unknown[]) => {
+      captured.push(args.map(String).join(" "));
+    };
+
+    try {
+      await service.enable("whoami", { path: configPath, noStart: true });
+      await caddy.regenerate({ path: configPath });
+      await dns.regenerate({ path: configPath });
+
+      const savedService = await manager.loadService("whoami");
+      const output = captured.join("\n");
+
+      expect(savedService?.enabled).toBe(true);
+      expect(caddyServices?.map((entry) => entry.name)).toEqual(["whoami"]);
+      expect(dnsServices?.map((entry) => entry.name)).toEqual(["whoami"]);
+      expect(output).toContain("Service 'whoami' enabled");
+      expect(output).toContain("Caddyfile regenerated and applied");
+      expect(output).toContain("CoreDNS config regenerated and reloaded");
+    } finally {
+      console.log = originalLog;
+    }
+  });
+
+  it("caddy and dns regenerate surface reload failures from their managers", async () => {
+    await manager.initialize();
+    await manager.saveGlobal({
+      hostname: "homelab",
+      domain: "example.com",
+      timezone: "UTC",
+      adminEmail: "admin@example.com",
+      puid: 1000,
+      pgid: 1000,
+      dnsProvider: "cloudflare",
+      upstreamDns: { primary: "1.1.1.1" },
+    });
+    await manager.saveService("whoami", {
+      enabled: true,
+      imageTag: "latest",
+    });
+
+    patchSet.patch(catalog, "get", async (name: string) => ({
+      name,
+      category: "development",
+      description: "HTTP echo service",
+      image: "traefik/whoami:latest",
+      labels: {
+        caddy: `${name}.${"${DOMAIN}"}`,
+      },
+    }) as never);
+
+    patchSet.patch(CaddyManager.prototype, "initialize", async () => undefined);
+    patchSet.patch(CaddyManager.prototype, "generateConfig", async () => "generated");
+    patchSet.patch(CaddyManager.prototype, "reload", async () => ({
+      success: false,
+      message: "caddy reload failed",
+    }));
+
+    patchSet.patch(CoreDnsManager.prototype, "initialize", async () => undefined);
+    patchSet.patch(CoreDnsManager.prototype, "generateConfig", async () => "generated");
+    patchSet.patch(CoreDnsManager.prototype, "reload", async () => ({
+      success: false,
+      message: "dns reload failed",
+    }));
+
+    const caddy = new CaddyCommand(configPath);
+    const dns = new DnsCommand(configPath);
+    const captured: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args: unknown[]) => {
+      captured.push(args.map(String).join(" "));
+    };
+
+    try {
+      await caddy.regenerate({ path: configPath });
+      await dns.regenerate({ path: configPath });
+
+      const output = captured.join("\n");
+      expect(output).toContain("Failed to apply changes: caddy reload failed");
+      expect(output).toContain("Failed to reload: dns reload failed");
     } finally {
       console.log = originalLog;
     }
