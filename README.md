@@ -1,24 +1,56 @@
 # Tuition - Homelab Management Tool
 
-A terminal-based management tool for self-hosted homelab services. Simplifies Docker container management with automatic HTTPS, internal DNS, and disaster recovery.
+Tuition is a terminal-first homelab manager for self-hosted services. It
+provides a curated Docker service catalog, centralized HTTPS through Caddy,
+internal DNS through CoreDNS, backup and restore workflows, and an interactive
+TUI for day-to-day operations.
+
+## Current Status
+
+Tuition is currently **MVP complete** on the
+`feature/initial-implementation` branch.
+
+Implemented now:
+
+- CLI for init, validation, config, service lifecycle, Caddy, DNS, backup,
+  and TUI flows
+- Curated service catalog with **24 services across 10 categories**
+- Service dependency auto-enable during `service enable`
+- Caddy-based HTTPS with Cloudflare DNS challenge support
+- CoreDNS generation and reload flow for internal DNS on **port 54**
+- Backup create, list, restore, and delete flows
+- Blessed-based TUI with dashboard and service browser views
+
+Still tracked as backlog against the PRD:
+
+- Database dump integration for backups
+- Event-driven DNS registration and sync
+- Scheduled and offsite backups
+- GPU passthrough, SSO-oriented workflows, and external service proxy support
+- Expansion from 24 curated services to the PRD target of 30+
+
+See [docs/STATUS.md](docs/STATUS.md) for the current implementation summary and
+[docs/PRD/PRD.md](docs/PRD/PRD.md) for the requirements baseline.
 
 ## Quick Start
 
 ### Install
 
 **One-line install:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/traefikturkey/tuition/feature/initial-implementation/scripts/install.sh | bash
 ```
 
-The installer automatically:
-- ✅ Checks Node.js is installed (18+ required)
-- ✅ Detects your shell (bash/zsh) and configures PATH
-- ✅ Clones tuition to `~/.tuition/app`
-- ✅ Installs all npm dependencies
-- ✅ Creates the `tuition` command in `~/.local/bin`
+The installer currently:
 
-**After install, reload your shell:**
+- checks Node.js 18+
+- clones the repository to `~/.tuition/app`
+- runs `npm install`
+- creates a `tuition` wrapper in `~/.local/bin`
+
+After install, reload your shell:
+
 ```bash
 source ~/.bashrc  # or ~/.zshrc
 ```
@@ -26,301 +58,240 @@ source ~/.bashrc  # or ~/.zshrc
 ### Configure
 
 ```bash
-tuition init  # Interactive setup wizard
+tuition init
 ```
 
-You'll need:
-- A domain name (e.g., `example.com`)
-- The domain must be managed by Cloudflare
-- A Cloudflare API token with `Zone:Read` and `DNS:Edit` permissions
+Current implementation notes:
+
+- DNS provider support is **Cloudflare-first**
+- you need a domain managed by Cloudflare
+- you need a Cloudflare API token with `Zone:Read` and `DNS:Edit`
 
 ### Deploy
 
 ```bash
 # 1. Start infrastructure
-tuition caddy start              # Start reverse proxy (with automatic HTTPS)
-tuition dns start                # Start CoreDNS (internal DNS)
+tuition caddy start
+tuition dns start
 
 # 2. Deploy your first service
-tuition service enable pihole    # Deploy Pi-hole ad blocker
+tuition service enable pihole
 
-# 3. Access services at:
-# https://pihole.example.com
-# https://tuition.example.com (Caddy admin UI)
+# 3. Verify status
+tuition caddy status
+tuition dns status
 ```
 
 ### Manage
 
 ```bash
-tuition tui                      # Launch interactive terminal UI
-tuition service list             # List all services
-tuition caddy status             # Check Caddy status
+tuition tui
+tuition service list
+tuition service show pihole
+tuition backup list
 ```
 
 ## Requirements
 
-- **Node.js**: 18+ (required by installer)
-- **Docker**: Engine 20.10+, Compose 2.0+
-- **OS**: Linux (Debian/Ubuntu recommended)
-- **Domain**: Must be managed by Cloudflare DNS
-- **Cloudflare API Token**: With Zone:Read and DNS:Edit permissions
+- **OS**: Linux, with Debian or Ubuntu as the primary target
+- **Docker**: Engine 20.10+ and Compose 2+
+- **Node.js**: 18+ for the installer and generated `tuition` wrapper
+- **Domain**: a domain managed in Cloudflare
+- **Cloudflare API token**: `Zone:Read` and `DNS:Edit`
 
-### Installing Node.js
+Contributor notes:
 
-If you don't have Node.js:
+- the repository entrypoint is [index.ts](index.ts)
+- the shebang uses Bun, but the installer wrapper runs `npx tsx index.ts`
+- `npm test` is available from [package.json](package.json)
+- `make test` currently runs `bun test` from [Makefile](Makefile)
 
-```bash
-# Using nvm (recommended)
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-nvm install 20
+## Command Reference
 
-# Or using apt (Ubuntu/Debian)
-sudo apt update
-sudo apt install nodejs npm
-```
-
-## Cloudflare Setup
-
-**Your domain MUST be on Cloudflare for automatic HTTPS to work.**
-
-### 1. Add Domain to Cloudflare
-- Sign up at https://dash.cloudflare.com
-- Add your domain
-- Change nameservers at your registrar to Cloudflare's
-
-### 2. Create API Token
-Go to https://dash.cloudflare.com/profile/api-tokens → "Create Token"
-
-Use this template:
-- **Zone:Read** - For all zones
-- **DNS:Edit** - For the specific zone (your domain)
-
-### 3. Verify Setup
+### System
 
 ```bash
-# Check nameservers
-dig example.com NS
-# Should show: [name].ns.cloudflare.com
-
-# Check tuition config
+tuition init
+tuition validate
 tuition config show
-# Verify cloudflareToken is set
+tuition config set <key> <value>
 ```
 
-## Usage
-
-Once installed, use `tuition` from anywhere:
+### Services
 
 ```bash
-# System
-tuition init                    # Initialize configuration
-tuition config show             # Show configuration
-tuition validate                # Validate configuration
-
-# Services
-tuition service list            # List all services
-tuition service show <name>     # Show service details
-tuition service enable <name>   # Enable and start service
-tuition service disable <name>  # Disable service
-tuition service start <name>    # Start service container
-tuition service stop <name>     # Stop service container
-tuition service logs <name>     # View service logs
-
-# Infrastructure
-tuition caddy start             # Start Caddy reverse proxy
-tuition caddy stop              # Stop Caddy
-tuition caddy status            # Show Caddy status + admin URL
-tuition caddy reload            # Reload Caddy config
-tuition caddy set-password      # Set admin UI password
-tuition dns start               # Start CoreDNS
-tuition dns stop                # Stop CoreDNS
-
-# Backup
-tuition backup create           # Create backup
-tuition backup list             # List backups
-tuition backup restore <n>      # Restore backup #n
-
-# Interactive UI
-tuition tui                     # Launch interactive terminal UI
-tuition --help                  # Show all commands
+tuition service list
+tuition service list --category media
+tuition service search plex
+tuition service show <name>
+tuition service enable <name>
+tuition service disable <name>
+tuition service disable <name> --remove-data
+tuition service start <name>
+tuition service stop <name>
+tuition service restart <name>
+tuition service update <name>
+tuition service logs <name>
 ```
 
-## Architecture
+### Caddy
 
+```bash
+tuition caddy start
+tuition caddy stop
+tuition caddy restart
+tuition caddy reload
+tuition caddy status
+tuition caddy regenerate
+tuition caddy set-password
+tuition caddy hash-password   # legacy helper retained for compatibility
 ```
+
+### DNS
+
+```bash
+tuition dns start
+tuition dns stop
+tuition dns status
+tuition dns regenerate
+tuition dns configure
+```
+
+### Backup
+
+```bash
+tuition backup create
+tuition backup create --include-volumes
+tuition backup list
+tuition backup restore <number-or-filename>
+tuition backup delete <number-or-filename>
+```
+
+### Interactive UI
+
+```bash
+tuition tui
+tuition --help
+```
+
+## What Is Implemented Now
+
+### Configuration and Validation
+
+- interactive initialization for global configuration
+- layered config loading and validation
+- sensitive value redaction in `tuition config show`
+- generated secrets for service environments
+- restrictive config file permissions where supported
+
+### Service Catalog and Lifecycle
+
+- bundled catalog in `catalog/services/`
+- list, show, and search flows
+- enable, disable, start, stop, restart, update, and logs commands
+- automatic dependency enablement during service activation
+- optional data removal on disable with `--remove-data`
+
+### Reverse Proxy and HTTPS
+
+- centralized Caddy management
+- generated Caddyfile from enabled services
+- admin password setup and status reporting
+- Cloudflare DNS challenge integration for certificate management
+
+### Internal DNS
+
+- generated CoreDNS config and hosts file
+- static host registration for the Tuition hostname
+- start, stop, status, regenerate, and upstream configuration flows
+- CoreDNS bound to **port 54** to avoid conflict with system DNS on port 53
+
+### Backup and Restore
+
+- backup archive creation for config and generated infrastructure state
+- optional inclusion of service data volumes
+- restore and delete by list index or filename
+- path containment checks for restore and delete operations
+
+Current backup limitations:
+
+- `includeDatabases` exists as an option, but database dump automation is not
+  implemented yet
+- offsite destinations and scheduling are not implemented yet
+
+### Terminal UI
+
+- dashboard view
+- service browser view
+- keyboard navigation for common workflows
+
+## Catalog Coverage
+
+The current catalog includes services in these categories:
+
+- AI
+- Auth
+- Development
+- DNS
+- Downloads
+- Games
+- Home Automation
+- Media
+- Monitoring
+- Storage
+
+Examples already included:
+
+- `pihole`
+- `plex`
+- `jellyfin`
+- `nextcloud`
+- `grafana`
+- `prometheus`
+- `uptime-kuma`
+- `authelia`
+- `ollama`
+- `open-webui`
+
+## Architecture Snapshot
+
+```text
 Internet
     ↓
 DNS (Cloudflare)
     ↓
-Caddy (443/80) ──► Automatic HTTPS (Let's Encrypt)
+Caddy (443/80)
     ↓
-Docker Network (tuition)
-    ├─ Pi-hole (DNS ad blocking)
-    ├─ Plex (Media server)
-    ├─ Joyride (Media requests)
-    ├─ CoreDNS (Internal DNS: 54)
-    └─ Tuition Admin (https://tuition.example.com)
+Docker network (tuition)
+    ├─ application services
+    ├─ Caddy admin route
+    └─ CoreDNS (port 54)
 ```
 
-## Services
-
-Pre-configured services available:
-
-- **Pi-hole** (`tuition service enable pihole`) - Network-wide ad blocking
-- **Plex** (`tuition service enable plex`) - Media server
-- **Joyride** (`tuition service enable joyride`) - Media request platform
-
-All services get automatic HTTPS via Caddy.
-
-## Configuration
-
-Stored in `~/.tuition/`:
-
-```
-~/.tuition/
-├── config/
-│   ├── global.yaml          # Domain, email, Cloudflare token
-│   └── services/
-│       └── <name>.yaml      # Per-service config
-├── data/                     # Service data volumes
-├── backups/                  # Backup archives
-└── app/                      # Tuition application files
-```
-
-## Admin UI
-
-Access Caddy's admin interface at:
-```
-https://tuition.example.com
-```
-
-**First time setup:**
-```bash
-tuition caddy set-password
-```
-
-This will:
-- Prompt for a password (with confirmation)
-- Hash it securely using bcrypt
-- Save to your configuration
-- Update the Caddyfile automatically
-- Reload Caddy to apply changes
-
-**Check status:**
-```bash
-tuition caddy status
-```
-
-Shows:
-- ✓ Password protected (if configured)
-- ⚠ No password configured (if not set)
-
-The admin UI shows:
-- Active TLS certificates
-- HTTP routes
-- Server configuration
-- Real-time metrics
-
-## Troubleshooting
-
-### "tuition: command not found"
+## Development Commands
 
 ```bash
-source ~/.bashrc  # or ~/.zshrc
-which tuition
-```
-
-If still not found:
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-```
-
-### Cloudflare DNS Error (SERVFAIL)
-
-**Error:** `could not determine zone for domain "_acme-challenge.example.com"`
-
-**Cause:** Caddy cannot resolve DNS to complete ACME challenge
-
-**Fix:**
-1. Ensure CoreDNS is running: `tuition dns status`
-2. Restart Caddy to pick up CoreDNS: `tuition caddy restart`
-3. Verify domain uses Cloudflare nameservers:
-   ```bash
-   dig example.com NS
-   ```
-4. Check Cloudflare token has correct permissions:
-   - Zone:Read (all zones)
-   - DNS:Edit (your specific zone)
-5. Verify token in config: `tuition config show`
-
-**Note:** Tuition automatically configures Caddy to use CoreDNS for DNS resolution, which resolves this issue.
-
-### Docker Permission Denied
-
-```bash
-sudo usermod -aG docker $USER
-# Log out and back in completely
-```
-
-### Caddy Won't Start
-
-Check logs:
-```bash
-docker logs caddy
-```
-
-Common issues:
-- **Port 80/443 in use**: Stop other web servers
-- **Cloudflare token invalid**: Regenerate token with correct permissions
-- **Domain not resolving**: Ensure DNS is set up correctly
-
-### Can't Access Admin UI
-
-The admin UI runs at `localhost:2019` inside the container. Access it via:
-```bash
-# SSH tunnel from your local machine
-ssh -L 2019:localhost:2019 user@your-server
-# Then open: http://localhost:2019
-```
-
-Or use the HTTPS route (once TLS is working):
-```
-https://tuition.example.com
-```
-
-## Development
-
-If you want to modify the source:
-
-```bash
-cd ~/.tuition/app
-
-# Run tests
-make test
-
 # TypeScript check
+npm run lint
 make lint
 
-# Build
-make build
+# Tests
+npm test
+make test
+
+# Run the CLI from the repo
+npx tsx index.ts --help
+bun run index.ts --help
 ```
 
-## Uninstall
+## Documentation
 
-```bash
-rm -rf ~/.tuition ~/.local/bin/tuition
-```
-
-## Support
-
-- **Issues:** https://github.com/traefikturkey/tuition/issues
-- **Documentation:** See `docs/` directory
+- [README.md](README.md) - project overview and command reference
+- [docs/STATUS.md](docs/STATUS.md) - delivered scope and backlog gaps
+- [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) - current plan and
+  remaining work
+- [docs/PRD/PRD.md](docs/PRD/PRD.md) - product requirements and alignment review
 
 ## License
 
-MIT
-
----
-
-**One command install. Simple, fast homelab management.** 🚀
+MIT License

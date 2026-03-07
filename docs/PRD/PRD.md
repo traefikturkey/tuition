@@ -709,6 +709,34 @@ Based on documented user pain points, the system must follow these principles:
 
 ---
 
+## Implementation Alignment Review (2026-03-07)
+
+This section records a point-in-time review of the current implementation
+against the requirements in this PRD. It does not change the product goals.
+
+| Area | Status | Notes |
+|------|--------|-------|
+| **Core product direction** | On track | The current branch still matches the original goal: a single-server homelab manager that favors disaster recovery over high availability. |
+| **FR1 Multi-Container Management** | Implemented | Consistent command flows, service lifecycle management, and centralized status handling are present. |
+| **FR2 SSL/TLS Certificate Management** | Implemented with current constraint | Caddy-based HTTPS and DNS challenge automation are present. Current implementation is Cloudflare-first rather than broadly provider-agnostic. |
+| **FR3 Service Discovery & Catalog** | Implemented | Catalog browsing, metadata display, category grouping, and search are present. |
+| **FR4 Configuration Management** | Implemented | Layered config, validation, generated secrets, and clear command flows are present. |
+| **FR5 Disaster Recovery** | Partial | Backup and restore commands exist, but database dump automation and fuller 3-2-1 offsite coverage are still outstanding. |
+| **FR6 Service Lifecycle** | Implemented | Enable, disable, update, logs, and dependency-aware lifecycle operations are present. |
+| **FR7 Internal DNS Resolution** | Partial | CoreDNS generation and management are implemented, but event-driven automatic registration and full sync behavior remain backlog work. |
+| **US3.1 Hardware acceleration** | Not yet implemented | Data structures allow for it, but no end-user workflow is complete yet. |
+| **US3.3 SSO** | Not yet implemented | Auth services exist in the catalog, but a cross-service SSO workflow is not complete. |
+| **US4.2 Automated offsite backups** | Not yet implemented | Scheduling and remote destinations are not implemented yet. |
+| **Supported services target** | At risk | The PRD target is 30+ curated services; the current catalog is 24 services. |
+
+### Review Conclusion
+
+The project is still aligned with the original vision. The main remaining gaps
+are completeness and automation items, especially in disaster recovery and DNS,
+not a drift away from the intended product.
+
+---
+
 ## Non-Goals
 
 The following are explicitly out of scope:

@@ -2,461 +2,185 @@
 
 ## Executive Summary
 
-This document outlines the phased implementation strategy for Tuition, a terminal-based homelab management tool. The plan prioritizes delivering core functionality quickly while maintaining quality and adhering to the disaster recovery philosophy.
+This document reflects the **current** implementation state of Tuition rather
+than the original greenfield phase plan.
 
-### Current Implementation Delta (2026-03-06)
+The branch has already delivered the MVP foundation:
 
-- Security hardening implemented for backup restore/delete path containment
-- Backup CLI path handling updated for Windows-safe absolute path resolution
-- Sensitive config output redaction implemented for CLI `config show`
-- Secure secret generation updated to cryptographic randomness
-- Config persistence now uses restrictive file permissions where supported
-- Logging standardization started with shared logger in core catalog/lifecycle paths
-- Logging usage extended into backup restore warning path
-- Integration coverage added for CLI security behavior
-- Additional unit coverage added for lifecycle manager and service command flows
-- New low-impact service definitions added: `openspeedtest`, `webtop`
-- State detector module implemented (`src/core/state/detector.ts`)
-- Service dependency auto-resolution added to lifecycle enable flow
-- Data removal implemented for `disable --remove-data` (replaces TODO stub)
-- Service catalog expanded to 20 definitions across 9 categories
-- New categories: monitoring (grafana, prometheus, uptime-kuma), auth (authelia), downloads (sonarr, radarr, prowlarr), storage (nextcloud, syncthing), home-automation (home-assistant), ai (ollama, open-webui), games (minecraft), media (jellyfin, photoprism), development (portainer)
-- Multi-command integration test added (init → configure → validate → reload)
-- Docker client behavior tests expanded beyond method-existence stubs
-- CLI command coverage expanded for disable, restart, update, logs, list, search, show
+- terminal-first CLI flows
+- a Blessed-based TUI
+- curated service catalog loading
+- service lifecycle orchestration through Docker Compose
+- generated Caddy and CoreDNS configuration
+- backup and restore primitives
 
-### Remaining Implementation Steps (Next Pass)
-
-1. ~~Close CLI command behavior coverage gaps~~ Done
-2. ~~Strengthen CLI parser/dispatch confidence~~ Done
-3. ~~Complete security hardening follow-through~~ Done
-4. ~~Increase integration-level confidence~~ Done
-5. ~~Keep docs synchronized with delivered state~~ Done
-6. **Prepare PR-ready handoff artifacts**
-    - Produce a concise change summary grouped by security, logging, coverage, and service catalog updates.
-    - Validate final gate status (make lint, make test) at head before handoff.
-
-### Future Feature Work
-
-1. **Docker event-based DNS registration** - Replace manual generateConfig() calls with a Docker event watcher for automatic DNS record creation when containers start/stop.
-2. **Database dump integration** - Add per-service database dump support (PostgreSQL pg_dump, MySQL mysqldump) to the backup workflow.
-3. **Remote backup destinations** - Extend backup manager with S3, rsync, or other offsite transport for 3-2-1 strategy.
-4. **Backup scheduler** - Add cron-based or systemd timer integration for automated backup scheduling.
-5. **TUI component extraction** - Extract reusable blessed widgets from inline view code into src/tui/components/.
-6. **GPU passthrough configuration** - Add detection and configuration for hardware-accelerated services.
+The remaining plan is therefore about closing the gap between the **current MVP**
+and the **full PRD target**.
 
 ---
 
-## Technology Decisions
+## What Has Been Delivered
 
-Based on the Decision Points in the PRD:
+### Core CLI Surface
 
-| Decision              | Choice                     | Rationale                                                                               |
-| --------------------- | -------------------------- | --------------------------------------------------------------------------------------- |
-| **Language**          | **TypeScript/Bun**         | Fast runtime, modern ecosystem, excellent for CLI/TUI tools, good Docker API libraries  |
-| **UI Approach**       | **Hybrid (CLI + TUI)**     | CLI for scripting/automation, TUI for discoverability and guided workflows              |
-| **Reverse Proxy**     | **Caddy**                  | Automatic HTTPS, straightforward Caddyfile generation, Cloudflare DNS challenge support |
-| **Config Format**     | **YAML**                   | Docker ecosystem standard, familiar to target users, human-readable                     |
-| **Service Catalog**   | **Bundled with tool**      | Version-locked compatibility, simpler distribution, controlled quality                  |
-| **Update Strategy**   | **Notified + User Action** | Awareness without surprises, allows breaking change review                              |
-| **Database Strategy** | **Dedicated per service**  | Better isolation, independent recovery, simpler operations                              |
-| **Internal DNS**      | **Label-based (CoreDNS)**  | Zero-config, Docker-native, automatic registration                                      |
+Implemented command groups:
 
----
+- `init`
+- `validate`
+- `config`
+- `service`
+- `caddy`
+- `dns`
+- `backup`
+- `tui`
 
-## Architecture Overview
+### Core Runtime Areas
 
-### High-Level Components
+- configuration management and validation
+- bundled catalog loader
+- lifecycle manager with dependency handling
+- Docker client and Compose wrappers
+- Caddyfile generation and reverse proxy management
+- CoreDNS configuration generation and reload flow
+- backup creation, restore, and deletion
+- state detection module
+- terminal dashboard and service browser views
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        User Interface                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │  CLI Parser  │  │   TUI App    │  │   Commands   │       │
-│  └──────────────┘  └──────────────┘  └──────────────┘       │
-└─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│                      Core Services                           │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │ Config Mgr   │  │ Catalog Svc  │  │ Lifecycle    │       │
-│  └──────────────┘  └──────────────┘  └──────────────┘       │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │ Container    │  │ SSL Manager  │  │ Backup/DR    │       │
-│  └──────────────┘  └──────────────┘  └──────────────┘       │
-│  ┌──────────────┐  ┌──────────────┐                        │
-│  │ DNS Manager  │  │ State Engine │                        │
-│  └──────────────┘  └──────────────┘                        │
-└─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│                    Infrastructure Layer                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │ Docker API   │  │ Compose CLI  │  │ File System  │       │
-│  └──────────────┘  └──────────────┘  └──────────────┘       │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │ Traefik Mgr  │  │ CoreDNS Mgr  │  │ Cert Bot     │       │
-│  └──────────────┘  └──────────────┘  └──────────────┘       │
-└─────────────────────────────────────────────────────────────┘
-```
+### Catalog Scope
+
+- 24 service definitions
+- 10 categories
+
+### Hardening Already Completed
+
+- backup path containment for restore and delete operations
+- Windows-safe absolute path handling in backup CLI flows
+- config redaction for sensitive output
+- cryptographically secure generated secrets
+- restrictive config file permissions where supported
+- broader unit and integration coverage for command behavior
 
 ---
 
-## Project Structure
+## Current Architecture Snapshot
 
-```
+```text
 tuition/
-├── src/
-│   ├── cli/                    # Command-line interface
-│   │   ├── commands/           # CLI commands (init, enable, disable, etc.)
-│   │   └── parser.ts           # Argument parsing
-│   ├── tui/                    # Terminal UI components
-│   │   ├── app.ts              # Main TUI application
-│   │   ├── views/              # Screen views
-│   │   └── components/         # Reusable UI components
-│   ├── core/                   # Core business logic
-│   │   ├── config/             # Configuration management
-│   │   │   ├── loader.ts       # Config loading/parsing
-│   │   │   ├── validator.ts    # Config validation
-│   │   │   └── hierarchy.ts    # Tier config (global → service)
-│   │   ├── catalog/            # Service catalog
-│   │   │   ├── loader.ts       # Load service definitions
-│   │   │   ├── registry.ts     # Service registry
-│   │   │   └── types.ts        # Service metadata types
-│   │   ├── lifecycle/          # Service lifecycle
-│   │   │   ├── engine.ts       # State machine
-│   │   │   ├── states.ts       # State definitions
-│   │   │   └── transitions.ts  # State transitions
-│   │   └── state/              # System state tracking
-│   │       ├── detector.ts     # Actual state detection
-│   │       └── store.ts        # State persistence
-│   ├── services/               # Infrastructure services
-│   │   ├── docker/             # Docker integration
-│   │   │   ├── client.ts       # Docker API client
-│   │   │   ├── compose.ts      # Docker Compose operations
-│   │   │   └── network.ts      # Network management
-│   │   ├── traefik/            # Reverse proxy
-│   │   │   ├── generator.ts    # Dynamic config generation
-│   │   │   └── manager.ts      # Traefik lifecycle
-│   │   ├── dns/                # Internal DNS
-│   │   │   ├── coredns.ts      # CoreDNS management
-│   │   │   └── registrar.ts    # Container DNS registration
-│   │   ├── ssl/                # Certificate management
-│   │   │   ├── certbot.ts      # Let's Encrypt integration
-│   │   │   └── manager.ts      # Certificate lifecycle
-│   │   └── backup/             # Disaster recovery
-│   │       ├── exporter.ts     # Backup creation
-│   │       ├── importer.ts     # Restore operations
-│   │       └── scheduler.ts    # Automated backups
-│   ├── types/                  # TypeScript definitions
-│   ├── utils/                  # Utilities
-│   └── constants.ts            # Constants
-├── catalog/                    # Bundled service catalog
-│   ├── services/               # Service definitions
-│   │   ├── media/              # Media servers (jellyfin, plex, etc.)
-│   │   ├── dns/                # DNS services (pihole, etc.)
-│   │   ├── monitoring/         # Monitoring (prometheus, grafana)
-│   │   ├── downloads/          # Download automation
-│   │   ├── auth/               # Authentication services
-│   │   └── _templates/         # Service templates
-│   └── categories.yaml         # Category definitions
-├── templates/                  # Configuration templates
-│   ├── docker-compose/         # Compose file templates
-│   ├── env/                    # Environment file templates
-│   └── traefik/                # Traefik config templates
-├── tests/                      # Test suite
-│   ├── unit/                   # Unit tests
-│   ├── integration/            # Integration tests
-│   └── fixtures/               # Test fixtures
-├── docs/                       # Documentation
-├── scripts/                    # Build/deployment scripts
-├── bunfig.toml                 # Bun configuration
-├── package.json                # Dependencies
-├── tsconfig.json               # TypeScript config
-└── README.md
+├── src/cli/commands/      # Command implementations
+├── src/core/config/       # Config load/save/validate
+├── src/core/catalog/      # Catalog loading
+├── src/core/lifecycle/    # Service lifecycle orchestration
+├── src/core/state/        # Actual state detection
+├── src/services/docker/   # Docker and Compose integration
+├── src/services/caddy/    # Reverse proxy generation and control
+├── src/services/dns/      # CoreDNS generation and control
+├── src/services/backup/   # Backup and restore workflows
+├── src/tui/               # Blessed TUI
+├── catalog/services/      # Bundled service definitions
+└── tests/                 # Unit and integration suites
 ```
 
----
-
-## Implementation Phases
-
-### Phase 1: Foundation (Weeks 1-2)
-**Goal**: Basic project structure and configuration management
-
-#### Deliverables
-- [ ] Project initialization with Bun/TypeScript
-- [ ] Build and test infrastructure
-- [ ] Configuration hierarchy implementation (Global → Infrastructure → Per-Service)
-- [ ] Configuration validation framework
-- [ ] Environment file management (auto-generation, isolation)
-- [ ] Initial CLI framework with basic commands
-
-#### Key Components
-- Config loader with YAML parsing
-- Config validator with helpful error messages
-- Environment file generator
-- Basic CLI (init, config, validate commands)
-
-#### Success Criteria
-- Can initialize a new tuition project
-- Can load and validate tiered configuration
-- Can generate secure passwords automatically
-- All operations are idempotent
+This replaces earlier plan references to components that are not part of the
+current branch, such as Traefik-specific managers, parser placeholders, or
+future scheduler modules.
 
 ---
 
-### Phase 2: Service Catalog & Docker Integration (Weeks 3-4)
-**Goal**: Service discovery and basic container management
+## Remaining Scope to Reach Full PRD Completion
 
-#### Deliverables
-- [ ] Service catalog data model and loader
-- [ ] Service metadata schema (description, category, requirements)
-- [ ] Docker API client integration
-- [ ] Docker Compose operations (up, down, ps, logs)
-- [ ] Basic service enable/disable
-- [ ] Initial curated services (5-10 essential services)
+### Priority 1: Disaster Recovery Completion
 
-#### Key Components
-- Service registry
-- Catalog browser (CLI)
-- Docker client wrapper
-- Compose file generator from templates
-- Service enablement workflow
+These items are the largest remaining gap against the stated project philosophy.
 
-#### Success Criteria
-- Can browse available services
-- Can enable a service and have containers start
-- Can view container status and logs
-- Can disable a service without data loss
+1. **Database dump integration**
+    - add real PostgreSQL and MySQL dump workflows
+    - connect `includeDatabases` to actual backup behavior
+    - restore database dumps as part of recovery
 
----
+2. **Scheduled backups**
+    - add cron or systemd-timer compatible scheduling
+    - provide safe idempotent setup and removal flows
 
-### Phase 3: Reverse Proxy & SSL (Weeks 5-6)
-**Goal**: Automated SSL and web access for services
+3. **Offsite backup targets**
+    - add S3, rsync, or similar remote destinations
+    - keep local-first behavior intact
 
-#### Deliverables
-- [ ] Traefik container management
-- [ ] Dynamic route generation from service labels
-- [ ] Let's Encrypt certificate automation
-- [ ] DNS-01 challenge support (common providers)
-- [ ] Wildcard certificate support
-- [ ] Service exposure control (enable/disable proxy routes)
+### Priority 2: Internal DNS Automation
 
-#### Key Components
-- Traefik manager
-- Label-based route generator
-- Certificate manager
-- DNS provider integrations (Cloudflare, DigitalOcean, etc.)
+1. **Docker event-based DNS registration**
+    - watch container lifecycle events
+    - update CoreDNS state automatically
+    - reduce reliance on manual regenerate and reload flows
 
-#### Success Criteria
-- Services accessible via HTTPS on configured domain
-- Automatic SSL certificate generation
-- Wildcard cert covers all subdomains
-- Certificate renewal automated
+2. **Route and DNS sync tightening**
+    - ensure reverse proxy exposure and DNS registration stay aligned
+    - expand static host handling where needed
+
+### Priority 3: Catalog and Power-User Expansion
+
+1. Expand curated service count from **24** to **30+**.
+2. Add GPU passthrough workflows for media and AI services.
+3. Improve auth and SSO-oriented workflows beyond catalog presence.
+4. Evaluate external service proxy support for non-container services.
+
+### Priority 4: Quality and Release Readiness
+
+1. Publish a formal coverage number if coverage reporting is required for v1.
+2. Reconcile the contributor runtime story:
+    - installer and wrapper use Node plus `npx tsx`
+    - repo entrypoint shebang uses Bun
+    - `make test` uses Bun while `package.json` uses `tsx --test`
+3. Add release packaging and versioned handoff documentation.
 
 ---
 
-### Phase 4: Service Lifecycle & State Management (Weeks 7-8)
-**Goal**: Complete service state machine and lifecycle operations
+## Recommended Next Execution Order
 
-#### Deliverables
-- [ ] State machine implementation (Available → Enabled → Running → Stopped → Disabled)
-- [ ] State detection engine (verify reality, not markers)
-- [ ] Service dependency management
-- [ ] Update mechanism (pull latest images)
-- [ ] Service logs aggregation
-- [ ] Health check integration
+1. Finish backup completeness first.
+2. Finish DNS automation second.
+3. Expand catalog and power-user features third.
+4. Normalize runtime and release workflow last.
 
-#### Key Components
-- State engine with transitions
-- Real state detector (queries Docker, not files)
-- Dependency resolver
-- Update manager
-- Log aggregator
-
-#### Success Criteria
-- Accurate state tracking without marker files
-- Services can depend on other services
-- Can update services to latest versions
-- Can view logs from all services in one place
+This order keeps the project aligned with the PRD's disaster-recovery-first
+goal and avoids polishing secondary workflows before the core recovery story is
+complete.
 
 ---
 
-### Phase 5: Internal DNS (Weeks 9-10)
-**Goal**: Zero-configuration DNS for containers
+## Mapping to the Original Phase Plan
 
-#### Deliverables
-- [ ] CoreDNS container management
-- [ ] Docker event watcher for container labels
-- [ ] Automatic DNS record generation
-- [ ] Static host entries support
-- [ ] DNS sync with reverse proxy routes
-- [ ] Local DNS resolution setup
+| Original Area | Current State |
+| ------------- | ------------- |
+| Foundation | Delivered |
+| Catalog and Docker integration | Delivered |
+| Reverse proxy and SSL | Delivered in Caddy-based form |
+| Service lifecycle and state | Delivered, with room to integrate state detector more broadly |
+| Internal DNS | Partially delivered |
+| Disaster recovery | Partially delivered |
+| TUI | Delivered |
+| Polish and documentation | In progress |
 
-#### Key Components
-- CoreDNS manager
-- Docker events listener
-- DNS record generator
-- Hosts file editor
-
-#### Success Criteria
-- Containers accessible by hostname within network
-- No manual DNS configuration needed
-- Static hosts supported for non-container services
-- Works independently of external DNS
+The original plan should no longer be read as a future checklist. It is now a
+historical outline whose unfinished items have been consolidated into the
+remaining scope sections above.
 
 ---
 
-### Phase 6: Disaster Recovery (Weeks 11-12)
-**Goal**: Backup and restore capabilities
+## Exit Criteria for Calling the PRD Fully Met
 
-#### Deliverables
-- [ ] Backup exporter (config, databases, volumes)
-- [ ] Backup scheduler
-- [ ] Restore importer
-- [ ] Database dump integration
-- [ ] 3-2-1 backup strategy support
-- [ ] Disaster recovery testing commands
+Tuition should only be described as fully complete against the PRD once all of
+the following are true:
 
-#### Key Components
-- Backup manager with tiered approach
-- Database dumpper (MySQL, PostgreSQL, etc.)
-- Archive creator
-- Restore validator
-- Scheduler (cron-based or systemd timer)
-
-#### Success Criteria
-- Can backup entire configuration in single operation
-- Can restore to new hardware from backup
-- Database dumps included automatically
-- Backup excludes regeneratable data (logs, caches)
+- backups include real database dump support
+- scheduled and offsite backup flows exist
+- internal DNS registration is automatic rather than mostly regenerate-based
+- catalog reaches or exceeds 30 curated services
+- documentation, tests, and release workflow are consistent and current
 
 ---
 
-### Phase 7: TUI & Advanced Features (Weeks 13-14)
-**Goal**: Rich terminal interface and power user features
+## Related Documents
 
-#### Deliverables
-- [ ] Interactive TUI application
-- [ ] Service browser with filtering/search
-- [ ] Dashboard view (status, health, resource usage)
-- [ ] Setup wizard
-- [ ] Hardware acceleration support (GPU passthrough)
-- [ ] External service proxy support
-
-#### Key Components
-- TUI framework (Bubble Tea or similar)
-- Interactive service browser
-- Status dashboard
-- Setup wizard workflow
-- GPU detection and configuration
-
-#### Success Criteria
-- First-time users can set up via guided TUI
-- Can browse and filter services visually
-- Real-time status dashboard
-- GPU passthrough configurable
-
----
-
-### Phase 8: Polish & Documentation (Weeks 15-16)
-**Goal**: Production readiness and comprehensive docs
-
-#### Deliverables
-- [ ] Complete CLI command set
-- [ ] Comprehensive error messages with actionable guidance
-- [ ] User documentation and guides
-- [ ] Service-specific documentation
-- [ ] Test coverage > 80%
-- [ ] Release packaging
-
-#### Key Components
-- Help system
-- Documentation generator
-- Test suite completion
-- Release automation
-
-#### Success Criteria
-- All PRD requirements met
-- Documentation complete for all features
-- Tests passing with > 80% coverage
-- Release artifacts available
-
----
-
-## Testing Strategy
-
-### Unit Tests
-- Configuration loading and validation
-- State machine transitions
-- Template rendering
-- Utility functions
-
-### Integration Tests
-- Docker API interactions
-- Compose operations
-- File system operations
-- Backup/restore workflows
-
-### End-to-End Tests
-- Full installation workflow
-- Service enable/disable cycles
-- Backup and restore scenarios
-- Error handling paths
-
-### Test Fixtures
-- Sample configurations
-- Mock Docker responses
-- Service definitions
-- Backup archives
-
----
-
-## Risk Mitigation
-
-| Risk                         | Mitigation                                              |
-| ---------------------------- | ------------------------------------------------------- |
-| Docker API complexity        | Use established libraries (dockerode), thorough testing |
-| Traefik configuration errors | Validation before application, rollback capability      |
-| SSL certificate failures     | Graceful fallback, clear error messages                 |
-| State tracking inaccuracy    | Verify actual Docker state, not marker files            |
-| Breaking Docker changes      | Pin tested versions, update testing                     |
-| Configuration complexity     | Guided setup, sensible defaults, validation             |
-
----
-
-## Milestones
-
-| Milestone | Target  | Criteria                                      |
-| --------- | ------- | --------------------------------------------- |
-| **MVP**   | Week 4  | Basic config, catalog, enable/disable working |
-| **Alpha** | Week 8  | Reverse proxy, SSL, lifecycle complete        |
-| **Beta**  | Week 12 | DNS, DR, TUI functional                       |
-| **v1.0**  | Week 16 | All features complete, tested, documented     |
-
----
-
-## Immediate Next Steps
-
-1. **Create feature branch** `git checkout -b feature/initial-implementation`
-2. **Initialize project** with Bun, TypeScript, testing framework
-3. **Implement Phase 1** (Foundation) starting with config management
-4. **Add first curated services** (simple ones: whoami, portainer)
-5. **Test basic enable/disable** workflow
-
----
-
-## Open Questions for Development
-
-1. **Service catalog format**: YAML files or TypeScript definitions?
-2. **TUI library**: Bubble Tea (Go-based but can shell out) vs. Ink (React-based) vs. custom?
-3. **Backup storage**: Local + remote options (S3, rsync, etc.)?
-4. **Update notifications**: Check GitHub releases or built-in mechanism?
-5. **Database versions**: Pin to specific versions or allow floating?
-
-These can be decided during Phase 1 based on prototyping.
-
----
-
-*Plan Version: 1.0*
-*Last Updated: 2026-02-15*
+- [README.md](../README.md)
+- [docs/STATUS.md](STATUS.md)
+- [docs/PRD/PRD.md](PRD/PRD.md)

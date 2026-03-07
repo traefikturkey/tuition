@@ -1,416 +1,209 @@
 # Tuition - Project Status
 
-**Version**: 0.1.0
-**Branch**: `feature/initial-implementation`
-**Status**: 🚧 **ACTIVE HARDENING - Implementation Ongoing**
-**Date**: 2026-03-06
+**Version**: 0.1.0  
+**Branch**: `feature/initial-implementation`  
+**Status**: **MVP complete, backlog tracked explicitly**  
+**Date**: 2026-03-07
 
 ---
 
-## 🎉 Implementation Complete
+## Summary
 
-All 7 implementation phases have been completed successfully:
+Tuition has delivered the core shape described in the PRD: a terminal-first
+homelab manager for a single-server environment with a curated service catalog,
+consistent Docker workflows, centralized HTTPS, internal DNS, disaster recovery
+basics, and an interactive TUI.
 
-- ✅ Phase 1: Foundation (config management, CLI, service catalog)
-- ✅ Phase 2: Docker Integration (dockerode, compose operations)
-- ✅ Phase 3: Caddy Reverse Proxy (auto HTTPS, wildcard certs)
-- ✅ Phase 4: Service Lifecycle (enable/disable/start/stop/update)
-- ✅ Phase 5: CoreDNS Internal DNS (port 53, zero-config)
-- ✅ Phase 6: Disaster Recovery (backup/restore, 3-2-1 strategy)
-- ✅ Phase 7: TUI & Documentation (Blessed interface, comprehensive docs)
+The current implementation should be described as **MVP complete**, not fully
+finished against every PRD target.
 
-## 🆕 Recent Updates
+Delivered now:
 
-### Feature Implementation & Coverage Expansion (2026-03-06)
-- State detector module implemented for actual Docker state detection
-- Service dependency auto-resolution added to lifecycle enable flow
-- Data removal implemented for `disable --remove-data`
-- Service catalog expanded to 24 definitions across 10 categories
-- New categories: monitoring, auth, downloads, storage, home-automation, ai, games
-- Multi-command integration tests (init → configure → validate)
-- Docker client behavior tests with mock stubs
-- CLI command coverage for all service actions (disable, restart, update, logs, list, search, show)
+- CLI for initialization, validation, config, service lifecycle, Caddy, DNS,
+  backup, and TUI workflows
+- 24 curated service definitions across 10 categories
+- dependency-aware service enable flow
+- Caddy configuration generation and admin password setup
+- CoreDNS configuration generation, reload, and upstream selection
+- backup create, list, restore, and delete flows
+- security hardening around config output and backup path handling
+- TUI dashboard and service browser views
 
-### Security, Logging, and Test Hardening (2026-03-06)
-- Added backup path validation to block restore/delete outside configured backup directory
-- Added Windows-safe absolute path handling for backup restore/delete CLI paths
-- Added sensitive value redaction for `tuition config show`
-- Switched generated secret path to cryptographically secure randomness
-- Added restrictive config file write permissions (best-effort `0600` semantics)
-- Added integration tests for CLI security behavior
-- Introduced shared logger utility and adopted it in core catalog/lifecycle warning paths
-- Extended logger usage in backup restore warning path
-- Added low-impact service definitions: `openspeedtest`, `webtop`
-- Added unit tests for lifecycle manager and service command flows
-- Added CLI dispatch and parser registration smoke tests
-- Added deeper config/validate command behavior coverage for failure branches
-- Updated `make test` to run Bun tests directly for deterministic cross-platform behavior
+Still in backlog:
 
-### CoreDNS Integration (2026-02-16)
-- Caddy now automatically uses CoreDNS for DNS resolution
-- Fixes Cloudflare ACME DNS-01 challenge issues (SERVFAIL errors)
-- CoreDNS assigned static IP (10.0.7.2) for reliability
-
-### Admin UI Password Protection (2026-02-16)
-- New command: `tuition caddy set-password`
-- bcrypt password hashing (10 salt rounds)
-- Password confirmation during setup
-- Status shows ✓ (protected) or ⚠ (unconfigured)
-- Optional setup during `tuition init`
+- database dump integration in backups
+- event-driven DNS registration instead of manual regenerate/reload flows
+- scheduled backups and offsite backup targets
+- GPU passthrough support
+- SSO-oriented workflows beyond catalog presence
+- expansion from 24 services to the PRD target of 30+
 
 ---
 
-## 📊 Project Statistics
+## Delivered Capability Areas
 
-| Metric                  | Value                      |
-| ----------------------- | -------------------------- |
-| **Source Files**        | 27 TypeScript modules      |
-| **Test Files**          | 24 test suites (185 tests) |
-| **Service Definitions** | 24 YAML files              |
-| **Documentation**       | 4 markdown files           |
-| **Total Lines of Code** | ~5,000 lines               |
-| **Test Coverage**       | Core modules covered       |
-| **Compilation Status**  | Zero errors ✅              |
-| **Test Status**         | 185/185 passing ✅          |
+### Configuration and Validation
 
----
+- interactive `tuition init`
+- layered configuration with global and per-service data
+- `tuition validate` for preflight checks
+- redacted sensitive output in `tuition config show`
+- generated secrets and restrictive file permissions where supported
 
-## 🏗️ Architecture
+### Service Catalog and Lifecycle
 
-```
-Internet
-    ↓
-DNS (Cloudflare)
-    ↓
-Caddy (Port 443/80) ──► Automatic HTTPS with Let's Encrypt
-    ↓
-Docker Network (tuition)
-    ├─ Pi-hole (DNS ad blocking)
-    ├─ Plex (Media server)
-    ├─ Joyride (Media requests)
-    └─ CoreDNS (Internal DNS: Port 53)
-```
+- browse, inspect, and search the service catalog
+- enable, disable, start, stop, restart, update, and logs workflows
+- dependency auto-enable during service activation
+- data-preserving disable by default
+- destructive disable path available with `--remove-data`
 
----
+### HTTPS and Reverse Proxy
 
-## 📦 Complete CLI Reference
+- Caddy start, stop, restart, reload, status, and regenerate commands
+- generated Caddy configuration from enabled services
+- admin password management through `set-password`
+- Cloudflare DNS challenge integration for certificate management
 
-### System Commands
-| Command                            | Description                   |
-| ---------------------------------- | ----------------------------- |
-| `tuition init`                     | Interactive setup wizard      |
-| `tuition validate`                 | Validate configuration        |
-| `tuition config show`              | Display current configuration |
-| `tuition config set <key> <value>` | Set configuration value       |
+### Internal DNS
 
-### Service Management
-| Command                          | Description                   |
-| -------------------------------- | ----------------------------- |
-| `tuition service list`           | List all services with status |
-| `tuition service show <name>`    | Show service details          |
-| `tuition service enable <name>`  | Enable and start service      |
-| `tuition service disable <name>` | Stop and disable service      |
-| `tuition service start <name>`   | Start service container       |
-| `tuition service stop <name>`    | Stop service container        |
-| `tuition service restart <name>` | Restart service container     |
-| `tuition service update <name>`  | Pull latest image             |
-| `tuition service logs <name>`    | View service logs             |
-| `tuition service search <query>` | Search service catalog        |
-
-### Infrastructure
-| Command                      | Description                          |
-| ---------------------------- | ------------------------------------ |
-| `tuition caddy start`        | Start Caddy reverse proxy            |
-| `tuition caddy stop`         | Stop Caddy reverse proxy             |
-| `tuition caddy restart`      | Restart Caddy                        |
-| `tuition caddy reload`       | Reload configuration (zero-downtime) |
-| `tuition caddy status`       | Show Caddy status                    |
-| `tuition caddy regenerate`   | Regenerate Caddyfile                 |
-| `tuition caddy set-password` | Set admin UI password (bcrypt)       |
-| `tuition dns start`          | Start CoreDNS                        |
-| `tuition dns stop`           | Stop CoreDNS                         |
-| `tuition dns status`         | Show CoreDNS status                  |
-| `tuition dns regenerate`     | Regenerate CoreDNS config            |
+- CoreDNS start, stop, status, regenerate, and configure commands
+- generated hosts and Corefile output from enabled services
+- CoreDNS runs on **port 54**, not port 53, to avoid local resolver conflicts
+- Tuition hostname registration in generated DNS config
 
 ### Disaster Recovery
-| Command                      | Description            |
-| ---------------------------- | ---------------------- |
-| `tuition backup create`      | Create backup archive  |
-| `tuition backup list`        | List available backups |
-| `tuition backup restore <n>` | Restore backup #n      |
-| `tuition backup delete <n>`  | Delete backup #n       |
 
-### Interactive TUI
-| Command       | Description                      |
-| ------------- | -------------------------------- |
-| `tuition tui` | Launch blessed-based terminal UI |
+- backup archive creation
+- optional inclusion of service data volumes
+- restore and delete by list number or filename
+- path containment validation for restore and delete operations
 
----
+### Terminal UI
 
-## 🧪 Testing
-
-### Running Tests
-```bash
-# Run all tests
-bun test
-
-# Run specific test file
-bun test tests/unit/config.test.ts
-
-# Run with coverage
-bun test --coverage
-```
-
-### Test Suites (149 tests total)
-
-| Suite               | Tests | Coverage                                  |
-| ------------------- | ----- | ----------------------------------------- |
-| Config Manager      | 11    | Configuration loading, saving, validation |
-| Config Validator    | 8     | Input validation, error handling          |
-| Service Catalog     | 14    | Service discovery, search, filtering      |
-| Caddyfile Generator | 8     | Configuration generation, parsing         |
-| Docker Compose      | 5     | Compose file generation                   |
-| Backup Manager      | 8     | Archive creation, restoration             |
-
-**All tests passing**: 149/149 ✅
+- dashboard view
+- service browser view
+- keyboard-driven navigation using Blessed
 
 ---
 
-## 🚀 Quick Start
+## Current CLI Surface
 
-```bash
-# 1. Install dependencies
-bun install
+### System
 
-# 2. Initialize tuition
-bun run index.ts init
-# Follow prompts: domain, email, Cloudflare token
+- `tuition init`
+- `tuition validate`
+- `tuition config show`
+- `tuition config set <key> <value>`
 
-# 3. Start infrastructure
-bun run index.ts caddy start
-bun run index.ts dns start
+### Services
 
-# 4. Deploy first service
-bun run index.ts service enable pihole
+- `tuition service list`
+- `tuition service show <name>`
+- `tuition service search <query>`
+- `tuition service enable <name>`
+- `tuition service disable <name> [--remove-data]`
+- `tuition service start <name>`
+- `tuition service stop <name>`
+- `tuition service restart <name>`
+- `tuition service update <name>`
+- `tuition service logs <name>`
 
-# 5. Access via HTTPS
-# https://pihole.yourdomain.com
+### Infrastructure
 
-# 6. Create backup
-bun run index.ts backup create
+- `tuition caddy start|stop|restart|reload|status|regenerate`
+- `tuition caddy set-password`
+- `tuition caddy hash-password` (legacy helper)
+- `tuition dns start|stop|status|regenerate|configure`
 
-# 7. Launch TUI for management
-bun run index.ts tui
-```
+### Backup and Recovery
 
----
+- `tuition backup create`
+- `tuition backup list`
+- `tuition backup restore <identifier>`
+- `tuition backup delete <identifier>`
 
-## 📁 Project Structure
+### Interactive UI
 
-```
-tuition/
-├── src/
-│   ├── cli/commands/         # CLI command implementations (9 files)
-│   │   ├── backup.ts
-│   │   ├── caddy.ts
-│   │   ├── config.ts
-│   │   ├── dns.ts
-│   │   ├── index.ts
-│   │   ├── init.ts
-│   │   ├── service.ts
-│   │   └── validate.ts
-│   ├── core/
-│   │   ├── config/          # Configuration management
-│   │   │   ├── index.ts
-│   │   │   ├── manager.ts
-│   │   │   └── validator.ts
-│   │   ├── catalog/         # Service catalog
-│   │   │   └── loader.ts
-│   │   └── lifecycle/       # Service lifecycle
-│   │       └── manager.ts
-│   ├── services/
-│   │   ├── backup/          # Disaster recovery
-│   │   │   └── manager.ts
-│   │   ├── caddy/           # Reverse proxy
-│   │   │   ├── caddyfile.ts
-│   │   │   └── manager.ts
-│   │   ├── dns/             # Internal DNS
-│   │   │   └── coredns.ts
-│   │   └── docker/          # Docker integration
-│   │       ├── client.ts
-│   │       └── compose.ts
-│   ├── tui/                 # Terminal UI
-│   │   ├── app.ts
-│   │   └── views/
-│   │       ├── service-browser.ts
-│   │       └── status-dashboard.ts
-│   └── types/
-│       └── index.ts         # TypeScript definitions
-├── tests/
-│   └── unit/                # Unit tests (20 files)
-│       ├── backup.test.ts
-│       ├── caddyfile.test.ts
-│       ├── catalog.test.ts
-│       ├── compose.test.ts
-│       ├── config.test.ts
-│       └── validator.test.ts
-├── catalog/services/        # Service definitions
-│   ├── dns/pihole.yaml
-│   ├── media/joyride.yaml
-│   └── media/plex.yaml
-├── docs/
-│   ├── IMPLEMENTATION_PLAN.md
-│   └── STATUS.md
-├── README.md
-├── index.ts
-├── package.json
-└── tsconfig.json
-```
+- `tuition tui`
 
 ---
 
-## 🔧 Configuration
+## Catalog Coverage
 
-### Global Configuration (`~/.tuition/config/global.yaml`)
+Current catalog footprint:
 
-```yaml
-hostname: homelab-server
-domain: example.com
-adminEmail: admin@example.com
-timezone: UTC
-puid: 1000
-pgid: 1000
-dnsProvider: cloudflare
-cloudflareToken: <your-token>
-adminPasswordHash: $2b$10$...  # bcrypt hash for admin UI
-```
+- **24 services**
+- **10 categories**
 
-### Service Configuration (`~/.tuition/config/services/<name>.yaml`)
+Categories represented:
 
-```yaml
-enabled: true
-imageTag: latest
-environment:
-  DOMAIN: example.com
-  TZ: UTC
-```
-
-### Directory Structure
-
-```
-~/.tuition/
-├── config/
-│   ├── global.yaml
-│   ├── infrastructure.yaml
-│   └── services/
-│       └── pihole.yaml
-├── data/                      # Service data volumes
-│   └── pihole/
-├── backups/                   # Backup archives
-├── caddy-data/               # Caddy certificates
-├── coredns-config/           # DNS configuration
-└── logs/                     # Application logs
-```
+- AI
+- Auth
+- Development
+- DNS
+- Downloads
+- Games
+- Home Automation
+- Media
+- Monitoring
+- Storage
 
 ---
 
-## ✨ Features
+## Verification Snapshot (2026-03-07)
 
-### Core Features
-- **Service Catalog** - Pre-configured services (Pi-hole, Plex, Joyride)
-- **Automatic HTTPS** - Caddy with Let's Encrypt certificates
-- **Internal DNS** - CoreDNS for zero-configuration container resolution
-- **Service Lifecycle** - Enable, disable, start, stop, update services
-- **Disaster Recovery** - Backup and restore entire homelab setup
-- **Interactive TUI** - Blessed-based terminal interface
-
-### Technical Features
-- **Type-safe** - Full TypeScript implementation
-- **Zero-downtime** - Graceful config reloads for Caddy and CoreDNS
-- **Idempotent** - Safe to re-run operations
-- **Auto-configuration** - Generates configs from service definitions
-- **3-2-1 Backup** - Implements backup best practices
+- `make lint` passes
+- `make test` passes
+- test runner result: **185 passing tests across 24 files**
 
 ---
 
-## 🛡️ Security
+## PRD Alignment Review
 
-- HTTPS automatically enabled for all services
-- Cloudflare DNS challenge for certificates
-- Service passwords auto-generated
-- Environment files excluded from version control
-- Secrets stored in isolated files
+| Area | Status | Notes |
+| ---- | ------ | ----- |
+| **FR1 Multi-container management** | Implemented | Consistent CLI flows, central lifecycle manager, and status-oriented service handling are present. |
+| **FR2 SSL/TLS management** | Implemented with current provider constraint | Centralized Caddy flow is implemented. Current implementation is Cloudflare-first rather than provider-agnostic. |
+| **FR3 Service discovery and catalog** | Implemented | Catalog browsing, descriptions, categories, and search are available. |
+| **FR4 Configuration management** | Implemented | Layered config, validation, defaults, secret generation, and precedence flows are present. |
+| **FR5 Disaster recovery** | Partial | Backup and restore work, but database dump integration and offsite automation are still missing. |
+| **FR6 Service lifecycle** | Implemented | Enable, disable, update, dependency handling, and non-destructive defaults are present. |
+| **FR7 Internal DNS** | Partial | CoreDNS generation exists, but event-driven registration and full automatic sync are still backlog items. |
 
----
-
-## 📝 Development Commands
-
-```bash
-# Development
-bun run dev                    # Run CLI
-bun run lint                   # TypeScript check
-bun test                       # Run tests
-
-# Production
-bun run build                  # Build for production
-bun run index.ts init          # Initialize
-bun run index.ts tui           # Launch TUI
-```
+The project remains on track with the original goal: a practical, single-server,
+CLI/TUI homelab manager focused on disaster recovery over high availability.
+Current gaps are mainly completeness and automation items, not direction
+changes.
 
 ---
 
-## 🔄 Git History
+## Success Criteria Snapshot
 
-| Commit    | Description                                   |
-| --------- | --------------------------------------------- |
-| `67d210c` | Initial implementation (34 files, 6326 lines) |
-| `aece860` | Unit test suite (54 tests, 6 test files)      |
-
-**Branch**: `feature/initial-implementation`
-**Status**: Ready for merge to main
-
----
-
-## 📋 Requirements
-
-- **Runtime**: Bun (latest)
-- **Docker**: Engine 20.10+, Compose 2.0+
-- **OS**: Linux (Debian/Ubuntu recommended)
-- **Network**: Domain with Cloudflare DNS
-- **Hardware**: Single server capable of running Docker
+| PRD Target | Current Position |
+| ---------- | ---------------- |
+| **30+ curated services** | At risk for v1 on this branch; current catalog is 24 services. |
+| **All commands documented** | Addressed by this documentation sync. |
+| **>80% test coverage** | Test suites are broad, but formal coverage reporting is not published in repo docs. |
+| **Fast first-service workflow** | On track via `init`, infrastructure commands, and `service enable`. |
 
 ---
 
-## 🎯 Roadmap (Optional Enhancements)
+## Backlog Required for Full PRD Completion
 
-- [ ] Add more services to catalog (Nextcloud, Vaultwarden, etc.)
-- [ ] Integration tests with real Docker
-- [ ] Remote backup destinations (S3, rsync)
-- [ ] Monitoring integration (Prometheus/Grafana)
-- [ ] Web UI dashboard
-- [ ] Service health checks and alerting
-- [ ] Log aggregation and analysis
-
----
-
-## 📜 License
-
-MIT License
+1. Add database dump support to backup creation and restore workflows.
+2. Replace manual DNS regeneration with Docker event-based registration and
+   sync.
+3. Add scheduled backup execution.
+4. Add offsite backup destinations for fuller 3-2-1 coverage.
+5. Expand catalog from 24 services to 30+ curated services.
+6. Implement power-user features such as GPU passthrough and broader auth/SSO
+   workflows.
 
 ---
 
-## 🤝 Contributing
+## Source of Truth
 
-Contributions welcome! Please ensure:
-- TypeScript compilation passes (`bun run lint`)
-- All tests pass (`bun test`)
-- Code follows existing style
-- Documentation is updated
-
----
-
-**Status**: Production Ready ✅
-**Tests**: 54/54 Passing ✅
-**Compilation**: Zero Errors ✅
-
-*Last updated: 2026-02-16*
+- [README.md](../README.md) for user-facing setup and command usage
+- [docs/IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for remaining scope
+- [docs/PRD/PRD.md](PRD/PRD.md) for product goals and the alignment review
