@@ -32,6 +32,7 @@ All 7 implementation phases have been completed successfully:
 - Extended logger usage in backup restore warning path
 - Added low-impact service definitions: `openspeedtest`, `webtop`
 - Added unit tests for lifecycle manager and service command flows
+- Added CLI dispatch and parser registration smoke tests
 - Updated `make test` to run Bun tests directly for deterministic cross-platform behavior
 
 ### CoreDNS Integration (2026-02-16)
@@ -53,13 +54,13 @@ All 7 implementation phases have been completed successfully:
 | Metric | Value |
 |--------|-------|
 | **Source Files** | 25 TypeScript modules |
-| **Test Files** | 14 test suites (116 tests) |
+| **Test Files** | 21 test suites (142 tests) |
 | **Service Definitions** | 8 YAML files |
 | **Documentation** | 4 markdown files |
 | **Total Lines of Code** | ~4,200 lines |
 | **Test Coverage** | Core modules covered |
 | **Compilation Status** | Zero errors ✅ |
-| **Test Status** | 116/116 passing ✅ |
+| **Test Status** | 142/142 passing ✅ |
 
 ---
 
@@ -149,7 +150,7 @@ bun test tests/unit/config.test.ts
 bun test --coverage
 ```
 
-### Test Suites (116 tests total)
+### Test Suites (142 tests total)
 
 | Suite | Tests | Coverage |
 |-------|-------|----------|
@@ -160,7 +161,7 @@ bun test --coverage
 | Docker Compose | 5 | Compose file generation |
 | Backup Manager | 8 | Archive creation, restoration |
 
-**All tests passing**: 116/116 ✅
+**All tests passing**: 142/142 ✅
 
 ---
 
@@ -235,7 +236,7 @@ tuition/
 │   └── types/
 │       └── index.ts         # TypeScript definitions
 ├── tests/
-│   └── unit/                # Unit tests (6 files, 54 tests)
+│   └── unit/                # Unit tests (20 files)
 │       ├── backup.test.ts
 │       ├── caddyfile.test.ts
 │       ├── catalog.test.ts
