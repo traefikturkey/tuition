@@ -23,6 +23,7 @@ export class CoreDnsManager {
   private composeManager: ComposeManager;
   private configPath: string;
   private dataPath: string;
+  private spawnProcess = spawn;
 
   constructor(projectPath: string) {
     this.projectPath = projectPath;
@@ -259,7 +260,7 @@ export class CoreDnsManager {
    */
   private async sendReloadSignal(): Promise<{ success: boolean; output: string }> {
     return new Promise((resolve) => {
-      const proc = spawn("docker", ["kill", "-s", "USR1", "coredns"], {
+      const proc = this.spawnProcess("docker", ["kill", "-s", "USR1", "coredns"], {
         cwd: this.projectPath,
       });
 

@@ -96,6 +96,15 @@ describe("ConfigCommand behavior", () => {
     expect(output).toContain("Invalid key format");
   });
 
+  it("prints not initialized when set is called before init", async () => {
+    ConfigManager.prototype.exists = async () => false;
+
+    const command = new ConfigCommand();
+    await command.set("global.domain", "example.com", {});
+
+    expect(captured.join("\n")).toContain("Tuition is not initialized");
+  });
+
   it("sets global boolean and saves config", async () => {
     ConfigManager.prototype.exists = async () => true;
 
@@ -155,5 +164,30 @@ describe("ConfigCommand behavior", () => {
 
     const output = captured.join("\n");
     expect(output).toContain("Invalid key format");
+  });
+
+  it("prints failures thrown while saving configuration", async () => {
+    ConfigManager.prototype.exists = async () => true;
+    ConfigManager.prototype.loadGlobal = async () => ({
+      hostname: "test-host",
+      domain: "example.com",
+      adminEmail: "admin@example.com",
+      timezone: "UTC",
+      puid: 1000,
+      pgid: 1000,
+      dnsProvider: "cloudflare" as const,
+      cloudflareToken: "token",
+      upstreamDns: {
+        primary: "1.1.1.1",
+      },
+    });
+    ConfigManager.prototype.saveGlobal = async () => {
+      throw new Error("save boom");
+    };
+
+    const command = new ConfigCommand();
+    await command.set("global.domain", "example.org", {});
+
+    expect(captured.join("\n")).toContain("Failed to set configuration");
   });
 });

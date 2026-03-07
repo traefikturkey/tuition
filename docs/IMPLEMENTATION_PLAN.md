@@ -149,16 +149,16 @@ complete.
 
 ## Mapping to the Original Phase Plan
 
-| Original Area | Current State |
-| ------------- | ------------- |
-| Foundation | Delivered |
-| Catalog and Docker integration | Delivered |
-| Reverse proxy and SSL | Delivered in Caddy-based form |
-| Service lifecycle and state | Delivered, with room to integrate state detector more broadly |
-| Internal DNS | Partially delivered |
-| Disaster recovery | Partially delivered |
-| TUI | Delivered |
-| Polish and documentation | In progress |
+| Original Area                  | Current State                                                 |
+| ------------------------------ | ------------------------------------------------------------- |
+| Foundation                     | Delivered                                                     |
+| Catalog and Docker integration | Delivered                                                     |
+| Reverse proxy and SSL          | Delivered in Caddy-based form                                 |
+| Service lifecycle and state    | Delivered, with room to integrate state detector more broadly |
+| Internal DNS                   | Partially delivered                                           |
+| Disaster recovery              | Partially delivered                                           |
+| TUI                            | Delivered                                                     |
+| Polish and documentation       | In progress                                                   |
 
 The original plan should no longer be read as a future checklist. It is now a
 historical outline whose unfinished items have been consolidated into the

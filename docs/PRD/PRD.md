@@ -31,10 +31,10 @@ This document defines the problem space, user needs, and requirements to enable 
 
 Self-hosting enthusiasts face two unsatisfying extremes:
 
-| Approach | Problems |
-|----------|----------|
-| **Manual Docker Compose** | Configuration sprawl, per-service SSL management, inconsistent patterns, no discoverability |
-| **Enterprise Orchestration (Kubernetes/Swarm)** | Steep learning curve, HA complexity, expensive infrastructure, overkill for hobbies |
+| Approach                                        | Problems                                                                                    |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **Manual Docker Compose**                       | Configuration sprawl, per-service SSL management, inconsistent patterns, no discoverability |
+| **Enterprise Orchestration (Kubernetes/Swarm)** | Steep learning curve, HA complexity, expensive infrastructure, overkill for hobbies         |
 
 ### What's Missing
 
@@ -49,13 +49,13 @@ There is no middle ground that provides:
 
 ### Why Existing Solutions Fall Short
 
-| Aspect | Manual Setup | Enterprise Orchestration | Needed |
-|--------|--------------|--------------------------|--------|
-| Learning Curve | Per-service | Steep | Gentle |
-| Configuration | Per-service | Complex | Automated |
-| SSL Management | Manual | Manual | Automated |
-| Disaster Recovery | User's problem | Complex | Simple |
-| Suitable For | 1-5 services | Production enterprise | Home deployments |
+| Aspect            | Manual Setup   | Enterprise Orchestration | Needed           |
+| ----------------- | -------------- | ------------------------ | ---------------- |
+| Learning Curve    | Per-service    | Steep                    | Gentle           |
+| Configuration     | Per-service    | Complex                  | Automated        |
+| SSL Management    | Manual         | Manual                   | Automated        |
+| Disaster Recovery | User's problem | Complex                  | Simple           |
+| Suitable For      | 1-5 services   | Production enterprise    | Home deployments |
 
 ---
 
@@ -78,13 +78,13 @@ Small infrastructure teams needing rapid deployment and reproducibility.
 
 ### User Characteristics
 
-| Characteristic | Description |
-|----------------|-------------|
+| Characteristic      | Description                                          |
+| ------------------- | ---------------------------------------------------- |
 | **Technical Level** | Comfortable with command line, basic Linux knowledge |
-| **Time Available** | Want to run services, not become full-time sysadmins |
-| **Hardware** | Single Linux server, possibly with NAS for storage |
-| **Network** | Personal domain, ability to configure DNS |
-| **Risk Tolerance** | Accept brief downtime in exchange for simplicity |
+| **Time Available**  | Want to run services, not become full-time sysadmins |
+| **Hardware**        | Single Linux server, possibly with NAS for storage   |
+| **Network**         | Personal domain, ability to configure DNS            |
+| **Risk Tolerance**  | Accept brief downtime in exchange for simplicity     |
 
 ---
 
@@ -94,12 +94,12 @@ Small infrastructure teams needing rapid deployment and reproducibility.
 
 ### Philosophy Comparison
 
-| High Availability (Rejected) | Disaster Recovery (Embraced) |
-|------------------------------|------------------------------|
-| Complex distributed infrastructure | Simple single-server setup |
+| High Availability (Rejected)          | Disaster Recovery (Embraced)          |
+| ------------------------------------- | ------------------------------------- |
+| Complex distributed infrastructure    | Simple single-server setup            |
 | Minimizes downtime through redundancy | Accepts brief downtime for simplicity |
-| Many moving parts to maintain | Few critical components |
-| Expensive and overkill for hobbies | Cost-effective and pragmatic |
+| Many moving parts to maintain         | Few critical components               |
+| Expensive and overkill for hobbies    | Cost-effective and pragmatic          |
 
 ### Practical Implications
 
@@ -124,18 +124,18 @@ Small infrastructure teams needing rapid deployment and reproducibility.
 
 ### Why Users Self-Host
 
-| Category | Motivation |
-|----------|------------|
-| **Media Servers** | Replace streaming subscriptions, own content library |
-| **Download Automation** | Automate content acquisition and organization |
-| **Photo Management** | Replace cloud photo storage, maintain privacy |
-| **Monitoring** | Visibility into system and service health |
-| **Authentication** | Unified identity, no external dependencies |
-| **Game Servers** | Host games for friends/family |
-| **Development Tools** | Self-hosted repos, CI/CD, code collaboration |
-| **Home Automation** | Smart home without cloud dependencies |
-| **AI/ML Tools** | Local AI capabilities, data privacy |
-| **File Sync/Share** | Replace Dropbox/Google Drive |
+| Category                | Motivation                                           |
+| ----------------------- | ---------------------------------------------------- |
+| **Media Servers**       | Replace streaming subscriptions, own content library |
+| **Download Automation** | Automate content acquisition and organization        |
+| **Photo Management**    | Replace cloud photo storage, maintain privacy        |
+| **Monitoring**          | Visibility into system and service health            |
+| **Authentication**      | Unified identity, no external dependencies           |
+| **Game Servers**        | Host games for friends/family                        |
+| **Development Tools**   | Self-hosted repos, CI/CD, code collaboration         |
+| **Home Automation**     | Smart home without cloud dependencies                |
+| **AI/ML Tools**         | Local AI capabilities, data privacy                  |
+| **File Sync/Share**     | Replace Dropbox/Google Drive                         |
 
 ### Common Threads
 
@@ -161,82 +161,82 @@ Small infrastructure teams needing rapid deployment and reproducibility.
 
 #### FR1: Multi-Container Management
 
-| ID | Requirement |
-|----|-------------|
+| ID    | Requirement                                                               |
+| ----- | ------------------------------------------------------------------------- |
 | FR1.1 | Manage dozens of Docker containers with consistent configuration patterns |
-| FR1.2 | Convention-based approach that auto-generates common configuration |
-| FR1.3 | Centralized view of all container status |
-| FR1.4 | Consistent commands across all containers |
+| FR1.2 | Convention-based approach that auto-generates common configuration        |
+| FR1.3 | Centralized view of all container status                                  |
+| FR1.4 | Consistent commands across all containers                                 |
 
 #### FR2: SSL/TLS Certificate Management
 
-| ID | Requirement |
-|----|-------------|
+| ID    | Requirement                                                     |
+| ----- | --------------------------------------------------------------- |
 | FR2.1 | Centralized, automated certificate management via reverse proxy |
-| FR2.2 | Wildcard certificate support for all subdomains |
-| FR2.3 | Automatic renewal before expiration |
-| FR2.4 | DNS-based validation (works through firewalls) |
+| FR2.2 | Wildcard certificate support for all subdomains                 |
+| FR2.3 | Automatic renewal before expiration                             |
+| FR2.4 | DNS-based validation (works through firewalls)                  |
 
 #### FR3: Service Discovery & Catalog
 
-| ID | Requirement |
-|----|-------------|
-| FR3.1 | Browse available services with descriptions and categories |
+| ID    | Requirement                                                             |
+| ----- | ----------------------------------------------------------------------- |
+| FR3.1 | Browse available services with descriptions and categories              |
 | FR3.2 | Self-documenting service metadata (description, category, upstream URL) |
-| FR3.3 | Consistent naming patterns for predictability |
-| FR3.4 | Search and filter capabilities |
+| FR3.3 | Consistent naming patterns for predictability                           |
+| FR3.4 | Search and filter capabilities                                          |
 
 #### FR4: Configuration Management
 
-| ID | Requirement |
-|----|-------------|
+| ID    | Requirement                                                  |
+| ----- | ------------------------------------------------------------ |
 | FR4.1 | Layered configuration: Global → Infrastructure → Per-Service |
-| FR4.2 | Sensible defaults with override capability |
-| FR4.3 | Auto-generate secrets when not specified |
-| FR4.4 | Clear precedence rules |
-| FR4.5 | Configuration validation before execution |
+| FR4.2 | Sensible defaults with override capability                   |
+| FR4.3 | Auto-generate secrets when not specified                     |
+| FR4.4 | Clear precedence rules                                       |
+| FR4.5 | Configuration validation before execution                    |
 
 #### FR5: Disaster Recovery
 
-| ID | Requirement |
-|----|-------------|
+| ID    | Requirement                                       |
+| ----- | ------------------------------------------------- |
 | FR5.1 | Backup entire configuration with single operation |
-| FR5.2 | Restore to new hardware from backup |
-| FR5.3 | Per-service backup granularity |
-| FR5.4 | Database dump integration |
-| FR5.5 | Support for 3-2-1 backup strategy |
+| FR5.2 | Restore to new hardware from backup               |
+| FR5.3 | Per-service backup granularity                    |
+| FR5.4 | Database dump integration                         |
+| FR5.5 | Support for 3-2-1 backup strategy                 |
 
 #### FR6: Service Lifecycle
 
-| ID | Requirement |
-|----|-------------|
-| FR6.1 | Enable/disable services without side effects |
+| ID    | Requirement                                                              |
+| ----- | ------------------------------------------------------------------------ |
+| FR6.1 | Enable/disable services without side effects                             |
 | FR6.2 | Clear service states: Available → Enabled → Running → Stopped → Disabled |
-| FR6.3 | Non-destructive by default, destructive requires confirmation |
-| FR6.4 | Update services without losing configuration |
-| FR6.5 | Dependencies handled automatically |
+| FR6.3 | Non-destructive by default, destructive requires confirmation            |
+| FR6.4 | Update services without losing configuration                             |
+| FR6.5 | Dependencies handled automatically                                       |
 
 #### FR7: Internal DNS Resolution
 
-| ID | Requirement |
-|----|-------------|
+| ID    | Requirement                                          |
+| ----- | ---------------------------------------------------- |
 | FR7.1 | Automatic DNS registration for containers via labels |
-| FR7.2 | Zero-configuration DNS for new containers |
-| FR7.3 | Static host entries for non-containerized services |
-| FR7.4 | Local resolution independent of external DNS |
-| FR7.5 | Sync DNS entries with reverse proxy routes |
+| FR7.2 | Zero-configuration DNS for new containers            |
+| FR7.3 | Static host entries for non-containerized services   |
+| FR7.4 | Local resolution independent of external DNS         |
+| FR7.5 | Sync DNS entries with reverse proxy routes           |
 
 ### Non-Functional Requirements
 
-| ID | Requirement |
-|----|-------------|
+| ID   | Requirement                                          |
+| ---- | ---------------------------------------------------- |
 | NFR1 | First service running within minutes of installation |
-| NFR2 | Operations work the same way across all services |
-| NFR3 | No destructive surprises; backups are easy |
-| NFR4 | Customization without forking the project |
-| NFR5 | All operations idempotent (safe to re-run) |
-| NFR6 | Clear, actionable error messages |
-| NFR7 | Works on fresh Debian/Ubuntu installations |
+| NFR2 | Operations work the same way across all services     |
+| NFR3 | No destructive surprises; backups are easy           |
+| NFR4 | Customization without forking the project            |
+| NFR5 | All operations idempotent (safe to re-run)           |
+| NFR6 | Clear, actionable error messages                     |
+| NFR7 | Works on fresh Debian/Ubuntu installations           |
 
 ---
 
@@ -277,23 +277,23 @@ Stage 5: MAINTENANCE & RECOVERY
 
 ### Recurring Tasks
 
-| Frequency | Tasks |
-|-----------|-------|
-| **Daily** | View service status and logs, check health via dashboard, monitor resource usage |
-| **Weekly** | Create configuration backups, update container images, review resource trends |
+| Frequency   | Tasks                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------- |
+| **Daily**   | View service status and logs, check health via dashboard, monitor resource usage       |
+| **Weekly**  | Create configuration backups, update container images, review resource trends          |
 | **Monthly** | Test restore procedure, clean up old backups, review logs for errors, apply OS patches |
 
 ### Key Decision Points
 
-| Decision | Options | Considerations |
-|----------|---------|----------------|
-| **Which services to enable?** | Browse catalog | Hardware requirements, conflicts, dependencies |
-| **Enable incrementally or all at once?** | Incremental (recommended) vs. all at once | Troubleshooting complexity |
-| **Local vs. network storage?** | Local (simpler) vs. NFS (scalable) | Library size, multi-service coordination |
-| **Shared vs. dedicated databases?** | Dedicated (recommended) vs. shared | Resource usage, isolation, recovery |
-| **Authentication approach?** | None, IP whitelist, SSO | Security requirements, exposure level |
-| **Hardware acceleration?** | None, Intel QuickSync, Nvidia GPU | Hardware availability, workload type |
-| **Backup strategy?** | Local only, remote, both (3-2-1) | Disaster recovery requirements |
+| Decision                                 | Options                                   | Considerations                                 |
+| ---------------------------------------- | ----------------------------------------- | ---------------------------------------------- |
+| **Which services to enable?**            | Browse catalog                            | Hardware requirements, conflicts, dependencies |
+| **Enable incrementally or all at once?** | Incremental (recommended) vs. all at once | Troubleshooting complexity                     |
+| **Local vs. network storage?**           | Local (simpler) vs. NFS (scalable)        | Library size, multi-service coordination       |
+| **Shared vs. dedicated databases?**      | Dedicated (recommended) vs. shared        | Resource usage, isolation, recovery            |
+| **Authentication approach?**             | None, IP whitelist, SSO                   | Security requirements, exposure level          |
+| **Hardware acceleration?**               | None, Intel QuickSync, Nvidia GPU         | Hardware availability, workload type           |
+| **Backup strategy?**                     | Local only, remote, both (3-2-1)          | Disaster recovery requirements                 |
 
 ---
 
@@ -301,49 +301,49 @@ Stage 5: MAINTENANCE & RECOVERY
 
 ### Tier 1: New User (Getting Started)
 
-| ID | Story |
-|----|-------|
+| ID    | Story                                                                                                                                      |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | US1.1 | As a new user, I want to install and configure the platform quickly so that I can get a self-hosted homelab running without deep expertise |
-| US1.2 | As a new user, I want to understand which services to enable first so that I don't overwhelm myself with too many options |
+| US1.2 | As a new user, I want to understand which services to enable first so that I don't overwhelm myself with too many options                  |
 | US1.3 | As a new user, I want to enable a service and have it work out of the box so that I don't spend time debugging networking or configuration |
-| US1.4 | As a new user, I want the system to detect and validate my environment so that I know if something is misconfigured before I proceed |
-| US1.5 | As a new user, I want sensible defaults for everything so that I only configure what I care about |
+| US1.4 | As a new user, I want the system to detect and validate my environment so that I know if something is misconfigured before I proceed       |
+| US1.5 | As a new user, I want sensible defaults for everything so that I only configure what I care about                                          |
 
 ### Tier 2: Active User (Daily Operations)
 
-| ID | Story |
-|----|-------|
-| US2.1 | As a homelab user, I want to view service status and logs from one place so that I can quickly troubleshoot without SSH and multiple tools |
+| ID    | Story                                                                                                                                           |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| US2.1 | As a homelab user, I want to view service status and logs from one place so that I can quickly troubleshoot without SSH and multiple tools      |
 | US2.2 | As a homelab user, I want to backup my entire configuration regularly so that I can restore everything to a new machine without losing my setup |
-| US2.3 | As a homelab user, I want to manage network storage for services so that I can store files on separate hardware from the main server |
+| US2.3 | As a homelab user, I want to manage network storage for services so that I can store files on separate hardware from the main server            |
 | US2.4 | As a homelab user, I want to update all containers to latest versions so that I get security patches and new features without manual management |
-| US2.5 | As a homelab user, I want to browse available services visually so that I can discover what's possible |
+| US2.5 | As a homelab user, I want to browse available services visually so that I can discover what's possible                                          |
 
 ### Tier 3: Power User (Customization)
 
-| ID | Story |
-|----|-------|
-| US3.1 | As a power user, I want to add hardware acceleration to services so that I can transcode media without CPU bottlenecks |
+| ID    | Story                                                                                                                                            |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| US3.1 | As a power user, I want to add hardware acceleration to services so that I can transcode media without CPU bottlenecks                           |
 | US3.2 | As a power user, I want to route external services through the reverse proxy so that I get unified SSL and can access everything from one domain |
-| US3.3 | As a power user, I want to set up single sign-on for all services so that I don't need individual credentials per service |
-| US3.4 | As a power user, I want to customize service configuration beyond defaults so that I can fine-tune behavior |
-| US3.5 | As a power user, I want CLI commands for all operations so that I can script and automate |
+| US3.3 | As a power user, I want to set up single sign-on for all services so that I don't need individual credentials per service                        |
+| US3.4 | As a power user, I want to customize service configuration beyond defaults so that I can fine-tune behavior                                      |
+| US3.5 | As a power user, I want CLI commands for all operations so that I can script and automate                                                        |
 
 ### Tier 4: Administrator (Maintenance & Recovery)
 
-| ID | Story |
-|----|-------|
+| ID    | Story                                                                                                                                     |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | US4.1 | As an administrator, I want to test disaster recovery by restoring to a test environment so that I know I can rebuild if production fails |
-| US4.2 | As an administrator, I want to schedule automated offsite backups so that configs are always backed up without manual intervention |
-| US4.3 | As an administrator, I want to enforce security best practices so that my homelab is resilient to compromises |
-| US4.4 | As an administrator, I want to restore a single service without affecting others so that I can recover from partial failures |
+| US4.2 | As an administrator, I want to schedule automated offsite backups so that configs are always backed up without manual intervention        |
+| US4.3 | As an administrator, I want to enforce security best practices so that my homelab is resilient to compromises                             |
+| US4.4 | As an administrator, I want to restore a single service without affecting others so that I can recover from partial failures              |
 
 ### Tier 5: Community & Contributors
 
-| ID | Story |
-|----|-------|
+| ID    | Story                                                                                                                |
+| ----- | -------------------------------------------------------------------------------------------------------------------- |
 | US5.1 | As a contributor, I want to add new services to the catalog so that others can use them without manual configuration |
-| US5.2 | As a community member, I want to understand how the system works so that I can troubleshoot issues or help others |
+| US5.2 | As a community member, I want to understand how the system works so that I can troubleshoot issues or help others    |
 
 ---
 
@@ -351,13 +351,13 @@ Stage 5: MAINTENANCE & RECOVERY
 
 ### Platform Prerequisites
 
-| Prerequisite | Description |
-|--------------|-------------|
-| **Docker Engine** | Container runtime for all services |
-| **Docker Compose** | Multi-container orchestration; all services defined as Compose projects |
-| **Debian/Ubuntu Linux** | Primary supported platform |
-| **Personal Domain** | Required for SSL certificates and service URLs |
-| **DNS Provider Access** | API credentials for automated certificate validation |
+| Prerequisite            | Description                                                             |
+| ----------------------- | ----------------------------------------------------------------------- |
+| **Docker Engine**       | Container runtime for all services                                      |
+| **Docker Compose**      | Multi-container orchestration; all services defined as Compose projects |
+| **Debian/Ubuntu Linux** | Primary supported platform                                              |
+| **Personal Domain**     | Required for SSL certificates and service URLs                          |
+| **DNS Provider Access** | API credentials for automated certificate validation                    |
 
 Docker Compose is the foundational technology for service orchestration. All service definitions are Compose files, and the system manages containers through Compose commands rather than raw Docker CLI.
 
@@ -369,24 +369,24 @@ Docker Compose is the foundational technology for service orchestration. All ser
 AVAILABLE → ENABLED → RUNNING ↔ STOPPED → DISABLED → [ARCHIVED]
 ```
 
-| State | Description | Data Impact |
-|-------|-------------|-------------|
-| **AVAILABLE** | Service definition exists but not active | None |
-| **ENABLED** | Service registered, configuration prepared | Creates configs |
-| **RUNNING** | Container active and accessible | None |
-| **STOPPED** | Container exists but not running | None |
-| **DISABLED** | Service unregistered | Preserves data |
-| **ARCHIVED** | Configuration permanently removed | Destroys data |
+| State         | Description                                | Data Impact     |
+| ------------- | ------------------------------------------ | --------------- |
+| **AVAILABLE** | Service definition exists but not active   | None            |
+| **ENABLED**   | Service registered, configuration prepared | Creates configs |
+| **RUNNING**   | Container active and accessible            | None            |
+| **STOPPED**   | Container exists but not running           | None            |
+| **DISABLED**  | Service unregistered                       | Preserves data  |
+| **ARCHIVED**  | Configuration permanently removed          | Destroys data   |
 
 #### Service Relationships
 
-| Relationship Type | Description |
-|-------------------|-------------|
-| **Networking** | All services join common network for web access via reverse proxy |
-| **Database Dependencies** | Services with databases run dedicated database containers |
-| **Configuration** | Global config provides base; service-specific extends/overrides |
-| **Extensions** | Overrides extend functionality (NFS, GPU, VPN) without modifying base |
-| **External Services** | Non-containerized services can be proxied through reverse proxy |
+| Relationship Type         | Description                                                           |
+| ------------------------- | --------------------------------------------------------------------- |
+| **Networking**            | All services join common network for web access via reverse proxy     |
+| **Database Dependencies** | Services with databases run dedicated database containers             |
+| **Configuration**         | Global config provides base; service-specific extends/overrides       |
+| **Extensions**            | Overrides extend functionality (NFS, GPU, VPN) without modifying base |
+| **External Services**     | Non-containerized services can be proxied through reverse proxy       |
 
 #### Service Metadata Requirements
 
@@ -425,42 +425,42 @@ Tier 4: Service Configuration Files
 
 #### Required Initial Configuration
 
-| Configuration | Purpose |
-|---------------|---------|
-| Hostname & Domain | SSL certificates and service URLs |
-| DNS Provider Credentials | Automated certificate management |
-| User/Group IDs | Container file permissions |
-| Timezone | Container time synchronization |
+| Configuration            | Purpose                           |
+| ------------------------ | --------------------------------- |
+| Hostname & Domain        | SSL certificates and service URLs |
+| DNS Provider Credentials | Automated certificate management  |
+| User/Group IDs           | Container file permissions        |
+| Timezone                 | Container time synchronization    |
 
 #### Sensitive Data Requirements
 
-| Requirement | Description |
-|-------------|-------------|
-| Auto-generation | Passwords auto-generated when not specified |
-| Isolation | Each service gets its own environment file |
-| Protection | Environment files never committed to version control |
-| File permissions | Restricted to owner read/write only |
-| Archival | Credentials preserved when disabling services |
+| Requirement      | Description                                          |
+| ---------------- | ---------------------------------------------------- |
+| Auto-generation  | Passwords auto-generated when not specified          |
+| Isolation        | Each service gets its own environment file           |
+| Protection       | Environment files never committed to version control |
+| File permissions | Restricted to owner read/write only                  |
+| Archival         | Credentials preserved when disabling services        |
 
 ### Networking & Access
 
 #### Access Patterns
 
-| Pattern | Use Case | Description |
-|---------|----------|-------------|
-| **HTTPS via Reverse Proxy** | Web UIs, APIs | Primary access method |
-| **Direct Protocols** | DNS, SSH, SMTP | Non-HTTP protocols exposed directly |
-| **Internal Networks** | Databases, caches | Container-to-container only |
-| **External Service Proxy** | VMs, appliances | Non-containerized services via proxy |
+| Pattern                     | Use Case          | Description                          |
+| --------------------------- | ----------------- | ------------------------------------ |
+| **HTTPS via Reverse Proxy** | Web UIs, APIs     | Primary access method                |
+| **Direct Protocols**        | DNS, SSH, SMTP    | Non-HTTP protocols exposed directly  |
+| **Internal Networks**       | Databases, caches | Container-to-container only          |
+| **External Service Proxy**  | VMs, appliances   | Non-containerized services via proxy |
 
 #### SSL/TLS Requirements
 
-| Requirement | Description |
-|-------------|-------------|
-| Wildcard Certificates | Single cert covers `*.example.com` |
-| DNS-01 Validation | Works through firewalls |
-| Automatic Renewal | Before expiration, zero manual intervention |
-| Provider Support | Multiple DNS providers supported |
+| Requirement           | Description                                 |
+| --------------------- | ------------------------------------------- |
+| Wildcard Certificates | Single cert covers `*.example.com`          |
+| DNS-01 Validation     | Works through firewalls                     |
+| Automatic Renewal     | Before expiration, zero manual intervention |
+| Provider Support      | Multiple DNS providers supported            |
 
 #### Network Architecture
 
@@ -481,12 +481,12 @@ Docker Network
 
 #### Exposure Control
 
-| Mechanism | Purpose |
-|-----------|---------|
-| Proxy Routing | Enable/disable web access per service |
+| Mechanism         | Purpose                                     |
+| ----------------- | ------------------------------------------- |
+| Proxy Routing     | Enable/disable web access per service       |
 | Network Selection | Control which Docker networks service joins |
-| Port Mappings | Expose direct ports (or localhost only) |
-| Middleware | Add authentication, security at proxy level |
+| Port Mappings     | Expose direct ports (or localhost only)     |
+| Middleware        | Add authentication, security at proxy level |
 
 #### Internal DNS Management
 
@@ -494,13 +494,13 @@ The system requires automatic DNS resolution for containers without depending on
 
 **Core Requirements:**
 
-| Requirement | Description |
-|-------------|-------------|
-| Automatic Registration | Containers automatically register their hostnames via labels |
-| Zero Configuration | New containers get DNS entries without manual intervention |
-| Static Entry Support | Support for non-containerized services (VMs, appliances, NAS) |
-| Local Resolution | DNS queries resolve within the homelab without external dependencies |
-| External Proxy Sync | DNS entries auto-created for services proxied through reverse proxy |
+| Requirement            | Description                                                          |
+| ---------------------- | -------------------------------------------------------------------- |
+| Automatic Registration | Containers automatically register their hostnames via labels         |
+| Zero Configuration     | New containers get DNS entries without manual intervention           |
+| Static Entry Support   | Support for non-containerized services (VMs, appliances, NAS)        |
+| Local Resolution       | DNS queries resolve within the homelab without external dependencies |
+| External Proxy Sync    | DNS entries auto-created for services proxied through reverse proxy  |
 
 **DNS Architecture:**
 
@@ -532,11 +532,11 @@ For services that aren't Docker containers (NAS, printers, VMs, external applian
 
 #### Backup Tiers
 
-| Tier | Contents | Priority |
-|------|----------|----------|
-| **Configuration (Critical)** | All service configs, environment files, enabled services | Required |
-| **Database Data** | Database dumps for each service with a database | Required if applicable |
-| **Volume Data** | Photos, media libraries, application data | User-dependent |
+| Tier                         | Contents                                                 | Priority               |
+| ---------------------------- | -------------------------------------------------------- | ---------------------- |
+| **Configuration (Critical)** | All service configs, environment files, enabled services | Required               |
+| **Database Data**            | Database dumps for each service with a database          | Required if applicable |
+| **Volume Data**              | Photos, media libraries, application data                | User-dependent         |
 
 #### Backup Exclusions (By Design)
 
@@ -565,23 +565,23 @@ Step 4: Start Services
 
 #### Recovery Time Objectives
 
-| Scenario | Target Time |
-|----------|-------------|
-| With prepared backup | 5-15 minutes |
+| Scenario                | Target Time               |
+| ----------------------- | ------------------------- |
+| With prepared backup    | 5-15 minutes              |
 | Without prepared backup | Hours (manual recreation) |
 
 ### Storage Patterns
 
 #### When to Use Shared Storage
 
-| Use Case | Local Storage | Shared Storage |
-|----------|---------------|----------------|
-| Small media library (<100GB) | ✓ | |
-| Large media library (1TB+) | | ✓ |
-| Single-service deployment | ✓ | |
-| Multi-service coordination | | ✓ |
-| Backup to separate hardware | | ✓ |
-| Testing/development | ✓ | |
+| Use Case                     | Local Storage | Shared Storage |
+| ---------------------------- | ------------- | -------------- |
+| Small media library (<100GB) | ✓             |                |
+| Large media library (1TB+)   |               | ✓              |
+| Single-service deployment    | ✓             |                |
+| Multi-service coordination   |               | ✓              |
+| Backup to separate hardware  |               | ✓              |
+| Testing/development          | ✓             |                |
 
 #### Shared Storage Benefits
 
@@ -594,14 +594,14 @@ Step 4: Start Services
 
 #### Recommended: Dedicated Database Per Service
 
-| Factor | Dedicated (Recommended) | Shared |
-|--------|-------------------------|--------|
-| Failure Isolation | Excellent | Poor (cascade) |
-| Recovery Granularity | Per-service | All-or-nothing |
-| Upgrade Independence | Independent | Must coordinate |
-| Configuration | Simple | Complex |
-| Scaling | Unlimited | Limited |
-| Resource Usage | Higher overhead | Lower |
+| Factor               | Dedicated (Recommended) | Shared          |
+| -------------------- | ----------------------- | --------------- |
+| Failure Isolation    | Excellent               | Poor (cascade)  |
+| Recovery Granularity | Per-service             | All-or-nothing  |
+| Upgrade Independence | Independent             | Must coordinate |
+| Configuration        | Simple                  | Complex         |
+| Scaling              | Unlimited               | Limited         |
+| Resource Usage       | Higher overhead         | Lower           |
 
 #### Why Dedicated Databases
 
@@ -682,30 +682,30 @@ Based on documented user pain points, the system must follow these principles:
 
 ### User Experience Metrics
 
-| Metric | Target |
-|--------|--------|
-| Time to first service | Under 5 minutes (excluding downloads) |
-| Setup completion rate | > 90% without errors |
-| Service enable success rate | > 95% first attempt |
-| Disaster recovery time | Under 15 minutes to full restore |
+| Metric                      | Target                                |
+| --------------------------- | ------------------------------------- |
+| Time to first service       | Under 5 minutes (excluding downloads) |
+| Setup completion rate       | > 90% without errors                  |
+| Service enable success rate | > 95% first attempt                   |
+| Disaster recovery time      | Under 15 minutes to full restore      |
 
 ### Project Metrics
 
-| Metric | Target |
-|--------|--------|
-| Supported services | 30+ curated services |
-| Test coverage | > 80% |
+| Metric                     | Target                  |
+| -------------------------- | ----------------------- |
+| Supported services         | 30+ curated services    |
+| Test coverage              | > 80%                   |
 | Documentation completeness | All commands documented |
 
 ### User Satisfaction Indicators
 
-| Indicator | Description |
-|-----------|-------------|
-| **Speed** | Quick wins (first service running rapidly) |
-| **Predictability** | Operations work the same way across all services |
-| **Discoverability** | Easy to find and understand available services |
-| **Safety** | No destructive surprises; backups are easy |
-| **Flexibility** | Customization without forking the project |
+| Indicator           | Description                                      |
+| ------------------- | ------------------------------------------------ |
+| **Speed**           | Quick wins (first service running rapidly)       |
+| **Predictability**  | Operations work the same way across all services |
+| **Discoverability** | Easy to find and understand available services   |
+| **Safety**          | No destructive surprises; backups are easy       |
+| **Flexibility**     | Customization without forking the project        |
 
 ---
 
@@ -714,20 +714,20 @@ Based on documented user pain points, the system must follow these principles:
 This section records a point-in-time review of the current implementation
 against the requirements in this PRD. It does not change the product goals.
 
-| Area | Status | Notes |
-|------|--------|-------|
-| **Core product direction** | On track | The current branch still matches the original goal: a single-server homelab manager that favors disaster recovery over high availability. |
-| **FR1 Multi-Container Management** | Implemented | Consistent command flows, service lifecycle management, and centralized status handling are present. |
+| Area                                   | Status                              | Notes                                                                                                                                         |
+| -------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Core product direction**             | On track                            | The current branch still matches the original goal: a single-server homelab manager that favors disaster recovery over high availability.     |
+| **FR1 Multi-Container Management**     | Implemented                         | Consistent command flows, service lifecycle management, and centralized status handling are present.                                          |
 | **FR2 SSL/TLS Certificate Management** | Implemented with current constraint | Caddy-based HTTPS and DNS challenge automation are present. Current implementation is Cloudflare-first rather than broadly provider-agnostic. |
-| **FR3 Service Discovery & Catalog** | Implemented | Catalog browsing, metadata display, category grouping, and search are present. |
-| **FR4 Configuration Management** | Implemented | Layered config, validation, generated secrets, and clear command flows are present. |
-| **FR5 Disaster Recovery** | Partial | Backup and restore commands exist, but database dump automation and fuller 3-2-1 offsite coverage are still outstanding. |
-| **FR6 Service Lifecycle** | Implemented | Enable, disable, update, logs, and dependency-aware lifecycle operations are present. |
-| **FR7 Internal DNS Resolution** | Partial | CoreDNS generation and management are implemented, but event-driven automatic registration and full sync behavior remain backlog work. |
-| **US3.1 Hardware acceleration** | Not yet implemented | Data structures allow for it, but no end-user workflow is complete yet. |
-| **US3.3 SSO** | Not yet implemented | Auth services exist in the catalog, but a cross-service SSO workflow is not complete. |
-| **US4.2 Automated offsite backups** | Not yet implemented | Scheduling and remote destinations are not implemented yet. |
-| **Supported services target** | At risk | The PRD target is 30+ curated services; the current catalog is 24 services. |
+| **FR3 Service Discovery & Catalog**    | Implemented                         | Catalog browsing, metadata display, category grouping, and search are present.                                                                |
+| **FR4 Configuration Management**       | Implemented                         | Layered config, validation, generated secrets, and clear command flows are present.                                                           |
+| **FR5 Disaster Recovery**              | Partial                             | Backup and restore commands exist, but database dump automation and fuller 3-2-1 offsite coverage are still outstanding.                      |
+| **FR6 Service Lifecycle**              | Implemented                         | Enable, disable, update, logs, and dependency-aware lifecycle operations are present.                                                         |
+| **FR7 Internal DNS Resolution**        | Partial                             | CoreDNS generation and management are implemented, but event-driven automatic registration and full sync behavior remain backlog work.        |
+| **US3.1 Hardware acceleration**        | Not yet implemented                 | Data structures allow for it, but no end-user workflow is complete yet.                                                                       |
+| **US3.3 SSO**                          | Not yet implemented                 | Auth services exist in the catalog, but a cross-service SSO workflow is not complete.                                                         |
+| **US4.2 Automated offsite backups**    | Not yet implemented                 | Scheduling and remote destinations are not implemented yet.                                                                                   |
+| **Supported services target**          | At risk                             | The PRD target is 30+ curated services; the current catalog is 24 services.                                                                   |
 
 ### Review Conclusion
 
@@ -741,14 +741,14 @@ not a drift away from the intended product.
 
 The following are explicitly out of scope:
 
-| Non-Goal | Rationale |
-|----------|-----------|
-| **Multi-node orchestration** | Single-server focus per philosophy |
-| **High availability** | Explicitly rejected per DR philosophy |
-| **Windows support** | Linux (Debian/Ubuntu) only |
-| **Arbitrary service definitions** | Curated catalog ensures quality |
-| **Zero-downtime deployments** | Accept brief downtime for simplicity |
-| **Service replication** | Single-instance per philosophy |
+| Non-Goal                          | Rationale                             |
+| --------------------------------- | ------------------------------------- |
+| **Multi-node orchestration**      | Single-server focus per philosophy    |
+| **High availability**             | Explicitly rejected per DR philosophy |
+| **Windows support**               | Linux (Debian/Ubuntu) only            |
+| **Arbitrary service definitions** | Curated catalog ensures quality       |
+| **Zero-downtime deployments**     | Accept brief downtime for simplicity  |
+| **Service replication**           | Single-instance per philosophy        |
 
 ---
 
@@ -758,87 +758,87 @@ The following implementation decisions require evaluation:
 
 ### DP1: User Interface Approach
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **TUI (Terminal UI)** | Rich interaction, visual feedback, guided workflows | Requires TUI library, more complex |
-| **Pure CLI** | Simple, scriptable, universal | Less discoverable, steeper learning curve |
-| **Web Dashboard** | Most accessible, visual | Requires server, adds complexity |
-| **Hybrid (TUI + CLI)** | Best of both | More development effort |
+| Option                 | Pros                                                | Cons                                      |
+| ---------------------- | --------------------------------------------------- | ----------------------------------------- |
+| **TUI (Terminal UI)**  | Rich interaction, visual feedback, guided workflows | Requires TUI library, more complex        |
+| **Pure CLI**           | Simple, scriptable, universal                       | Less discoverable, steeper learning curve |
+| **Web Dashboard**      | Most accessible, visual                             | Requires server, adds complexity          |
+| **Hybrid (TUI + CLI)** | Best of both                                        | More development effort                   |
 
 ### DP2: Implementation Language/Runtime
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **TypeScript/Bun** | Modern, fast, good ecosystem | Newer runtime |
-| **TypeScript/Node** | Mature, widely deployed | Slower than Bun |
-| **Go** | Single binary, fast, Charm ecosystem | Less flexible |
-| **Python** | Rich ecosystem, familiar | Requires runtime |
-| **Rust** | Fast, safe, single binary | Steeper learning curve |
+| Option              | Pros                                 | Cons                   |
+| ------------------- | ------------------------------------ | ---------------------- |
+| **TypeScript/Bun**  | Modern, fast, good ecosystem         | Newer runtime          |
+| **TypeScript/Node** | Mature, widely deployed              | Slower than Bun        |
+| **Go**              | Single binary, fast, Charm ecosystem | Less flexible          |
+| **Python**          | Rich ecosystem, familiar             | Requires runtime       |
+| **Rust**            | Fast, safe, single binary            | Steeper learning curve |
 
 ### DP3: Reverse Proxy
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **Traefik** | Label-based, dynamic discovery | Complex config, plugins for DNS |
-| **Caddy** | Simple Caddyfile, built-in DNS-01 | Centralized config file |
-| **nginx** | Widely known, performant | Manual config, no auto-SSL |
+| Option      | Pros                              | Cons                            |
+| ----------- | --------------------------------- | ------------------------------- |
+| **Traefik** | Label-based, dynamic discovery    | Complex config, plugins for DNS |
+| **Caddy**   | Simple Caddyfile, built-in DNS-01 | Centralized config file         |
+| **nginx**   | Widely known, performant          | Manual config, no auto-SSL      |
 
 ### DP4: Configuration Storage Format
 
-| Option | Pros | Cons |
-|--------|------|------|
+| Option   | Pros                                     | Cons                 |
+| -------- | ---------------------------------------- | -------------------- |
 | **YAML** | Human-readable, familiar to Docker users | Whitespace-sensitive |
-| **TOML** | Simpler syntax, less ambiguous | Less familiar |
-| **JSON** | Easy to parse, universal | Verbose, no comments |
+| **TOML** | Simpler syntax, less ambiguous           | Less familiar        |
+| **JSON** | Easy to parse, universal                 | Verbose, no comments |
 
 ### DP5: Service Catalog Distribution
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **Bundled with tool** | Simple, version-locked compatibility | Requires tool update for new services |
-| **Separate repository** | Independent updates | Version compatibility issues |
-| **Registry/API** | Dynamic updates | Network dependency, complexity |
+| Option                  | Pros                                 | Cons                                  |
+| ----------------------- | ------------------------------------ | ------------------------------------- |
+| **Bundled with tool**   | Simple, version-locked compatibility | Requires tool update for new services |
+| **Separate repository** | Independent updates                  | Version compatibility issues          |
+| **Registry/API**        | Dynamic updates                      | Network dependency, complexity        |
 
 ### DP6: Update Strategy
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **Pull-based (user initiates)** | Predictable, no surprises | User must remember |
-| **Push-based (automatic)** | Always current | Potential breaking changes |
-| **Notified (alert + user action)** | Awareness without forcing | Middle complexity |
+| Option                             | Pros                      | Cons                       |
+| ---------------------------------- | ------------------------- | -------------------------- |
+| **Pull-based (user initiates)**    | Predictable, no surprises | User must remember         |
+| **Push-based (automatic)**         | Always current            | Potential breaking changes |
+| **Notified (alert + user action)** | Awareness without forcing | Middle complexity          |
 
 ### DP7: Database Container Strategy
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **Dedicated per service** | Isolation, independent recovery | Higher resource usage |
-| **Shared instances** | Resource efficiency | Cascade failures, complexity |
-| **User choice** | Flexibility | Decision burden |
+| Option                    | Pros                            | Cons                         |
+| ------------------------- | ------------------------------- | ---------------------------- |
+| **Dedicated per service** | Isolation, independent recovery | Higher resource usage        |
+| **Shared instances**      | Resource efficiency             | Cascade failures, complexity |
+| **User choice**           | Flexibility                     | Decision burden              |
 
 ### DP8: Internal DNS Approach
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **Label-based DNS (CoreDNS/Joyride)** | Automatic, zero-config, Docker-native | Requires DNS server container |
-| **Docker internal DNS** | Built-in, no extra containers | Limited to container names, no custom domains |
-| **External DNS only** | Simple, no local DNS | Requires external DNS changes, slower |
-| **hosts file management** | Simple, no server | Manual, doesn't scale |
+| Option                                | Pros                                  | Cons                                          |
+| ------------------------------------- | ------------------------------------- | --------------------------------------------- |
+| **Label-based DNS (CoreDNS/Joyride)** | Automatic, zero-config, Docker-native | Requires DNS server container                 |
+| **Docker internal DNS**               | Built-in, no extra containers         | Limited to container names, no custom domains |
+| **External DNS only**                 | Simple, no local DNS                  | Requires external DNS changes, slower         |
+| **hosts file management**             | Simple, no server                     | Manual, doesn't scale                         |
 
 ---
 
 ## Appendix: Pain Points Addressed
 
-| Pain Point | How System Must Address |
-|------------|------------------------|
-| **Directory/file ownership issues** | Pre-create directories with correct ownership |
-| **Environment variable chaos** | Single source of truth, clear precedence, guided setup |
-| **Initial setup complexity** | Guided setup, system detection, sensible defaults |
-| **Container networking issues** | Non-destructive, idempotent network operations |
-| **Configuration brittleness** | Generated configs from templates, never edited directly |
-| **Silent failures** | Explicit error messages, validation before execution |
-| **State tracking lies** | Verify actual state, don't trust markers |
-| **Timing/timeout issues** | Generous defaults, progress indication |
-| **Installation idempotency** | All operations safe to re-run |
+| Pain Point                          | How System Must Address                                 |
+| ----------------------------------- | ------------------------------------------------------- |
+| **Directory/file ownership issues** | Pre-create directories with correct ownership           |
+| **Environment variable chaos**      | Single source of truth, clear precedence, guided setup  |
+| **Initial setup complexity**        | Guided setup, system detection, sensible defaults       |
+| **Container networking issues**     | Non-destructive, idempotent network operations          |
+| **Configuration brittleness**       | Generated configs from templates, never edited directly |
+| **Silent failures**                 | Explicit error messages, validation before execution    |
+| **State tracking lies**             | Verify actual state, don't trust markers                |
+| **Timing/timeout issues**           | Generous defaults, progress indication                  |
+| **Installation idempotency**        | All operations safe to re-run                           |
 
 ---
 

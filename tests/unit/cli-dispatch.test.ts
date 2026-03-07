@@ -6,38 +6,34 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { createCli } from "../../src/cli/commands/index.js";
 import { InitCommand } from "../../src/cli/commands/init.js";
 import { ValidateCommand } from "../../src/cli/commands/validate.js";
+import { ConfigCommand } from "../../src/cli/commands/config.js";
 import { BackupCommand } from "../../src/cli/commands/backup.js";
 import { ServiceCommand } from "../../src/cli/commands/service.js";
+import { CaddyCommand } from "../../src/cli/commands/caddy.js";
+import { DnsCommand } from "../../src/cli/commands/dns.js";
+import { TuiApp } from "../../src/tui/app.js";
+import { createPatchSet, stubProcessExit } from "../helpers/test-utils.js";
 
 describe("CLI command dispatch", () => {
-  const originalInitExecute = InitCommand.prototype.execute;
-  const originalValidateExecute = ValidateCommand.prototype.execute;
-  const originalBackupRestore = BackupCommand.prototype.restore;
-  const originalServiceLogs = ServiceCommand.prototype.logs;
-  const originalExit = process.exit;
+  let patchSet: ReturnType<typeof createPatchSet>;
+  let exitStub: ReturnType<typeof stubProcessExit> | undefined;
 
   beforeEach(() => {
-    InitCommand.prototype.execute = originalInitExecute;
-    ValidateCommand.prototype.execute = originalValidateExecute;
-    BackupCommand.prototype.restore = originalBackupRestore;
-    ServiceCommand.prototype.logs = originalServiceLogs;
-    process.exit = originalExit;
+    patchSet = createPatchSet();
+    exitStub = undefined;
   });
 
   afterEach(() => {
-    InitCommand.prototype.execute = originalInitExecute;
-    ValidateCommand.prototype.execute = originalValidateExecute;
-    BackupCommand.prototype.restore = originalBackupRestore;
-    ServiceCommand.prototype.logs = originalServiceLogs;
-    process.exit = originalExit;
+    exitStub?.restore();
+    patchSet.restore();
   });
 
   it("dispatches init command with parsed path option", async () => {
     let receivedPath: string | undefined;
 
-    InitCommand.prototype.execute = async (options: { path?: string }) => {
+    patchSet.patch(InitCommand.prototype, "execute", async (options: { path?: string }) => {
       receivedPath = options.path;
-    };
+    });
 
     const cli = createCli();
     await cli.parseAsync(["node", "tuition", "init", "--path", "/tmp/custom-config"]);
@@ -46,46 +42,37 @@ describe("CLI command dispatch", () => {
   });
 
   it("exits with code 0 when validate succeeds", async () => {
-    let exitCode: number | undefined;
-
-    ValidateCommand.prototype.execute = async () => true;
-    process.exit = ((code?: number) => {
-      exitCode = code;
-      return undefined as never;
-    }) as typeof process.exit;
+    patchSet.patch(ValidateCommand.prototype, "execute", async () => true);
+    exitStub = stubProcessExit();
 
     const cli = createCli();
     await cli.parseAsync(["node", "tuition", "validate"]);
 
-    expect(exitCode).toBe(0);
+    expect(exitStub.lastCode()).toBe(0);
   });
 
   it("exits with code 1 when validate fails", async () => {
-    let exitCode: number | undefined;
-
-    ValidateCommand.prototype.execute = async () => false;
-    process.exit = ((code?: number) => {
-      exitCode = code;
-      return undefined as never;
-    }) as typeof process.exit;
+    patchSet.patch(ValidateCommand.prototype, "execute", async () => false);
+    exitStub = stubProcessExit();
 
     const cli = createCli();
     await cli.parseAsync(["node", "tuition", "validate"]);
 
-    expect(exitCode).toBe(1);
+    expect(exitStub.lastCode()).toBe(1);
   });
 
   it("dispatches backup restore with identifier and parsed flags", async () => {
     let receivedIdentifier = "";
     let receivedOptions: { dryRun?: boolean; force?: boolean; path?: string } = {};
 
-    BackupCommand.prototype.restore = async (
-      identifier: string,
-      options: { dryRun?: boolean; force?: boolean; path?: string }
-    ) => {
-      receivedIdentifier = identifier;
-      receivedOptions = options;
-    };
+    patchSet.patch(
+      BackupCommand.prototype,
+      "restore",
+      async (identifier: string, options: { dryRun?: boolean; force?: boolean; path?: string }) => {
+        receivedIdentifier = identifier;
+        receivedOptions = options;
+      }
+    );
 
     const cli = createCli();
     await cli.parseAsync([
@@ -110,13 +97,14 @@ describe("CLI command dispatch", () => {
     let receivedName = "";
     let receivedOptions: { tail?: number; follow?: boolean } = {};
 
-    ServiceCommand.prototype.logs = async (
-      name: string,
-      options: { tail?: number; follow?: boolean; path?: string }
-    ) => {
-      receivedName = name;
-      receivedOptions = options;
-    };
+    patchSet.patch(
+      ServiceCommand.prototype,
+      "logs",
+      async (name: string, options: { tail?: number; follow?: boolean; path?: string }) => {
+        receivedName = name;
+        receivedOptions = options;
+      }
+    );
 
     const cli = createCli();
     await cli.parseAsync([
@@ -135,5 +123,214 @@ describe("CLI command dispatch", () => {
     expect(receivedName).toBe("whoami");
     expect(receivedOptions.tail).toBe(25);
     expect(receivedOptions.follow).toBe(true);
+  });
+
+  it("dispatches config commands with parsed arguments", async () => {
+    let showPath: string | undefined;
+    let setArgs: { key: string; value: string; path?: string } | undefined;
+
+    patchSet.patch(ConfigCommand.prototype, "show", async (options: { path?: string }) => {
+      showPath = options.path;
+    });
+    patchSet.patch(ConfigCommand.prototype, "set", async (key: string, value: string, options: { path?: string }) => {
+      setArgs = { key, value, path: options.path };
+    });
+
+    let cli = createCli();
+    await cli.parseAsync(["node", "tuition", "config", "show", "--path", "/tmp/config-show"]);
+
+    cli = createCli();
+    await cli.parseAsync([
+      "node",
+      "tuition",
+      "config",
+      "set",
+      "global.domain",
+      "example.com",
+      "--path",
+      "/tmp/config-set",
+    ]);
+
+    expect(showPath).toBe("/tmp/config-show");
+    expect(setArgs).toEqual({ key: "global.domain", value: "example.com", path: "/tmp/config-set" });
+  });
+
+  it("dispatches service lifecycle and search commands", async () => {
+    const calls: Array<{ method: string; name?: string; path?: string; extra?: Record<string, unknown> }> = [];
+
+    patchSet.patch(
+      ServiceCommand.prototype,
+      "list",
+      async (options: { category?: string; all?: boolean; path?: string }) => {
+        calls.push({ method: "list", path: options.path, extra: { category: options.category, all: options.all } });
+      }
+    );
+    patchSet.patch(ServiceCommand.prototype, "show", async (name: string, options: { path?: string }) => {
+      calls.push({ method: "show", name, path: options.path });
+    });
+    patchSet.patch(
+      ServiceCommand.prototype,
+      "enable",
+      async (name: string, options: { noStart?: boolean; start?: boolean; path?: string }) => {
+        calls.push({
+          method: "enable",
+          name,
+          path: options.path,
+          extra: { noStart: options.noStart, start: options.start },
+        });
+      }
+    );
+    patchSet.patch(
+      ServiceCommand.prototype,
+      "disable",
+      async (name: string, options: { removeData?: boolean; path?: string }) => {
+        calls.push({ method: "disable", name, path: options.path, extra: { removeData: options.removeData } });
+      }
+    );
+    patchSet.patch(ServiceCommand.prototype, "start", async (name: string, options: { path?: string }) => {
+      calls.push({ method: "start", name, path: options.path });
+    });
+    patchSet.patch(ServiceCommand.prototype, "stop", async (name: string, options: { path?: string }) => {
+      calls.push({ method: "stop", name, path: options.path });
+    });
+    patchSet.patch(ServiceCommand.prototype, "restart", async (name: string, options: { path?: string }) => {
+      calls.push({ method: "restart", name, path: options.path });
+    });
+    patchSet.patch(ServiceCommand.prototype, "update", async (name: string, options: { path?: string }) => {
+      calls.push({ method: "update", name, path: options.path });
+    });
+    patchSet.patch(ServiceCommand.prototype, "search", async (query: string, options: { path?: string }) => {
+      calls.push({ method: "search", name: query, path: options.path });
+    });
+
+    const invocations: string[][] = [
+      ["node", "tuition", "service", "list", "--category", "dns", "--all", "--path", "/tmp/service-list"],
+      ["node", "tuition", "service", "show", "whoami", "--path", "/tmp/service-show"],
+      ["node", "tuition", "service", "enable", "whoami", "--no-start", "--path", "/tmp/service-enable"],
+      ["node", "tuition", "service", "disable", "whoami", "--remove-data", "--path", "/tmp/service-disable"],
+      ["node", "tuition", "service", "start", "whoami", "--path", "/tmp/service-start"],
+      ["node", "tuition", "service", "stop", "whoami", "--path", "/tmp/service-stop"],
+      ["node", "tuition", "service", "restart", "whoami", "--path", "/tmp/service-restart"],
+      ["node", "tuition", "service", "update", "whoami", "--path", "/tmp/service-update"],
+      ["node", "tuition", "service", "search", "media", "--path", "/tmp/service-search"],
+    ];
+
+    for (const args of invocations) {
+      const cli = createCli();
+      await cli.parseAsync(args);
+    }
+
+    expect(calls).toEqual([
+      { method: "list", path: "/tmp/service-list", extra: { category: "dns", all: true } },
+      { method: "show", name: "whoami", path: "/tmp/service-show" },
+      { method: "enable", name: "whoami", path: "/tmp/service-enable", extra: { noStart: undefined, start: false } },
+      { method: "disable", name: "whoami", path: "/tmp/service-disable", extra: { removeData: true } },
+      { method: "start", name: "whoami", path: "/tmp/service-start" },
+      { method: "stop", name: "whoami", path: "/tmp/service-stop" },
+      { method: "restart", name: "whoami", path: "/tmp/service-restart" },
+      { method: "update", name: "whoami", path: "/tmp/service-update" },
+      { method: "search", name: "media", path: "/tmp/service-search" },
+    ]);
+  });
+
+  it("dispatches caddy, dns, backup, and tui commands", async () => {
+    const calls: string[] = [];
+
+    patchSet.patch(CaddyCommand.prototype, "start", async () => {
+      calls.push("caddy:start");
+    });
+    patchSet.patch(CaddyCommand.prototype, "stop", async () => {
+      calls.push("caddy:stop");
+    });
+    patchSet.patch(CaddyCommand.prototype, "restart", async () => {
+      calls.push("caddy:restart");
+    });
+    patchSet.patch(CaddyCommand.prototype, "reload", async () => {
+      calls.push("caddy:reload");
+    });
+    patchSet.patch(CaddyCommand.prototype, "status", async () => {
+      calls.push("caddy:status");
+    });
+    patchSet.patch(CaddyCommand.prototype, "regenerate", async () => {
+      calls.push("caddy:regenerate");
+    });
+    patchSet.patch(CaddyCommand.prototype, "hashPassword", async () => {
+      calls.push("caddy:hash-password");
+    });
+    patchSet.patch(CaddyCommand.prototype, "setPassword", async () => {
+      calls.push("caddy:set-password");
+    });
+    patchSet.patch(DnsCommand.prototype, "start", async () => {
+      calls.push("dns:start");
+    });
+    patchSet.patch(DnsCommand.prototype, "stop", async () => {
+      calls.push("dns:stop");
+    });
+    patchSet.patch(DnsCommand.prototype, "status", async () => {
+      calls.push("dns:status");
+    });
+    patchSet.patch(DnsCommand.prototype, "regenerate", async () => {
+      calls.push("dns:regenerate");
+    });
+    patchSet.patch(DnsCommand.prototype, "configure", async () => {
+      calls.push("dns:configure");
+    });
+    patchSet.patch(BackupCommand.prototype, "create", async () => {
+      calls.push("backup:create");
+    });
+    patchSet.patch(BackupCommand.prototype, "list", async () => {
+      calls.push("backup:list");
+    });
+    patchSet.patch(BackupCommand.prototype, "delete", async () => {
+      calls.push("backup:delete");
+    });
+    patchSet.patch(TuiApp.prototype, "run", async () => {
+      calls.push("tui:run");
+    });
+
+    const invocations: string[][] = [
+      ["node", "tuition", "caddy", "start"],
+      ["node", "tuition", "caddy", "stop"],
+      ["node", "tuition", "caddy", "restart"],
+      ["node", "tuition", "caddy", "reload"],
+      ["node", "tuition", "caddy", "status"],
+      ["node", "tuition", "caddy", "regenerate"],
+      ["node", "tuition", "caddy", "hash-password"],
+      ["node", "tuition", "caddy", "set-password"],
+      ["node", "tuition", "dns", "start"],
+      ["node", "tuition", "dns", "stop"],
+      ["node", "tuition", "dns", "status"],
+      ["node", "tuition", "dns", "regenerate"],
+      ["node", "tuition", "dns", "configure"],
+      ["node", "tuition", "backup", "create"],
+      ["node", "tuition", "backup", "list"],
+      ["node", "tuition", "backup", "delete", "backup.tar.gz"],
+      ["node", "tuition", "tui"],
+    ];
+
+    for (const args of invocations) {
+      const cli = createCli();
+      await cli.parseAsync(args);
+    }
+
+    expect(calls).toEqual([
+      "caddy:start",
+      "caddy:stop",
+      "caddy:restart",
+      "caddy:reload",
+      "caddy:status",
+      "caddy:regenerate",
+      "caddy:hash-password",
+      "caddy:set-password",
+      "dns:start",
+      "dns:stop",
+      "dns:status",
+      "dns:regenerate",
+      "dns:configure",
+      "backup:create",
+      "backup:list",
+      "backup:delete",
+      "tui:run",
+    ]);
   });
 });

@@ -17,6 +17,7 @@ export class CaddyManager {
   private composeManager: ComposeManager;
   private caddyfilePath: string;
   private dataPath: string;
+  private spawnProcess = spawn;
 
   constructor(projectPath: string) {
     this.projectPath = projectPath;
@@ -246,7 +247,7 @@ export class CaddyManager {
    */
   private async execCaddyCommand(args: string[]): Promise<{ success: boolean; output: string }> {
     return new Promise((resolve) => {
-      const proc = spawn("docker", ["exec", "caddy", "caddy", ...args], {
+      const proc = this.spawnProcess("docker", ["exec", "caddy", "caddy", ...args], {
         cwd: this.projectPath,
         stdio: ["pipe", "pipe", "pipe"],
       });

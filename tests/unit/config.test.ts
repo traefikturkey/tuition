@@ -86,6 +86,84 @@ describe("ConfigManager", () => {
     });
   });
 
+  describe("loadInfrastructure", () => {
+    it("should return undefined when infrastructure config does not exist", async () => {
+      const config = await configManager.loadInfrastructure();
+
+      expect(config).toBeUndefined();
+    });
+
+    it("should load saved infrastructure configuration", async () => {
+      await configManager.initialize();
+      await configManager.saveInfrastructure({
+        externalServices: [],
+      });
+
+      const config = await configManager.loadInfrastructure();
+
+      expect(config).toEqual({ externalServices: [] });
+    });
+  });
+
+  describe("load", () => {
+    it("should load global, infrastructure, and service configs together", async () => {
+      await configManager.initialize();
+      await configManager.saveGlobal({
+        hostname: "test-server",
+        domain: "test.com",
+        adminEmail: "admin@test.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "test-token",
+        upstreamDns: {
+          primary: "1.1.1.1",
+          backup: "1.0.0.1",
+        },
+      });
+      await configManager.saveInfrastructure({
+        externalServices: [],
+      });
+      await configManager.saveService("whoami", {
+        enabled: true,
+        imageTag: "latest",
+        environment: { TEST_VAR: "value" },
+      });
+
+      const loaded = await configManager.load();
+
+      expect(loaded.global.hostname).toBe("test-server");
+      expect(loaded.infrastructure).toEqual({ externalServices: [] });
+      expect(loaded.services.whoami?.enabled).toBe(true);
+    });
+  });
+
+  describe("loadServices", () => {
+    it("should load supported service files and ignore entries that do not resolve", async () => {
+      await configManager.initialize();
+      const servicesPath = join(configManager.getConfigPath(), "services");
+
+      await writeFile(join(servicesPath, "whoami.yaml"), "enabled: true\nimageTag: latest\n", "utf-8");
+      await writeFile(join(servicesPath, "jellyfin.yml"), "enabled: false\nimageTag: stable\n", "utf-8");
+      await writeFile(join(servicesPath, "notes.txt"), "ignore me", "utf-8");
+
+      const services = await configManager.loadServices();
+
+      expect(Object.keys(services)).toEqual(["whoami"]);
+      expect(services.whoami?.enabled).toBe(true);
+      expect(services.jellyfin).toBeUndefined();
+    });
+  });
+
+  describe("loadService", () => {
+    it("should return undefined when a service config does not exist", async () => {
+      const config = await configManager.loadService("missing-service");
+
+      expect(config).toBeUndefined();
+    });
+  });
+
   describe("saveService", () => {
     it("should save service configuration", async () => {
       await configManager.initialize();
@@ -100,6 +178,13 @@ describe("ConfigManager", () => {
       expect(loaded).not.toBeNull();
       expect(loaded?.enabled).toBe(true);
       expect(loaded?.imageTag).toBe("latest");
+    });
+  });
+
+  describe("paths", () => {
+    it("should expose the tuition and config directories for a custom path", () => {
+      expect(configManager.getConfigPath()).toBe(join(tempDir, "config"));
+      expect(configManager.getTuitionDir()).toBe(tempDir);
     });
   });
 

@@ -12,7 +12,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "test": "npx tsx --test tests/**/*.test.ts",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

@@ -3,26 +3,40 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { catalog } from "../../src/core/catalog/loader.js";
 import { CaddyCommand } from "../../src/cli/commands/caddy.js";
+import { captureConsoleLog, createPatchSet } from "../helpers/test-utils.js";
 
 describe("CaddyCommand", () => {
-  let captured: string[];
-  let originalLog: typeof console.log;
   let command: CaddyCommand;
+  let consoleCapture: ReturnType<typeof captureConsoleLog>;
+  let patchSet: ReturnType<typeof createPatchSet>;
 
   beforeEach(() => {
-    captured = [];
-    originalLog = console.log;
-    console.log = (...args: unknown[]) => {
-      captured.push(args.map(String).join(" "));
-    };
-
+    consoleCapture = captureConsoleLog();
+    patchSet = createPatchSet();
     command = new CaddyCommand();
   });
 
   afterEach(() => {
-    console.log = originalLog;
+    patchSet.restore();
+    consoleCapture.restore();
   });
+
+  const setupPasswordPromptIo = () => {
+    patchSet.patch(process.stdout, "write", ((_: string | Uint8Array) => true) as typeof process.stdout.write);
+    patchSet.patch(process.stdin, "resume", (() => process.stdin) as typeof process.stdin.resume);
+    patchSet.patch(process.stdin, "pause", (() => process.stdin) as typeof process.stdin.pause);
+    patchSet.patch(process.stdin, "setRawMode", ((_: boolean) => process.stdin) as typeof process.stdin.setRawMode);
+  };
+
+  const submitPassword = async (value: string) => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (const character of value) {
+      process.stdin.emit("data", Buffer.from(character));
+    }
+    process.stdin.emit("data", Buffer.from("\r"));
+  };
 
   it("shows not initialized message when start is called before init", async () => {
     const commandMock = command as unknown as {
@@ -37,8 +51,25 @@ describe("CaddyCommand", () => {
 
     await command.start({});
 
-    const output = captured.join("\n");
+    const output = consoleCapture.output.join("\n");
     expect(output).toContain("Tuition is not initialized");
+  });
+
+  it("initializes the underlying Caddy manager", async () => {
+    let initializeCalls = 0;
+    (
+      command as unknown as {
+        caddy: { initialize: () => Promise<void> };
+      }
+    ).caddy = {
+      initialize: async () => {
+        initializeCalls += 1;
+      },
+    };
+
+    await command.initialize();
+
+    expect(initializeCalls).toBe(1);
   });
 
   it("passes cloudflare token as CF_API_TOKEN when starting caddy", async () => {
@@ -90,7 +121,7 @@ describe("CaddyCommand", () => {
     expect(receivedEnv).toBeDefined();
     expect(receivedEnv?.CF_API_TOKEN).toBe("token-123");
 
-    const output = captured.join("\n");
+    const output = consoleCapture.output.join("\n");
     expect(output).toContain("Caddy started successfully");
   });
 
@@ -109,7 +140,7 @@ describe("CaddyCommand", () => {
 
     await command.stop({});
 
-    const output = captured.join("\n");
+    const output = consoleCapture.output.join("\n");
     expect(output).toContain("failed to stop caddy");
   });
 
@@ -158,7 +189,7 @@ describe("CaddyCommand", () => {
     await command.restart({});
 
     expect(receivedEnv?.CF_API_TOKEN).toBe("token-xyz");
-    expect(captured.join("\n")).toContain("restarted");
+    expect(consoleCapture.output.join("\n")).toContain("restarted");
   });
 
   it("shows failure output when reload fails", async () => {
@@ -198,7 +229,7 @@ describe("CaddyCommand", () => {
 
     await command.reload({});
 
-    const output = captured.join("\n");
+    const output = consoleCapture.output.join("\n");
     expect(output).toContain("reload failed");
   });
 
@@ -235,8 +266,267 @@ describe("CaddyCommand", () => {
 
     await command.status({});
 
-    const output = captured.join("\n");
+    const output = consoleCapture.output.join("\n");
     expect(output).toContain("No password configured");
     expect(output).toContain("tuition caddy set-password");
+  });
+
+  it("shows the protected status when an admin password exists", async () => {
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      caddy: {
+        status: () => Promise<{ running: boolean; routes: number }>;
+      };
+      config: {
+        loadGlobal: () => Promise<{
+          domain: string;
+          adminPasswordHash: string;
+        }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.caddy = {
+      status: async () => ({ running: true, routes: 3 }),
+    };
+    commandMock.config = {
+      loadGlobal: async () => ({
+        domain: "example.com",
+        adminPasswordHash: "existing-hash",
+      }),
+    };
+
+    await command.status({});
+
+    const output = consoleCapture.output.join("\n");
+    expect(output).toContain("https://tuition.example.com");
+    expect(output).toContain("Password protected");
+  });
+
+  it("reports regenerate success after reloading Caddy", async () => {
+    let generatedServices: unknown[] | undefined;
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadGlobal: () => Promise<Record<string, unknown>>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+      };
+      caddy: {
+        generateConfig: (config: unknown, services: unknown[]) => Promise<void>;
+        reload: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadGlobal: async () => ({ domain: "example.com" }),
+      loadServices: async () => ({ whoami: { enabled: true } }),
+    };
+    commandMock.caddy = {
+      generateConfig: async (_config, services) => {
+        generatedServices = services;
+      },
+      reload: async () => ({ success: true, message: "ok" }),
+    };
+    patchSet.patch(catalog, "get", async (name: string) => ({
+      name,
+      category: "development",
+      description: "service",
+      image: "test:latest",
+    }));
+
+    await command.regenerate({});
+
+    expect(generatedServices).toHaveLength(1);
+    expect(consoleCapture.output.join("\n")).toContain("Caddyfile regenerated and applied");
+  });
+
+  it("reports regenerate failures when reload does not apply changes", async () => {
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadGlobal: () => Promise<Record<string, unknown>>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+      };
+      caddy: {
+        generateConfig: (config: unknown, services: unknown[]) => Promise<void>;
+        reload: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadGlobal: async () => ({ domain: "example.com" }),
+      loadServices: async () => ({}),
+    };
+    commandMock.caddy = {
+      generateConfig: async () => undefined,
+      reload: async () => ({ success: false, message: "reload failed" }),
+    };
+
+    await command.regenerate({});
+
+    expect(consoleCapture.output.join("\n")).toContain("Failed to apply changes: reload failed");
+  });
+
+  it("does not save anything when set-password receives mismatched values", async () => {
+    setupPasswordPromptIo();
+    let saveCalled = false;
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadGlobal: () => Promise<{ domain: string }>;
+        saveGlobal: (config: Record<string, unknown>) => Promise<void>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadGlobal: async () => ({ domain: "example.com" }),
+      saveGlobal: async () => {
+        saveCalled = true;
+      },
+    };
+
+    const pending = command.setPassword({});
+    await submitPassword("secret-one");
+    await submitPassword("secret-two");
+    await pending;
+
+    expect(saveCalled).toBe(false);
+    expect(consoleCapture.output.join("\n")).toContain("Passwords do not match");
+  });
+
+  it("rejects empty passwords during set-password", async () => {
+    setupPasswordPromptIo();
+    let saveCalled = false;
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadGlobal: () => Promise<{ domain: string }>;
+        saveGlobal: (config: Record<string, unknown>) => Promise<void>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadGlobal: async () => ({ domain: "example.com" }),
+      saveGlobal: async () => {
+        saveCalled = true;
+      },
+    };
+
+    const pending = command.setPassword({});
+    await submitPassword("");
+    await submitPassword("");
+    await pending;
+
+    expect(saveCalled).toBe(false);
+    expect(consoleCapture.output.join("\n")).toContain("Password cannot be empty");
+  });
+
+  it("saves the hashed password, regenerates config, and reloads Caddy", async () => {
+    let savedConfig: Record<string, unknown> | undefined;
+    let generatedServices: unknown[] | undefined;
+    setupPasswordPromptIo();
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadGlobal: () => Promise<Record<string, unknown>>;
+        saveGlobal: (config: Record<string, unknown>) => Promise<void>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+      };
+      caddy: {
+        generateConfig: (config: unknown, services: unknown[]) => Promise<void>;
+        reload: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadGlobal: async () => ({ domain: "example.com" }),
+      saveGlobal: async (config) => {
+        savedConfig = config;
+      },
+      loadServices: async () => ({ whoami: { enabled: true } }),
+    };
+    commandMock.caddy = {
+      generateConfig: async (_config, services) => {
+        generatedServices = services;
+      },
+      reload: async () => ({ success: true, message: "reloaded" }),
+    };
+    patchSet.patch(catalog, "get", async (name: string) => ({
+      name,
+      category: "development",
+      description: "service",
+      image: "test:latest",
+    }));
+
+    const pending = command.setPassword({});
+    await submitPassword("secret");
+    await submitPassword("secret");
+    await pending;
+
+    expect(typeof savedConfig?.adminPasswordHash).toBe("string");
+    expect(String(savedConfig?.adminPasswordHash)).toContain("$2b$");
+    expect(generatedServices).toHaveLength(1);
+    expect(consoleCapture.output.join("\n")).toContain("Admin password updated successfully");
+    expect(consoleCapture.output.join("\n")).toContain("https://tuition.example.com");
+  });
+
+  it("warns when the password is saved but Caddy reload fails", async () => {
+    setupPasswordPromptIo();
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadGlobal: () => Promise<Record<string, unknown>>;
+        saveGlobal: (config: Record<string, unknown>) => Promise<void>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+      };
+      caddy: {
+        generateConfig: (config: unknown, services: unknown[]) => Promise<void>;
+        reload: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadGlobal: async () => ({ domain: "example.com" }),
+      saveGlobal: async () => undefined,
+      loadServices: async () => ({}),
+    };
+    commandMock.caddy = {
+      generateConfig: async () => undefined,
+      reload: async () => ({ success: false, message: "reload failed" }),
+    };
+
+    const pending = command.setPassword({});
+    await submitPassword("secret");
+    await submitPassword("secret");
+    await pending;
+
+    expect(consoleCapture.output.join("\n")).toContain("Password saved but Caddy could not reload");
+    expect(consoleCapture.output.join("\n")).toContain("tuition caddy restart");
+  });
+
+  it("routes the legacy hash-password command to set-password", async () => {
+    let called = false;
+    patchSet.patch(
+      command as unknown as { setPassword: (options: { path?: string }) => Promise<void> },
+      "setPassword",
+      async () => {
+        called = true;
+      }
+    );
+
+    await command.hashPassword({ path: "/tmp/config" });
+
+    expect(called).toBe(true);
+    expect(consoleCapture.output.join("\n")).toContain('Use "tuition caddy set-password" instead');
   });
 });

@@ -56,6 +56,38 @@ describe('CaddyfileGenerator', () => {
       expect(caddyfile).toContain('svc1:80');
       expect(caddyfile).toContain('svc2:8080');
     });
+
+    it('should include admin password hash when configured', () => {
+      const config = {
+        email: 'admin@example.com',
+        domain: 'example.com',
+        dnsProvider: 'cloudflare',
+        dnsCredentials: {},
+        adminPasswordHash: 'hashed-password',
+        routes: [],
+      };
+
+      const caddyfile = generator.generate(config);
+
+      expect(caddyfile).toContain('admin hashed-password');
+      expect(caddyfile).not.toContain('Admin UI password not configured');
+      expect(caddyfile).not.toContain('tuition caddy set-password');
+    });
+
+    it('should include the admin password placeholder when no hash is configured', () => {
+      const config = {
+        email: 'admin@example.com',
+        domain: 'example.com',
+        dnsProvider: 'cloudflare',
+        dnsCredentials: {},
+        routes: [],
+      };
+
+      const caddyfile = generator.generate(config);
+
+      expect(caddyfile).toContain('# Admin UI password not configured');
+      expect(caddyfile).toContain('# Run: tuition caddy set-password');
+    });
   });
 
   describe('parseServiceLabels', () => {
@@ -93,6 +125,21 @@ describe('CaddyfileGenerator', () => {
       expect(route).toBeNull();
     });
 
+    it('should return null when labels exist but the caddy label is missing', () => {
+      const service: ServiceDefinition = {
+        name: 'test',
+        category: 'dns',
+        description: 'Test service',
+        image: 'test:latest',
+        labels: {
+          'caddy.reverse_proxy': '{{upstreams 8080}}',
+        },
+      };
+
+      const route = generator.parseServiceLabels(service);
+      expect(route).toBeNull();
+    });
+
     it('should extract port from upstream label', () => {
       const service: ServiceDefinition = {
         name: 'plex',
@@ -108,6 +155,61 @@ describe('CaddyfileGenerator', () => {
 
       const route = generator.parseServiceLabels(service);
       expect(route?.port).toBe(32400);
+    });
+
+    it('should fall back to the first container port when ports are defined', () => {
+      const service: ServiceDefinition = {
+        name: 'jellyfin',
+        category: 'media',
+        description: 'Media server',
+        image: 'jellyfin',
+        ports: [{ host: 8096, container: 8096, protocol: 'tcp' }],
+        labels: {
+          caddy: 'jellyfin.${DOMAIN}',
+        },
+      };
+
+      const route = generator.parseServiceLabels(service);
+
+      expect(route?.port).toBe(8096);
+      expect(route?.upstream).toBe('jellyfin');
+    });
+
+    it('should keep the default port when the upstream label does not match the expected template', () => {
+      const service: ServiceDefinition = {
+        name: 'grafana',
+        category: 'monitoring',
+        description: 'Dashboards',
+        image: 'grafana/grafana',
+        labels: {
+          caddy: 'grafana.${DOMAIN}',
+          'caddy.reverse_proxy': 'grafana:3000',
+        },
+      };
+
+      const route = generator.parseServiceLabels(service);
+
+      expect(route?.port).toBe(80);
+      expect(route?.domain).toBe('grafana.');
+    });
+
+    it('should ignore sparse port entries and keep the parsed upstream port', () => {
+      const service: ServiceDefinition = {
+        name: 'prometheus',
+        category: 'monitoring',
+        description: 'Metrics',
+        image: 'prom/prometheus',
+        ports: [undefined as unknown as PortMapping],
+        labels: {
+          caddy: 'prometheus.${DOMAIN}',
+          'caddy.reverse_proxy': '{{upstreams 9090}}',
+        },
+      };
+
+      const route = generator.parseServiceLabels(service);
+
+      expect(route?.port).toBe(9090);
+      expect(route?.upstream).toBe('prometheus');
     });
   });
 

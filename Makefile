@@ -1,7 +1,7 @@
 # Tuition Homelab Manager - Makefile
 # Simple, standard targets that work everywhere
 
-.PHONY: help install uninstall dev build test lint clean
+.PHONY: help install uninstall dev build test coverage lint clean
 
 # Default target
 help:
@@ -13,6 +13,7 @@ help:
 	@echo "  make dev         - Run in development mode"
 	@echo "  make build       - Build for production"
 	@echo "  make test        - Run all tests"
+	@echo "  make coverage    - Run tests with coverage"
 	@echo "  make lint        - Check TypeScript"
 	@echo "  make clean       - Remove build artifacts"
 	@echo ""
@@ -48,6 +49,10 @@ build:
 # Run tests
 test:
 	@bun test
+
+# Run tests with coverage
+coverage:
+	@bun test --coverage
 
 # TypeScript check
 lint:

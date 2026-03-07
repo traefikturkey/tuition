@@ -3,12 +3,12 @@
  * Manages docker-compose files and container orchestration
  */
 
-import { spawn } from 'child_process';
-import { writeFile, mkdir, access } from 'fs/promises';
-import { constants } from 'fs';
-import { join, dirname } from 'path';
-import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import type { ServiceDefinition, PortMapping, VolumeMapping } from '../../types/index.js';
+import { spawn } from "child_process";
+import { writeFile, mkdir, access } from "fs/promises";
+import { constants } from "fs";
+import { join, dirname } from "path";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import type { ServiceDefinition, PortMapping, VolumeMapping } from "../../types/index.js";
 
 export interface ComposeService {
   image: string;
@@ -44,6 +44,7 @@ export interface ComposeFile {
 
 export class ComposeManager {
   private projectPath: string;
+  private spawnProcess = spawn;
 
   constructor(projectPath: string) {
     this.projectPath = projectPath;
@@ -52,11 +53,7 @@ export class ComposeManager {
   /**
    * Generate docker-compose.yaml from service definition
    */
-  async generateCompose(
-    name: string,
-    definition: ServiceDefinition,
-    envVars: Record<string, string>
-  ): Promise<string> {
+  async generateCompose(name: string, definition: ServiceDefinition, envVars: Record<string, string>): Promise<string> {
     const composePath = join(this.projectPath, `${name}.docker-compose.yaml`);
 
     // Resolve environment variables
@@ -70,15 +67,17 @@ export class ComposeManager {
       ports: this.formatPorts(definition.ports || []),
       volumes: resolvedVolumes,
       labels: definition.labels,
-      restart: 'unless-stopped',
-      deploy: definition.resourceLimits ? {
-        resources: {
-          limits: {
-            cpus: String(definition.resourceLimits.cpus || 1),
-            memory: definition.resourceLimits.memory || '1G',
-          },
-        },
-      } : undefined,
+      restart: "unless-stopped",
+      deploy: definition.resourceLimits
+        ? {
+            resources: {
+              limits: {
+                cpus: String(definition.resourceLimits.cpus || 1),
+                memory: definition.resourceLimits.memory || "1G",
+              },
+            },
+          }
+        : undefined,
     };
 
     // Add health check if service exposes ports
@@ -86,9 +85,9 @@ export class ComposeManager {
       const firstPort = definition.ports[0];
       if (firstPort) {
         service.healthcheck = {
-          test: ['CMD', 'nc', '-z', 'localhost', String(firstPort.container)],
-          interval: '30s',
-          timeout: '10s',
+          test: ["CMD", "nc", "-z", "localhost", String(firstPort.container)],
+          interval: "30s",
+          timeout: "10s",
           retries: 3,
         };
       }
@@ -98,14 +97,14 @@ export class ComposeManager {
       services: { [name]: service },
       networks: {
         tuition: {
-          driver: 'bridge',
+          driver: "bridge",
           external: true,
         },
       },
     };
 
     const yaml = stringifyYaml(compose);
-    await writeFile(composePath, yaml, 'utf-8');
+    await writeFile(composePath, yaml, "utf-8");
 
     return composePath;
   }
@@ -113,13 +112,16 @@ export class ComposeManager {
   /**
    * Run docker-compose up for a service
    */
-  async up(name: string, options: {
-    detached?: boolean;
-    build?: boolean;
-    env?: Record<string, string>;
-  } = {}): Promise<{ success: boolean; output: string }> {
+  async up(
+    name: string,
+    options: {
+      detached?: boolean;
+      build?: boolean;
+      env?: Record<string, string>;
+    } = {}
+  ): Promise<{ success: boolean; output: string }> {
     const composePath = join(this.projectPath, `${name}.docker-compose.yaml`);
-    
+
     // Check if compose file exists
     try {
       await access(composePath, constants.F_OK);
@@ -130,19 +132,14 @@ export class ComposeManager {
       };
     }
 
-    const args = [
-      'compose',
-      '-f', composePath,
-      '-p', name,
-      'up',
-    ];
+    const args = ["compose", "-f", composePath, "-p", name, "up"];
 
     if (options.detached !== false) {
-      args.push('-d');
+      args.push("-d");
     }
 
     if (options.build) {
-      args.push('--build');
+      args.push("--build");
     }
 
     return this.execDocker(args, options.env);
@@ -151,25 +148,23 @@ export class ComposeManager {
   /**
    * Run docker-compose down for a service
    */
-  async down(name: string, options: {
-    removeVolumes?: boolean;
-    removeImages?: boolean;
-  } = {}): Promise<{ success: boolean; output: string }> {
+  async down(
+    name: string,
+    options: {
+      removeVolumes?: boolean;
+      removeImages?: boolean;
+    } = {}
+  ): Promise<{ success: boolean; output: string }> {
     const composePath = join(this.projectPath, `${name}.docker-compose.yaml`);
 
-    const args = [
-      'compose',
-      '-f', composePath,
-      '-p', name,
-      'down',
-    ];
+    const args = ["compose", "-f", composePath, "-p", name, "down"];
 
     if (options.removeVolumes) {
-      args.push('-v');
+      args.push("-v");
     }
 
     if (options.removeImages) {
-      args.push('--rmi', 'all');
+      args.push("--rmi", "all");
     }
 
     return this.execDocker(args);
@@ -181,12 +176,7 @@ export class ComposeManager {
   async ps(name: string): Promise<{ success: boolean; output: string }> {
     const composePath = join(this.projectPath, `${name}.docker-compose.yaml`);
 
-    const args = [
-      'compose',
-      '-f', composePath,
-      '-p', name,
-      'ps',
-    ];
+    const args = ["compose", "-f", composePath, "-p", name, "ps"];
 
     return this.execDocker(args);
   }
@@ -194,30 +184,28 @@ export class ComposeManager {
   /**
    * Get service logs via docker-compose logs
    */
-  async logs(name: string, options: {
-    tail?: number;
-    follow?: boolean;
-    timestamps?: boolean;
-  } = {}): Promise<{ success: boolean; output: string }> {
+  async logs(
+    name: string,
+    options: {
+      tail?: number;
+      follow?: boolean;
+      timestamps?: boolean;
+    } = {}
+  ): Promise<{ success: boolean; output: string }> {
     const composePath = join(this.projectPath, `${name}.docker-compose.yaml`);
 
-    const args = [
-      'compose',
-      '-f', composePath,
-      '-p', name,
-      'logs',
-    ];
+    const args = ["compose", "-f", composePath, "-p", name, "logs"];
 
     if (options.tail) {
-      args.push('--tail', String(options.tail));
+      args.push("--tail", String(options.tail));
     }
 
     if (options.timestamps) {
-      args.push('--timestamps');
+      args.push("--timestamps");
     }
 
     if (options.follow) {
-      args.push('-f');
+      args.push("-f");
     }
 
     return this.execDocker(args);
@@ -229,12 +217,7 @@ export class ComposeManager {
   async pull(name: string): Promise<{ success: boolean; output: string }> {
     const composePath = join(this.projectPath, `${name}.docker-compose.yaml`);
 
-    const args = [
-      'compose',
-      '-f', composePath,
-      '-p', name,
-      'pull',
-    ];
+    const args = ["compose", "-f", composePath, "-p", name, "pull"];
 
     return this.execDocker(args);
   }
@@ -245,32 +228,32 @@ export class ComposeManager {
   private execDocker(args: string[], env?: Record<string, string>): Promise<{ success: boolean; output: string }> {
     return new Promise((resolve) => {
       const envVars = env ? { ...process.env, ...env } : process.env;
-      const proc = spawn('docker', args, {
+      const proc = this.spawnProcess("docker", args, {
         cwd: this.projectPath,
-        stdio: ['pipe', 'pipe', 'pipe'],
+        stdio: ["pipe", "pipe", "pipe"],
         env: envVars,
       });
 
-      let stdout = '';
-      let stderr = '';
+      let stdout = "";
+      let stderr = "";
 
-      proc.stdout?.on('data', (data: Buffer) => {
-        stdout += data.toString('utf-8');
+      proc.stdout?.on("data", (data: Buffer) => {
+        stdout += data.toString("utf-8");
       });
 
-      proc.stderr?.on('data', (data: Buffer) => {
-        stderr += data.toString('utf-8');
+      proc.stderr?.on("data", (data: Buffer) => {
+        stderr += data.toString("utf-8");
       });
 
-      proc.on('close', (code) => {
-        const output = stdout + (stderr ? `\n${stderr}` : '');
+      proc.on("close", (code) => {
+        const output = stdout + (stderr ? `\n${stderr}` : "");
         resolve({
           success: code === 0,
           output: output.trim(),
         });
       });
 
-      proc.on('error', (error) => {
+      proc.on("error", (error) => {
         resolve({
           success: false,
           output: error.message,
@@ -283,8 +266,8 @@ export class ComposeManager {
    * Format port mappings for docker-compose
    */
   private formatPorts(ports: PortMapping[]): string[] {
-    return ports.map(p => {
-      const protocol = p.protocol || 'tcp';
+    return ports.map((p) => {
+      const protocol = p.protocol || "tcp";
       return `${p.host}:${p.container}/${protocol}`;
     });
   }
@@ -292,10 +275,7 @@ export class ComposeManager {
   /**
    * Resolve environment variables with substitutions
    */
-  private resolveEnvironment(
-    env: Record<string, string>,
-    vars: Record<string, string>
-  ): Record<string, string> {
+  private resolveEnvironment(env: Record<string, string>, vars: Record<string, string>): Record<string, string> {
     const resolved: Record<string, string> = {};
 
     for (const [key, value] of Object.entries(env)) {
@@ -311,24 +291,21 @@ export class ComposeManager {
   /**
    * Resolve volume paths with substitutions
    */
-  private resolveVolumes(
-    volumes: VolumeMapping[],
-    vars: Record<string, string>
-  ): string[] {
-    return volumes.map(v => {
+  private resolveVolumes(volumes: VolumeMapping[], vars: Record<string, string>): string[] {
+    return volumes.map((v) => {
       let hostPath = v.host;
-      
+
       // Replace ${VAR} with actual values
       hostPath = hostPath.replace(/\$\{(\w+)\}/g, (match, varName) => {
         return vars[varName] || match;
       });
 
       // Ensure relative paths are from project directory
-      if (!hostPath.startsWith('/') && !hostPath.startsWith('~')) {
+      if (!hostPath.startsWith("/") && !hostPath.startsWith("~")) {
         hostPath = `./${hostPath}`;
       }
 
-      const readOnly = v.readOnly ? ':ro' : '';
+      const readOnly = v.readOnly ? ":ro" : "";
       return `${hostPath}:${v.container}${readOnly}`;
     });
   }

@@ -1,8 +1,8 @@
 # Tuition - Project Status
 
-**Version**: 0.1.0  
-**Branch**: `feature/initial-implementation`  
-**Status**: **MVP complete, backlog tracked explicitly**  
+**Version**: 0.1.0
+**Branch**: `feature/initial-implementation`
+**Status**: **MVP complete, backlog tracked explicitly**
 **Date**: 2026-03-07
 
 ---
@@ -161,15 +161,15 @@ Categories represented:
 
 ## PRD Alignment Review
 
-| Area | Status | Notes |
-| ---- | ------ | ----- |
-| **FR1 Multi-container management** | Implemented | Consistent CLI flows, central lifecycle manager, and status-oriented service handling are present. |
-| **FR2 SSL/TLS management** | Implemented with current provider constraint | Centralized Caddy flow is implemented. Current implementation is Cloudflare-first rather than provider-agnostic. |
-| **FR3 Service discovery and catalog** | Implemented | Catalog browsing, descriptions, categories, and search are available. |
-| **FR4 Configuration management** | Implemented | Layered config, validation, defaults, secret generation, and precedence flows are present. |
-| **FR5 Disaster recovery** | Partial | Backup and restore work, but database dump integration and offsite automation are still missing. |
-| **FR6 Service lifecycle** | Implemented | Enable, disable, update, dependency handling, and non-destructive defaults are present. |
-| **FR7 Internal DNS** | Partial | CoreDNS generation exists, but event-driven registration and full automatic sync are still backlog items. |
+| Area                                  | Status                                       | Notes                                                                                                            |
+| ------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **FR1 Multi-container management**    | Implemented                                  | Consistent CLI flows, central lifecycle manager, and status-oriented service handling are present.               |
+| **FR2 SSL/TLS management**            | Implemented with current provider constraint | Centralized Caddy flow is implemented. Current implementation is Cloudflare-first rather than provider-agnostic. |
+| **FR3 Service discovery and catalog** | Implemented                                  | Catalog browsing, descriptions, categories, and search are available.                                            |
+| **FR4 Configuration management**      | Implemented                                  | Layered config, validation, defaults, secret generation, and precedence flows are present.                       |
+| **FR5 Disaster recovery**             | Partial                                      | Backup and restore work, but database dump integration and offsite automation are still missing.                 |
+| **FR6 Service lifecycle**             | Implemented                                  | Enable, disable, update, dependency handling, and non-destructive defaults are present.                          |
+| **FR7 Internal DNS**                  | Partial                                      | CoreDNS generation exists, but event-driven registration and full automatic sync are still backlog items.        |
 
 The project remains on track with the original goal: a practical, single-server,
 CLI/TUI homelab manager focused on disaster recovery over high availability.
@@ -180,12 +180,12 @@ changes.
 
 ## Success Criteria Snapshot
 
-| PRD Target | Current Position |
-| ---------- | ---------------- |
-| **30+ curated services** | At risk for v1 on this branch; current catalog is 24 services. |
-| **All commands documented** | Addressed by this documentation sync. |
-| **>80% test coverage** | Test suites are broad, but formal coverage reporting is not published in repo docs. |
-| **Fast first-service workflow** | On track via `init`, infrastructure commands, and `service enable`. |
+| PRD Target                      | Current Position                                                                    |
+| ------------------------------- | ----------------------------------------------------------------------------------- |
+| **30+ curated services**        | At risk for v1 on this branch; current catalog is 24 services.                      |
+| **All commands documented**     | Addressed by this documentation sync.                                               |
+| **>80% test coverage**          | Test suites are broad, but formal coverage reporting is not published in repo docs. |
+| **Fast first-service workflow** | On track via `init`, infrastructure commands, and `service enable`.                 |
 
 ---
 
