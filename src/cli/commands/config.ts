@@ -6,6 +6,7 @@ import { ConfigManager } from '../../core/config/manager.js';
 import chalk from 'chalk';
 
 const SENSITIVE_KEY_PATTERN = /(token|password|secret|key|hash)/i;
+const UNSAFE_CONFIG_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
 export function redactSensitiveValues<T>(value: T): T {
   if (value === null || value === undefined) {
@@ -85,8 +86,18 @@ export class ConfigCommand {
     try {
       switch (section) {
         case 'global': {
+          if (parts.length !== 2) {
+            console.log(chalk.red('Invalid key format. Use: global.<key>'));
+            return;
+          }
+
           const config = await manager.loadGlobal();
           const configKey = parts[1] as keyof typeof config;
+
+          if (UNSAFE_CONFIG_KEYS.has(String(configKey))) {
+            console.log(chalk.red('Unsafe configuration key'));
+            return;
+          }
           
           // Try to parse as number/boolean
           let parsedValue: string | number | boolean = value;

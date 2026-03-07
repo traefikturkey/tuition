@@ -136,4 +136,24 @@ describe('ConfigCommand behavior', () => {
     const output = captured.join('\n');
     expect(output).toContain('Unknown configuration section: services');
   });
+
+  it('rejects unsafe global key names', async () => {
+    ConfigManager.prototype.exists = async () => true;
+
+    const command = new ConfigCommand();
+    await command.set('global.__proto__', 'pollute', {});
+
+    const output = captured.join('\n');
+    expect(output).toContain('Unsafe configuration key');
+  });
+
+  it('rejects nested global key paths', async () => {
+    ConfigManager.prototype.exists = async () => true;
+
+    const command = new ConfigCommand();
+    await command.set('global.hostname.extra', 'value', {});
+
+    const output = captured.join('\n');
+    expect(output).toContain('Invalid key format');
+  });
 });
