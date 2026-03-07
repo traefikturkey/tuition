@@ -127,4 +127,99 @@ describe('DnsCommand', () => {
     const output = captured.join('\n');
     expect(output).toContain('Failed to reload: reload failed');
   });
+
+  it('shows failure output when stop fails', async () => {
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      dns: {
+        stop: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.dns = {
+      stop: async () => ({ success: false, message: 'stop failed' }),
+    };
+
+    await command.stop({});
+
+    const output = captured.join('\n');
+    expect(output).toContain('stop failed');
+  });
+
+  it('shows running status details when CoreDNS is up', async () => {
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      dns: {
+        status: () => Promise<{ running: boolean; hosts: number }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.dns = {
+      status: async () => ({ running: true, hosts: 5 }),
+    };
+
+    await command.status({});
+
+    const output = captured.join('\n');
+    expect(output).toContain('Running:');
+    expect(output).toContain('Host entries: 5');
+    expect(output).toContain('Internal DNS available on port 54');
+  });
+
+  it('omits running-only hint when CoreDNS is stopped', async () => {
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      dns: {
+        status: () => Promise<{ running: boolean; hosts: number }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.dns = {
+      status: async () => ({ running: false, hosts: 0 }),
+    };
+
+    await command.status({});
+
+    const output = captured.join('\n');
+    expect(output).toContain('Host entries: 0');
+    expect(output).not.toContain('Internal DNS available on port 54');
+  });
+
+  it('shows success output when regenerate reload succeeds', async () => {
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+        loadGlobal: () => Promise<{ upstreamDns: { primary: string; backup?: string } }>;
+      };
+      dns: {
+        generateConfig: (
+          enabledServices: unknown[],
+          staticHosts: Record<string, string>,
+          upstreamDns?: { primary: string; backup?: string }
+        ) => Promise<void>;
+        reload: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadServices: async () => ({}),
+      loadGlobal: async () => ({
+        upstreamDns: { primary: '1.1.1.1' },
+      }),
+    };
+    commandMock.dns = {
+      generateConfig: async () => undefined,
+      reload: async () => ({ success: true, message: 'ok' }),
+    };
+
+    await command.regenerate({});
+
+    const output = captured.join('\n');
+    expect(output).toContain('CoreDNS config regenerated and reloaded');
+  });
 });
