@@ -3,30 +3,25 @@
  * Handles loading, validation, and persistence of tiered configuration
  */
 
-import { readFile, writeFile, mkdir, access, readdir } from 'fs/promises';
-import { constants } from 'fs';
-import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { join } from 'path';
-import os from 'os';
-import { randomInt } from 'crypto';
-import { chmod } from 'fs/promises';
-import type {
-  FullConfig,
-  GlobalConfig,
-  InfrastructureConfig,
-  ServiceConfig,
-} from '../../types/index.js';
+import { readFile, writeFile, mkdir, access, readdir } from "fs/promises";
+import { constants } from "fs";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { join } from "path";
+import os from "os";
+import { randomInt } from "crypto";
+import { chmod } from "fs/promises";
+import type { FullConfig, GlobalConfig, InfrastructureConfig, ServiceConfig } from "../../types/index.js";
 
-const TUITION_DIR = join(os.homedir(), '.tuition');
-const CONFIG_DIR = join(TUITION_DIR, 'config');
-const STATE_DIR = join(TUITION_DIR, 'state');
+const TUITION_DIR = join(os.homedir(), ".tuition");
+const CONFIG_DIR = join(TUITION_DIR, "config");
+const STATE_DIR = join(TUITION_DIR, "state");
 
 // Default configuration values
 const DEFAULT_GLOBAL_CONFIG: Partial<GlobalConfig> = {
-  timezone: 'UTC',
+  timezone: "UTC",
   puid: 1000,
   pgid: 1000,
-  dnsProvider: 'cloudflare',
+  dnsProvider: "cloudflare",
 };
 
 export class ConfigManager {
@@ -38,7 +33,7 @@ export class ConfigManager {
     this.configPath = customPath || CONFIG_DIR;
     this.statePath = STATE_DIR;
     // If custom path provided, use its parent as tuition dir, otherwise use default
-    this.tuitionDir = customPath ? customPath.replace(/\/config$/, '').replace(/\\config$/, '') : TUITION_DIR;
+    this.tuitionDir = customPath ? customPath.replace(/\/config$/, "").replace(/\\config$/, "") : TUITION_DIR;
   }
 
   /**
@@ -47,7 +42,7 @@ export class ConfigManager {
   async initialize(): Promise<void> {
     await mkdir(this.configPath, { recursive: true });
     await mkdir(this.statePath, { recursive: true });
-    await mkdir(join(this.configPath, 'services'), { recursive: true });
+    await mkdir(join(this.configPath, "services"), { recursive: true });
   }
 
   /**
@@ -55,7 +50,7 @@ export class ConfigManager {
    */
   async exists(): Promise<boolean> {
     try {
-      await access(join(this.configPath, 'global.yaml'), constants.F_OK);
+      await access(join(this.configPath, "global.yaml"), constants.F_OK);
       return true;
     } catch {
       return false;
@@ -81,14 +76,14 @@ export class ConfigManager {
    * Load global configuration
    */
   async loadGlobal(): Promise<GlobalConfig> {
-    const path = join(this.configPath, 'global.yaml');
-    
+    const path = join(this.configPath, "global.yaml");
+
     try {
-      const content = await readFile(path, 'utf-8');
+      const content = await readFile(path, "utf-8");
       const parsed = parseYaml(content) as GlobalConfig;
       return { ...DEFAULT_GLOBAL_CONFIG, ...parsed };
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         // Return defaults if file doesn't exist
         return DEFAULT_GLOBAL_CONFIG as GlobalConfig;
       }
@@ -100,13 +95,13 @@ export class ConfigManager {
    * Load infrastructure configuration
    */
   async loadInfrastructure(): Promise<InfrastructureConfig | undefined> {
-    const path = join(this.configPath, 'infrastructure.yaml');
-    
+    const path = join(this.configPath, "infrastructure.yaml");
+
     try {
-      const content = await readFile(path, 'utf-8');
+      const content = await readFile(path, "utf-8");
       return parseYaml(content) as InfrastructureConfig;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return undefined;
       }
       throw new Error(`Failed to load infrastructure config: ${error}`);
@@ -118,14 +113,14 @@ export class ConfigManager {
    */
   async loadServices(): Promise<Record<string, ServiceConfig>> {
     const services: Record<string, ServiceConfig> = {};
-    const servicesDir = join(this.configPath, 'services');
+    const servicesDir = join(this.configPath, "services");
 
     try {
       const files = await readdir(servicesDir);
-      
+
       for (const file of files) {
-        if (file.endsWith('.yaml') || file.endsWith('.yml')) {
-          const name = file.replace(/\.ya?ml$/, '');
+        if (file.endsWith(".yaml") || file.endsWith(".yml")) {
+          const name = file.replace(/\.ya?ml$/, "");
           const config = await this.loadService(name);
           if (config) {
             services[name] = config;
@@ -135,7 +130,7 @@ export class ConfigManager {
     } catch {
       // Directory doesn't exist or other error
     }
-    
+
     return services;
   }
 
@@ -143,13 +138,13 @@ export class ConfigManager {
    * Load configuration for a specific service
    */
   async loadService(name: string): Promise<ServiceConfig | undefined> {
-    const path = join(this.configPath, 'services', `${name}.yaml`);
-    
+    const path = join(this.configPath, "services", `${name}.yaml`);
+
     try {
-      const content = await readFile(path, 'utf-8');
+      const content = await readFile(path, "utf-8");
       return parseYaml(content) as ServiceConfig;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return undefined;
       }
       throw new Error(`Failed to load service config for ${name}: ${error}`);
@@ -160,7 +155,7 @@ export class ConfigManager {
    * Save global configuration
    */
   async saveGlobal(config: GlobalConfig): Promise<void> {
-    const path = join(this.configPath, 'global.yaml');
+    const path = join(this.configPath, "global.yaml");
     const yaml = stringifyYaml(config);
     await this.writeSecureFile(path, yaml);
   }
@@ -169,7 +164,7 @@ export class ConfigManager {
    * Save infrastructure configuration
    */
   async saveInfrastructure(config: InfrastructureConfig): Promise<void> {
-    const path = join(this.configPath, 'infrastructure.yaml');
+    const path = join(this.configPath, "infrastructure.yaml");
     const yaml = stringifyYaml(config);
     await this.writeSecureFile(path, yaml);
   }
@@ -178,7 +173,7 @@ export class ConfigManager {
    * Save service configuration
    */
   async saveService(name: string, config: ServiceConfig): Promise<void> {
-    const path = join(this.configPath, 'services', `${name}.yaml`);
+    const path = join(this.configPath, "services", `${name}.yaml`);
     const yaml = stringifyYaml(config);
     await this.writeSecureFile(path, yaml);
   }
@@ -187,14 +182,14 @@ export class ConfigManager {
    * Generate secure random password
    */
   generatePassword(length: number = 32): string {
-    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-    let password = '';
-    
+    const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    let password = "";
+
     for (let i = 0; i < length; i++) {
       const randomIndex = randomInt(0, charset.length);
       password += charset[randomIndex];
     }
-    
+
     return password;
   }
 
@@ -216,7 +211,7 @@ export class ConfigManager {
    * Write config files with restrictive permissions when supported by OS/filesystem
    */
   private async writeSecureFile(path: string, content: string): Promise<void> {
-    await writeFile(path, content, { encoding: 'utf-8', mode: 0o600 });
+    await writeFile(path, content, { encoding: "utf-8", mode: 0o600 });
 
     try {
       await chmod(path, 0o600);

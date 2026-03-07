@@ -3,20 +3,20 @@
  * Handles service enable/disable and state transitions
  */
 
-import { mkdir, writeFile, access, readFile } from 'fs/promises';
-import { constants } from 'fs';
-import { join } from 'path';
-import { parse as parseYaml } from 'yaml';
-import { ConfigManager } from '../../core/config/manager.js';
-import { catalog } from '../../core/catalog/loader.js';
-import { ComposeManager } from '../../services/docker/compose.js';
-import { docker } from '../../services/docker/client.js';
-import { CaddyManager } from '../../services/caddy/manager.js';
-import { CoreDnsManager } from '../../services/dns/coredns.js';
-import type { ServiceDefinition, ServiceConfig } from '../../types/index.js';
-import { logger } from '../../utils/logger.js';
+import { mkdir, writeFile, access, readFile, rm } from "fs/promises";
+import { constants } from "fs";
+import { join } from "path";
+import { parse as parseYaml } from "yaml";
+import { ConfigManager } from "../../core/config/manager.js";
+import { catalog } from "../../core/catalog/loader.js";
+import { ComposeManager } from "../../services/docker/compose.js";
+import { docker } from "../../services/docker/client.js";
+import { CaddyManager } from "../../services/caddy/manager.js";
+import { CoreDnsManager } from "../../services/dns/coredns.js";
+import type { ServiceDefinition, ServiceConfig } from "../../types/index.js";
+import { logger } from "../../utils/logger.js";
 
-export type ServiceState = 'available' | 'enabled' | 'running' | 'stopped' | 'disabled';
+export type ServiceState = "available" | "enabled" | "running" | "stopped" | "disabled";
 
 export interface ServiceInfo {
   name: string;
@@ -52,10 +52,10 @@ export class LifecycleManager {
     await this.configManager.initialize();
     await this.caddyManager.initialize();
     await this.dnsManager.initialize();
-    
+
     // Ensure data directories exist
     const tuitionDir = this.configManager.getTuitionDir();
-    await mkdir(join(tuitionDir, 'data'), { recursive: true });
+    await mkdir(join(tuitionDir, "data"), { recursive: true });
   }
 
   /**
@@ -80,7 +80,7 @@ export class LifecycleManager {
     }
 
     // Get Docker host IP for tuition hostname registration
-    const hostIp = await docker.getNetworkGateway('tuition');
+    const hostIp = await docker.getNetworkGateway("tuition");
     const staticHosts: Record<string, string> = {};
 
     if (hostIp) {
@@ -90,11 +90,7 @@ export class LifecycleManager {
     }
 
     // Regenerate CoreDNS config with static hosts and upstream DNS
-    await this.dnsManager.generateConfig(
-      enabledServices,
-      staticHosts,
-      globalConfig.upstreamDns
-    );
+    await this.dnsManager.generateConfig(enabledServices, staticHosts, globalConfig.upstreamDns);
 
     // Reload CoreDNS to apply changes
     await this.dnsManager.reload();
@@ -106,7 +102,7 @@ export class LifecycleManager {
   private async updateCaddyConfig(): Promise<void> {
     const globalConfig = await this.configManager.loadGlobal();
     const services = await this.configManager.loadServices();
-    
+
     // Get enabled services
     const enabledServiceNames = Object.entries(services)
       .filter(([, config]) => config.enabled)
@@ -123,7 +119,7 @@ export class LifecycleManager {
 
     // Regenerate Caddyfile
     await this.caddyManager.generateConfig(globalConfig, enabledServices);
-    
+
     // Reload Caddy to apply changes
     await this.caddyManager.reload();
   }
@@ -134,24 +130,24 @@ export class LifecycleManager {
   async getService(name: string): Promise<ServiceInfo | null> {
     // Check if service exists in catalog
     const definition = await catalog.get(name);
-    
+
     if (!definition) {
       return null;
     }
 
     // Load service config if enabled
     const config = await this.configManager.loadService(name);
-    
+
     // Determine state
-    let state: ServiceState = 'available';
-    
+    let state: ServiceState = "available";
+
     if (config) {
-      state = config.enabled ? (await this.isRunning(name) ? 'running' : 'stopped') : 'disabled';
+      state = config.enabled ? ((await this.isRunning(name)) ? "running" : "stopped") : "disabled";
     }
 
     // Get container status if enabled
     let containerStatus = null;
-    if (state === 'running' || state === 'stopped') {
+    if (state === "running" || state === "stopped") {
       containerStatus = await this.getContainerStatus(name);
     }
 
@@ -167,10 +163,13 @@ export class LifecycleManager {
   /**
    * Enable a service
    */
-  async enable(name: string, options: {
-    autoStart?: boolean;
-    customEnv?: Record<string, string>;
-  } = {}): Promise<{ success: boolean; message: string }> {
+  async enable(
+    name: string,
+    options: {
+      autoStart?: boolean;
+      customEnv?: Record<string, string>;
+    } = {}
+  ): Promise<{ success: boolean; message: string }> {
     // Check if service exists in catalog
     const definition = await catalog.get(name);
     if (!definition) {
@@ -180,9 +179,26 @@ export class LifecycleManager {
       };
     }
 
+    // Resolve dependencies — enable required services first
+    if (definition.dependsOn && definition.dependsOn.length > 0) {
+      for (const depName of definition.dependsOn) {
+        const depConfig = await this.configManager.loadService(depName);
+        if (!depConfig || !depConfig.enabled) {
+          logger.warn("lifecycle.manager", `Auto-enabling dependency '${depName}' for '${name}'`);
+          const depResult = await this.enable(depName, { autoStart: options.autoStart });
+          if (!depResult.success) {
+            return {
+              success: false,
+              message: `Failed to enable dependency '${depName}': ${depResult.message}`,
+            };
+          }
+        }
+      }
+    }
+
     // Load global config for env vars
     const globalConfig = await this.configManager.loadGlobal();
-    
+
     // Build environment variables
     const envVars: Record<string, string> = {
       DOMAIN: globalConfig.domain,
@@ -190,16 +206,16 @@ export class LifecycleManager {
       TZ: globalConfig.timezone,
       PUID: String(globalConfig.puid),
       PGID: String(globalConfig.pgid),
-      HOST_IP: '127.0.0.1', // Will be detected
-      MEDIA_PATH: './data/media', // Default media path
+      HOST_IP: "127.0.0.1", // Will be detected
+      MEDIA_PATH: "./data/media", // Default media path
       ...options.customEnv,
     };
 
     // Generate service-specific secrets if needed
     if (definition.environment) {
       for (const [key, value] of Object.entries(definition.environment)) {
-        if (value.includes('${') && value.includes('PASSWORD')) {
-          const varName = value.replace(/\$\{(\w+)\}/, '$1');
+        if (value.includes("${") && value.includes("PASSWORD")) {
+          const varName = value.replace(/\$\{(\w+)\}/, "$1");
           if (!envVars[varName]) {
             envVars[varName] = this.configManager.generatePassword(32);
           }
@@ -216,10 +232,10 @@ export class LifecycleManager {
     // Save service config
     const serviceConfig: ServiceConfig = {
       enabled: true,
-      imageTag: 'latest',
+      imageTag: "latest",
       environment: envVars,
     };
-    
+
     await this.configManager.saveService(name, serviceConfig);
 
     // Auto-start if requested
@@ -237,32 +253,36 @@ export class LifecycleManager {
     try {
       await this.updateCaddyConfig();
     } catch (error) {
-      logger.warn('lifecycle.manager', `Failed to update Caddy configuration: ${error}`);
+      logger.warn("lifecycle.manager", `Failed to update Caddy configuration: ${error}`);
     }
 
     // Update CoreDNS configuration
     try {
       await this.updateDnsConfig();
     } catch (error) {
-      logger.warn('lifecycle.manager', `Failed to update CoreDNS configuration: ${error}`);
+      logger.warn("lifecycle.manager", `Failed to update CoreDNS configuration: ${error}`);
     }
 
     return {
       success: true,
-      message: options.autoStart !== false 
-        ? `Service '${name}' enabled and started` 
-        : `Service '${name}' enabled (start with: tuition service start ${name})`,
+      message:
+        options.autoStart !== false
+          ? `Service '${name}' enabled and started`
+          : `Service '${name}' enabled (start with: tuition service start ${name})`,
     };
   }
 
   /**
    * Disable a service
    */
-  async disable(name: string, options: {
-    removeData?: boolean;
-  } = {}): Promise<{ success: boolean; message: string }> {
+  async disable(
+    name: string,
+    options: {
+      removeData?: boolean;
+    } = {}
+  ): Promise<{ success: boolean; message: string }> {
     const config = await this.configManager.loadService(name);
-    
+
     if (!config) {
       return {
         success: false,
@@ -285,26 +305,34 @@ export class LifecycleManager {
 
     // Remove data if requested (destructive!)
     if (options.removeData) {
-      // TODO: Implement data removal with confirmation
+      const dataDir = join(this.configManager.getTuitionDir(), "data", name);
+      try {
+        await rm(dataDir, { recursive: true, force: true });
+        logger.warn("lifecycle.manager", `Removed data directory for service '${name}'`);
+      } catch (error) {
+        logger.warn("lifecycle.manager", `Failed to remove data for '${name}': ${error}`);
+      }
     }
 
     // Update Caddy configuration to remove route
     try {
       await this.updateCaddyConfig();
     } catch (error) {
-      logger.warn('lifecycle.manager', `Failed to update Caddy configuration: ${error}`);
+      logger.warn("lifecycle.manager", `Failed to update Caddy configuration: ${error}`);
     }
 
     // Update CoreDNS configuration
     try {
       await this.updateDnsConfig();
     } catch (error) {
-      logger.warn('lifecycle.manager', `Failed to update CoreDNS configuration: ${error}`);
+      logger.warn("lifecycle.manager", `Failed to update CoreDNS configuration: ${error}`);
     }
 
     return {
       success: true,
-      message: `Service '${name}' disabled (data preserved)`,
+      message: options.removeData
+        ? `Service '${name}' disabled (data removed)`
+        : `Service '${name}' disabled (data preserved)`,
     };
   }
 
@@ -313,10 +341,10 @@ export class LifecycleManager {
    */
   async start(name: string): Promise<{ success: boolean; message: string }> {
     // Ensure Docker network exists before starting
-    const networkExists = await docker.networkExists('tuition');
+    const networkExists = await docker.networkExists("tuition");
     if (!networkExists) {
       try {
-        await docker.createNetwork('tuition');
+        await docker.createNetwork("tuition");
       } catch (error) {
         return {
           success: false,
@@ -326,12 +354,10 @@ export class LifecycleManager {
     }
 
     const result = await this.composeManager.up(name);
-    
+
     return {
       success: result.success,
-      message: result.success 
-        ? `Service '${name}' started` 
-        : `Failed to start '${name}': ${result.output}`,
+      message: result.success ? `Service '${name}' started` : `Failed to start '${name}': ${result.output}`,
     };
   }
 
@@ -340,12 +366,10 @@ export class LifecycleManager {
    */
   async stop(name: string): Promise<{ success: boolean; message: string }> {
     const result = await this.composeManager.down(name);
-    
+
     return {
       success: result.success,
-      message: result.success 
-        ? `Service '${name}' stopped` 
-        : `Failed to stop '${name}': ${result.output}`,
+      message: result.success ? `Service '${name}' stopped` : `Failed to stop '${name}': ${result.output}`,
     };
   }
 
@@ -359,8 +383,8 @@ export class LifecycleManager {
     }
 
     // Small delay to ensure clean shutdown
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     return this.start(name);
   }
 
@@ -389,10 +413,13 @@ export class LifecycleManager {
   /**
    * Get service logs
    */
-  async logs(name: string, options: {
-    tail?: number;
-    follow?: boolean;
-  } = {}): Promise<{ success: boolean; output: string }> {
+  async logs(
+    name: string,
+    options: {
+      tail?: number;
+      follow?: boolean;
+    } = {}
+  ): Promise<{ success: boolean; output: string }> {
     const result = await this.composeManager.logs(name, options);
     return result;
   }
@@ -419,15 +446,15 @@ export class LifecycleManager {
    */
   private async isRunning(name: string): Promise<boolean> {
     const container = await docker.getContainer(name);
-    return container !== null && container.state === 'running';
+    return container !== null && container.state === "running";
   }
 
   /**
    * Get container status for a service
    */
-  private async getContainerStatus(name: string): Promise<ServiceInfo['containerStatus']> {
+  private async getContainerStatus(name: string): Promise<ServiceInfo["containerStatus"]> {
     const container = await docker.getContainer(name);
-    
+
     if (!container) {
       return null;
     }
@@ -443,30 +470,27 @@ export class LifecycleManager {
   /**
    * Create necessary directories for a service
    */
-  private async createServiceDirectories(
-    name: string,
-    definition: ServiceDefinition
-  ): Promise<void> {
+  private async createServiceDirectories(name: string, definition: ServiceDefinition): Promise<void> {
     const tuitionDir = this.configManager.getTuitionDir();
 
     if (definition.volumes) {
       for (const volume of definition.volumes) {
         // Parse host path
         let hostPath = volume.host;
-        
+
         // Replace variables
         hostPath = hostPath.replace(/\$\{(\w+)\}/g, (match, varName) => {
-          if (varName === 'MEDIA_PATH') {
-            return './data/media';
+          if (varName === "MEDIA_PATH") {
+            return "./data/media";
           }
           return match;
         });
 
         // Skip if not a relative path
-        if (hostPath.startsWith('/')) continue;
+        if (hostPath.startsWith("/")) continue;
 
         // Create directory
-        const fullPath = join(tuitionDir, hostPath.replace(/^\.\//, ''));
+        const fullPath = join(tuitionDir, hostPath.replace(/^\.\//, ""));
         await mkdir(fullPath, { recursive: true });
       }
     }

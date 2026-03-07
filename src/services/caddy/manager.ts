@@ -3,14 +3,14 @@
  * Handles Caddy container lifecycle and configuration
  */
 
-import { writeFile, readFile, access, mkdir } from 'fs/promises';
-import { constants } from 'fs';
-import { join } from 'path';
-import { spawn } from 'child_process';
-import { caddyfileGenerator, type CaddyConfig, type CaddyRoute } from './caddyfile.js';
-import { docker } from '../docker/client.js';
-import { ComposeManager } from '../docker/compose.js';
-import type { ServiceDefinition } from '../../types/index.js';
+import { writeFile, readFile, access, mkdir } from "fs/promises";
+import { constants } from "fs";
+import { join } from "path";
+import { spawn } from "child_process";
+import { caddyfileGenerator, type CaddyConfig, type CaddyRoute } from "./caddyfile.js";
+import { docker } from "../docker/client.js";
+import { ComposeManager } from "../docker/compose.js";
+import type { ServiceDefinition } from "../../types/index.js";
 
 export class CaddyManager {
   private projectPath: string;
@@ -21,8 +21,8 @@ export class CaddyManager {
   constructor(projectPath: string) {
     this.projectPath = projectPath;
     this.composeManager = new ComposeManager(projectPath);
-    this.caddyfilePath = join(projectPath, 'Caddyfile');
-    this.dataPath = join(projectPath, 'caddy-data');
+    this.caddyfilePath = join(projectPath, "Caddyfile");
+    this.dataPath = join(projectPath, "caddy-data");
   }
 
   /**
@@ -31,9 +31,9 @@ export class CaddyManager {
   async initialize(): Promise<void> {
     // Ensure data directories exist
     await mkdir(this.dataPath, { recursive: true });
-    await mkdir(join(this.dataPath, 'config'), { recursive: true });
-    await mkdir(join(this.dataPath, 'data'), { recursive: true });
-    await mkdir(join(this.dataPath, 'logs'), { recursive: true });
+    await mkdir(join(this.dataPath, "config"), { recursive: true });
+    await mkdir(join(this.dataPath, "data"), { recursive: true });
+    await mkdir(join(this.dataPath, "logs"), { recursive: true });
   }
 
   /**
@@ -57,9 +57,7 @@ export class CaddyManager {
       email: globalConfig.adminEmail,
       domain: globalConfig.domain,
       dnsProvider: globalConfig.dnsProvider,
-      dnsCredentials: globalConfig.cloudflareToken
-        ? { api_token: globalConfig.cloudflareToken }
-        : {},
+      dnsCredentials: globalConfig.cloudflareToken ? { api_token: globalConfig.cloudflareToken } : {},
       routes,
       adminPasswordHash: globalConfig.adminPasswordHash,
     };
@@ -68,7 +66,7 @@ export class CaddyManager {
     const caddyfile = caddyfileGenerator.generate(caddyConfig);
 
     // Write to disk
-    await writeFile(this.caddyfilePath, caddyfile, 'utf-8');
+    await writeFile(this.caddyfilePath, caddyfile, "utf-8");
 
     return caddyfile;
   }
@@ -79,20 +77,20 @@ export class CaddyManager {
    */
   async start(envVars: Record<string, string> = {}): Promise<{ success: boolean; message: string }> {
     // Check if Caddy is already running
-    const container = await docker.getContainer('caddy');
-    if (container && container.state === 'running') {
-      return { success: true, message: 'Caddy is already running' };
+    const container = await docker.getContainer("caddy");
+    if (container && container.state === "running") {
+      return { success: true, message: "Caddy is already running" };
     }
 
     // Ensure Docker network exists
-    const networkExists = await docker.networkExists('tuition');
+    const networkExists = await docker.networkExists("tuition");
     if (!networkExists) {
       try {
-        await docker.createNetwork('tuition');
+        await docker.createNetwork("tuition");
       } catch (error) {
-        return { 
-          success: false, 
-          message: `Failed to create Docker network: ${error}` 
+        return {
+          success: false,
+          message: `Failed to create Docker network: ${error}`,
         };
       }
     }
@@ -103,13 +101,13 @@ export class CaddyManager {
     await this.generateComposeFile();
 
     // Start via docker-compose with environment variables
-    const result = await this.composeManager.up('caddy', { 
+    const result = await this.composeManager.up("caddy", {
       detached: true,
-      env: envVars 
+      env: envVars,
     });
 
     if (result.success) {
-      return { success: true, message: 'Caddy started successfully' };
+      return { success: true, message: "Caddy started successfully" };
     } else {
       return { success: false, message: `Failed to start Caddy: ${result.output}` };
     }
@@ -119,10 +117,10 @@ export class CaddyManager {
    * Stop Caddy container
    */
   async stop(): Promise<{ success: boolean; message: string }> {
-    const result = await this.composeManager.down('caddy');
+    const result = await this.composeManager.down("caddy");
 
     if (result.success) {
-      return { success: true, message: 'Caddy stopped' };
+      return { success: true, message: "Caddy stopped" };
     } else {
       return { success: false, message: `Failed to stop Caddy: ${result.output}` };
     }
@@ -133,10 +131,10 @@ export class CaddyManager {
    */
   async reload(): Promise<{ success: boolean; message: string }> {
     // Try graceful reload via caddy API
-    const result = await this.execCaddyCommand(['reload', '--config', '/etc/caddy/Caddyfile']);
+    const result = await this.execCaddyCommand(["reload", "--config", "/etc/caddy/Caddyfile"]);
 
     if (result.success) {
-      return { success: true, message: 'Caddy configuration reloaded' };
+      return { success: true, message: "Caddy configuration reloaded" };
     } else {
       // If reload fails, try restart
       return this.restart();
@@ -153,7 +151,7 @@ export class CaddyManager {
     }
 
     // Small delay for clean shutdown
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     return this.start(envVars);
   }
@@ -168,8 +166,8 @@ export class CaddyManager {
   }> {
     let running = false;
     try {
-      const container = await docker.getContainer('caddy');
-      running = container !== null && container.state === 'running';
+      const container = await docker.getContainer("caddy");
+      running = container !== null && container.state === "running";
     } catch {
       running = false;
     }
@@ -177,7 +175,7 @@ export class CaddyManager {
     // Count routes in Caddyfile
     let routes = 0;
     try {
-      const caddyfile = await readFile(this.caddyfilePath, 'utf-8');
+      const caddyfile = await readFile(this.caddyfilePath, "utf-8");
       // Count service blocks (lines ending with { that contain a dot for subdomain)
       const matches = caddyfile.match(/^\S+\.\S+\s*\{/gm);
       routes = matches ? matches.length - 1 : 0; // Subtract 1 for wildcard cert block
@@ -198,25 +196,25 @@ export class CaddyManager {
   private async generateComposeFile(): Promise<void> {
     // Build Caddy service configuration
     const caddyService: Record<string, unknown> = {
-      image: 'iarekylew00t/caddy-cloudflare:latest',
-      container_name: 'caddy',
-      restart: 'unless-stopped',
+      image: "iarekylew00t/caddy-cloudflare:latest",
+      container_name: "caddy",
+      restart: "unless-stopped",
       ports: [
-        '80:80',
-        '443:443',
-        '443:443/udp', // HTTP/3
+        "80:80",
+        "443:443",
+        "443:443/udp", // HTTP/3
       ],
       volumes: [
         `${this.caddyfilePath}:/etc/caddy/Caddyfile:ro`,
-        `${join(this.dataPath, 'config')}:/config`,
-        `${join(this.dataPath, 'data')}:/data`,
-        `${join(this.dataPath, 'logs')}:/var/log/caddy`,
+        `${join(this.dataPath, "config")}:/config`,
+        `${join(this.dataPath, "data")}:/data`,
+        `${join(this.dataPath, "logs")}:/var/log/caddy`,
       ],
-      networks: ['tuition'],
+      networks: ["tuition"],
       environment: {
-        CF_API_TOKEN: '${CF_API_TOKEN}',
+        CF_API_TOKEN: "${CF_API_TOKEN}",
       },
-      cap_add: ['NET_ADMIN'], // Required for HTTP/3
+      cap_add: ["NET_ADMIN"], // Required for HTTP/3
     };
 
     // Note: Docker's dns configuration only accepts IP addresses (not IP:port)
@@ -231,20 +229,16 @@ export class CaddyManager {
       },
       networks: {
         tuition: {
-          driver: 'bridge',
+          driver: "bridge",
           external: true,
         },
       },
     };
 
-    const { stringify: stringifyYaml } = await import('yaml');
+    const { stringify: stringifyYaml } = await import("yaml");
     const yaml = stringifyYaml(compose);
-    
-    await writeFile(
-      join(this.projectPath, 'caddy.docker-compose.yaml'),
-      yaml,
-      'utf-8'
-    );
+
+    await writeFile(join(this.projectPath, "caddy.docker-compose.yaml"), yaml, "utf-8");
   }
 
   /**
@@ -252,31 +246,31 @@ export class CaddyManager {
    */
   private async execCaddyCommand(args: string[]): Promise<{ success: boolean; output: string }> {
     return new Promise((resolve) => {
-      const proc = spawn('docker', ['exec', 'caddy', 'caddy', ...args], {
+      const proc = spawn("docker", ["exec", "caddy", "caddy", ...args], {
         cwd: this.projectPath,
-        stdio: ['pipe', 'pipe', 'pipe'],
+        stdio: ["pipe", "pipe", "pipe"],
       });
 
-      let stdout = '';
-      let stderr = '';
+      let stdout = "";
+      let stderr = "";
 
-      proc.stdout?.on('data', (data: Buffer) => {
-        stdout += data.toString('utf-8');
+      proc.stdout?.on("data", (data: Buffer) => {
+        stdout += data.toString("utf-8");
       });
 
-      proc.stderr?.on('data', (data: Buffer) => {
-        stderr += data.toString('utf-8');
+      proc.stderr?.on("data", (data: Buffer) => {
+        stderr += data.toString("utf-8");
       });
 
-      proc.on('close', (code) => {
-        const output = stdout + (stderr ? `\n${stderr}` : '');
+      proc.on("close", (code) => {
+        const output = stdout + (stderr ? `\n${stderr}` : "");
         resolve({
           success: code === 0,
           output: output.trim(),
         });
       });
 
-      proc.on('error', (error) => {
+      proc.on("error", (error) => {
         resolve({
           success: false,
           output: error.message,

@@ -3,16 +3,16 @@
  * Manages available services from YAML definitions
  */
 
-import { readFile, readdir } from 'fs/promises';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { parse as parseYaml } from 'yaml';
-import type { ServiceDefinition, ServiceCategory } from '../../types/index.js';
-import { logger } from '../../utils/logger.js';
+import { readFile, readdir } from "fs/promises";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+import { parse as parseYaml } from "yaml";
+import type { ServiceDefinition, ServiceCategory } from "../../types/index.js";
+import { logger } from "../../utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const CATALOG_DIR = join(__dirname, '..', '..', '..', 'catalog', 'services');
+const CATALOG_DIR = join(__dirname, "..", "..", "..", "catalog", "services");
 
 export class ServiceCatalog {
   private services: Map<string, ServiceDefinition> = new Map();
@@ -28,12 +28,12 @@ export class ServiceCatalog {
 
     for (const category of categories) {
       const categoryPath = join(CATALOG_DIR, category);
-      
+
       try {
         const files = await readdir(categoryPath);
-        
+
         for (const file of files) {
-          if (file.endsWith('.yaml') || file.endsWith('.yml')) {
+          if (file.endsWith(".yaml") || file.endsWith(".yml")) {
             const service = await this.loadServiceFile(join(categoryPath, file));
             if (service) {
               this.services.set(service.name, service);
@@ -41,7 +41,7 @@ export class ServiceCatalog {
           }
         }
       } catch (error) {
-        logger.warn('catalog.loader', `Failed to load category ${category}: ${error}`);
+        logger.warn("catalog.loader", `Failed to load category ${category}: ${error}`);
       }
     }
 
@@ -54,9 +54,7 @@ export class ServiceCatalog {
   private async getCategoryDirs(): Promise<string[]> {
     try {
       const entries = await readdir(CATALOG_DIR, { withFileTypes: true });
-      return entries
-        .filter(entry => entry.isDirectory() && !entry.name.startsWith('_'))
-        .map(entry => entry.name);
+      return entries.filter((entry) => entry.isDirectory() && !entry.name.startsWith("_")).map((entry) => entry.name);
     } catch {
       return [];
     }
@@ -67,11 +65,11 @@ export class ServiceCatalog {
    */
   private async loadServiceFile(path: string): Promise<ServiceDefinition | null> {
     try {
-      const content = await readFile(path, 'utf-8');
+      const content = await readFile(path, "utf-8");
       const parsed = parseYaml(content) as ServiceDefinition;
       return parsed;
     } catch (error) {
-      logger.warn('catalog.loader', `Failed to load service from ${path}: ${error}`);
+      logger.warn("catalog.loader", `Failed to load service from ${path}: ${error}`);
       return null;
     }
   }
@@ -97,9 +95,7 @@ export class ServiceCatalog {
    */
   async getByCategory(category: ServiceCategory): Promise<ServiceDefinition[]> {
     await this.load();
-    return Array.from(this.services.values()).filter(
-      s => s.category === category
-    );
+    return Array.from(this.services.values()).filter((s) => s.category === category);
   }
 
   /**
@@ -116,11 +112,11 @@ export class ServiceCatalog {
   async getCategories(): Promise<ServiceCategory[]> {
     await this.load();
     const categories = new Set<ServiceCategory>();
-    
+
     for (const service of this.services.values()) {
       categories.add(service.category);
     }
-    
+
     return Array.from(categories).sort();
   }
 
@@ -130,10 +126,10 @@ export class ServiceCatalog {
   async search(query: string): Promise<ServiceDefinition[]> {
     await this.load();
     const lowerQuery = query.toLowerCase();
-    
-    return Array.from(this.services.values()).filter(service =>
-      service.name.toLowerCase().includes(lowerQuery) ||
-      service.description.toLowerCase().includes(lowerQuery)
+
+    return Array.from(this.services.values()).filter(
+      (service) =>
+        service.name.toLowerCase().includes(lowerQuery) || service.description.toLowerCase().includes(lowerQuery)
     );
   }
 }

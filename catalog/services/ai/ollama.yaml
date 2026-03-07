@@ -1,0 +1,26 @@
+name: ollama
+category: ai
+description: Run large language models locally with a simple API for AI inference
+upstreamUrl: https://ollama.com/
+image: ollama/ollama:latest
+
+ports:
+  - host: 11434
+    container: 11434
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+
+volumes:
+  - host: ./data/ollama/models
+    container: /root/.ollama
+
+labels:
+  caddy: ollama.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 11434}}"
+
+resourceLimits:
+  cpus: 4.0
+  memory: 8G
+  gpus: true

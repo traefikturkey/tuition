@@ -1,0 +1,32 @@
+name: photoprism
+category: media
+description: AI-powered photo management application for browsing, organizing, and sharing collections
+upstreamUrl: https://photoprism.app/
+image: photoprism/photoprism:latest
+
+ports:
+  - host: 2342
+    container: 2342
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  PHOTOPRISM_ADMIN_USER: admin
+  PHOTOPRISM_ADMIN_PASSWORD: ${PHOTOPRISM_PASSWORD}
+  PHOTOPRISM_ORIGINALS_LIMIT: "5000"
+  PHOTOPRISM_HTTP_COMPRESSION: gzip
+  PHOTOPRISM_DATABASE_DRIVER: sqlite
+
+volumes:
+  - host: ./data/photoprism/storage
+    container: /photoprism/storage
+  - host: ${MEDIA_PATH}/photos
+    container: /photoprism/originals
+
+labels:
+  caddy: photos.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 2342}}"
+
+resourceLimits:
+  cpus: 2.0
+  memory: 2G

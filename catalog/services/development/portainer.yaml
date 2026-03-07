@@ -1,0 +1,28 @@
+name: portainer
+category: development
+description: Lightweight management UI for Docker environments with container, image, and volume management
+upstreamUrl: https://www.portainer.io/
+image: portainer/portainer-ce:latest
+
+ports:
+  - host: 9000
+    container: 9000
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+
+volumes:
+  - host: ./data/portainer/data
+    container: /data
+  - host: /var/run/docker.sock
+    container: /var/run/docker.sock
+    readOnly: true
+
+labels:
+  caddy: portainer.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 9000}}"
+
+resourceLimits:
+  cpus: 0.25
+  memory: 256M

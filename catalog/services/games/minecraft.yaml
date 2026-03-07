@@ -1,0 +1,30 @@
+name: minecraft
+category: games
+description: Dedicated Minecraft Java Edition server with configurable game modes and plugins
+upstreamUrl: https://github.com/itzg/docker-minecraft-server
+image: itzg/minecraft-server:latest
+
+ports:
+  - host: 25565
+    container: 25565
+    protocol: tcp
+  - host: 25575
+    container: 25575
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  EULA: "TRUE"
+  TYPE: VANILLA
+  MEMORY: 2G
+  DIFFICULTY: normal
+  MODE: survival
+  MAX_PLAYERS: "10"
+
+volumes:
+  - host: ./data/minecraft/data
+    container: /data
+
+resourceLimits:
+  cpus: 2.0
+  memory: 3G

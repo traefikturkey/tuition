@@ -1,0 +1,28 @@
+name: grafana
+category: monitoring
+description: Open-source analytics and interactive visualization web application with dashboards and graphs
+upstreamUrl: https://grafana.com/
+image: grafana/grafana:latest
+
+ports:
+  - host: 3100
+    container: 3000
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  GF_SECURITY_ADMIN_USER: admin
+  GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+  GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-piechart-panel
+
+volumes:
+  - host: ./data/grafana/data
+    container: /var/lib/grafana
+
+labels:
+  caddy: grafana.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 3000}}"
+
+resourceLimits:
+  cpus: 0.5
+  memory: 512M

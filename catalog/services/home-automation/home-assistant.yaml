@@ -1,0 +1,25 @@
+name: home-assistant
+category: home-automation
+description: Open-source home automation platform for smart home device control and automation
+upstreamUrl: https://www.home-assistant.io/
+image: ghcr.io/home-assistant/home-assistant:stable
+
+ports:
+  - host: 8123
+    container: 8123
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+
+volumes:
+  - host: ./data/home-assistant/config
+    container: /config
+
+labels:
+  caddy: hass.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 8123}}"
+
+resourceLimits:
+  cpus: 1.0
+  memory: 1G

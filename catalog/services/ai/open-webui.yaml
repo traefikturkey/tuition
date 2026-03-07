@@ -1,0 +1,29 @@
+name: open-webui
+category: ai
+description: User-friendly web interface for interacting with local LLMs powered by Ollama
+upstreamUrl: https://github.com/open-webui/open-webui
+image: ghcr.io/open-webui/open-webui:main
+
+ports:
+  - host: 3200
+    container: 8080
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  OLLAMA_BASE_URL: http://ollama:11434
+
+volumes:
+  - host: ./data/open-webui/data
+    container: /app/backend/data
+
+dependsOn:
+  - ollama
+
+labels:
+  caddy: chat.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 8080}}"
+
+resourceLimits:
+  cpus: 0.5
+  memory: 512M

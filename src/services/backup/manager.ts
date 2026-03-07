@@ -3,16 +3,16 @@
  * Implements 3-2-1 backup strategy
  */
 
-import { createReadStream, createWriteStream } from 'fs';
-import { readFile, writeFile, mkdir, readdir, stat, rm } from 'fs/promises';
-import { createGzip } from 'zlib';
-import { promisify } from 'util';
-import { pipeline } from 'stream';
-import { join, relative, resolve } from 'path';
-import { spawn } from 'child_process';
-import * as tar from 'tar';
-import type { ConfigManager } from '../../core/config/manager.js';
-import { logger } from '../../utils/logger.js';
+import { createReadStream, createWriteStream } from "fs";
+import { readFile, writeFile, mkdir, readdir, stat, rm } from "fs/promises";
+import { createGzip } from "zlib";
+import { promisify } from "util";
+import { pipeline } from "stream";
+import { join, relative, resolve } from "path";
+import { spawn } from "child_process";
+import * as tar from "tar";
+import type { ConfigManager } from "../../core/config/manager.js";
+import { logger } from "../../utils/logger.js";
 
 const pipelineAsync = promisify(pipeline);
 
@@ -40,7 +40,7 @@ export class BackupManager {
 
   constructor(configManager: ConfigManager) {
     this.configManager = configManager;
-    this.backupDir = join(configManager.getTuitionDir(), 'backups');
+    this.backupDir = join(configManager.getTuitionDir(), "backups");
   }
 
   /**
@@ -68,9 +68,9 @@ export class BackupManager {
       ...options,
     };
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const backupName = `tuition-backup-${timestamp}`;
-    const backupPath = join(opts.destination, `${backupName}.tar${opts.compression ? '.gz' : ''}`);
+    const backupPath = join(opts.destination, `${backupName}.tar${opts.compression ? ".gz" : ""}`);
 
     try {
       // Create temp directory for staging
@@ -83,41 +83,41 @@ export class BackupManager {
       // 1. Configuration (always included if requested)
       if (opts.includeConfigs) {
         const configSource = this.configManager.getConfigPath();
-        const configDest = join(tempDir, 'config');
+        const configDest = join(tempDir, "config");
         await this.copyDirectory(configSource, configDest);
-        backupContents.push('config');
+        backupContents.push("config");
       }
 
       // 2. Caddy data
-      const caddyDataPath = join(this.configManager.getTuitionDir(), 'caddy-data');
+      const caddyDataPath = join(this.configManager.getTuitionDir(), "caddy-data");
       try {
         await stat(caddyDataPath);
-        const caddyDest = join(tempDir, 'caddy-data');
+        const caddyDest = join(tempDir, "caddy-data");
         await this.copyDirectory(caddyDataPath, caddyDest);
-        backupContents.push('caddy-data');
+        backupContents.push("caddy-data");
       } catch {
         // Caddy data doesn't exist, skip
       }
 
       // 3. CoreDNS config
-      const dnsConfigPath = join(this.configManager.getTuitionDir(), 'coredns-config');
+      const dnsConfigPath = join(this.configManager.getTuitionDir(), "coredns-config");
       try {
         await stat(dnsConfigPath);
-        const dnsDest = join(tempDir, 'coredns-config');
+        const dnsDest = join(tempDir, "coredns-config");
         await this.copyDirectory(dnsConfigPath, dnsDest);
-        backupContents.push('coredns-config');
+        backupContents.push("coredns-config");
       } catch {
         // DNS config doesn't exist, skip
       }
 
       // 4. Service data directories (if includeVolumes)
       if (opts.includeVolumes) {
-        const dataPath = join(this.configManager.getTuitionDir(), 'data');
+        const dataPath = join(this.configManager.getTuitionDir(), "data");
         try {
           await stat(dataPath);
-          const dataDest = join(tempDir, 'data');
+          const dataDest = join(tempDir, "data");
           await this.copyDirectory(dataPath, dataDest);
-          backupContents.push('data');
+          backupContents.push("data");
         } catch {
           // Data directory doesn't exist
         }
@@ -127,31 +127,27 @@ export class BackupManager {
       const tuitionDir = this.configManager.getTuitionDir();
       const composeFiles = await this.findComposeFiles(tuitionDir);
       if (composeFiles.length > 0) {
-        const composeDest = join(tempDir, 'compose-files');
+        const composeDest = join(tempDir, "compose-files");
         await mkdir(composeDest, { recursive: true });
         for (const file of composeFiles) {
-          const content = await readFile(file, 'utf-8');
-          const basename = file.split('/').pop() || file.split('\\').pop() || 'compose.yaml';
-          await writeFile(join(composeDest, basename), content, 'utf-8');
+          const content = await readFile(file, "utf-8");
+          const basename = file.split("/").pop() || file.split("\\").pop() || "compose.yaml";
+          await writeFile(join(composeDest, basename), content, "utf-8");
         }
-        backupContents.push('compose-files');
+        backupContents.push("compose-files");
       }
 
       // Create metadata
       const metadata: BackupMetadata = {
-        version: '1.0',
+        version: "1.0",
         createdAt: new Date().toISOString(),
-        hostname: 'unknown', // Would get from system
+        hostname: "unknown", // Would get from system
         services: backupContents,
         size: 0,
-        checksum: 'pending',
+        checksum: "pending",
       };
 
-      await writeFile(
-        join(tempDir, 'metadata.json'),
-        JSON.stringify(metadata, null, 2),
-        'utf-8'
-      );
+      await writeFile(join(tempDir, "metadata.json"), JSON.stringify(metadata, null, 2), "utf-8");
 
       // Create tar archive
       await tar.create(
@@ -160,7 +156,7 @@ export class BackupManager {
           file: backupPath,
           cwd: tempDir,
         },
-        ['.']
+        ["."]
       );
 
       // Get file size
@@ -187,10 +183,13 @@ export class BackupManager {
   /**
    * Restore from backup archive
    */
-  async restoreBackup(backupPath: string, options: {
-    dryRun?: boolean;
-    force?: boolean;
-  } = {}): Promise<{
+  async restoreBackup(
+    backupPath: string,
+    options: {
+      dryRun?: boolean;
+      force?: boolean;
+    } = {}
+  ): Promise<{
     success: boolean;
     message: string;
     restored?: string[];
@@ -224,22 +223,22 @@ export class BackupManager {
       await tar.extract({
         file: resolvedBackupPath,
         cwd: tempDir,
-        gzip: resolvedBackupPath.endsWith('.gz'),
+        gzip: resolvedBackupPath.endsWith(".gz"),
       });
 
       // Read metadata
       let metadata: BackupMetadata;
       try {
-        const metadataContent = await readFile(join(tempDir, 'metadata.json'), 'utf-8');
+        const metadataContent = await readFile(join(tempDir, "metadata.json"), "utf-8");
         metadata = JSON.parse(metadataContent) as BackupMetadata;
       } catch {
         metadata = {
-          version: 'unknown',
+          version: "unknown",
           createdAt: new Date().toISOString(),
-          hostname: 'unknown',
+          hostname: "unknown",
           services: [],
           size: 0,
-          checksum: 'unknown',
+          checksum: "unknown",
         };
       }
 
@@ -247,7 +246,7 @@ export class BackupManager {
         await rm(tempDir, { recursive: true, force: true });
         return {
           success: true,
-          message: `Dry run: Backup from ${metadata.createdAt} contains ${metadata.services.join(', ')}`,
+          message: `Dry run: Backup from ${metadata.createdAt} contains ${metadata.services.join(", ")}`,
           restored: metadata.services,
         };
       }
@@ -255,68 +254,68 @@ export class BackupManager {
       // Confirm restoration if not forced
       if (!options.force) {
         // Would prompt user here in interactive mode
-        logger.warn('backup.manager', `Restore requested without force for backup from ${metadata.createdAt}`);
+        logger.warn("backup.manager", `Restore requested without force for backup from ${metadata.createdAt}`);
       }
 
       const restored: string[] = [];
       const tuitionDir = this.configManager.getTuitionDir();
 
       // Restore configurations
-      const configSource = join(tempDir, 'config');
+      const configSource = join(tempDir, "config");
       try {
         await stat(configSource);
         const configDest = this.configManager.getConfigPath();
         await this.copyDirectory(configSource, configDest);
-        restored.push('configuration');
+        restored.push("configuration");
       } catch {
         // Config not in backup
       }
 
       // Restore Caddy data
-      const caddySource = join(tempDir, 'caddy-data');
+      const caddySource = join(tempDir, "caddy-data");
       try {
         await stat(caddySource);
-        const caddyDest = join(tuitionDir, 'caddy-data');
+        const caddyDest = join(tuitionDir, "caddy-data");
         await this.copyDirectory(caddySource, caddyDest);
-        restored.push('caddy-data');
+        restored.push("caddy-data");
       } catch {
         // Caddy data not in backup
       }
 
       // Restore CoreDNS config
-      const dnsSource = join(tempDir, 'coredns-config');
+      const dnsSource = join(tempDir, "coredns-config");
       try {
         await stat(dnsSource);
-        const dnsDest = join(tuitionDir, 'coredns-config');
+        const dnsDest = join(tuitionDir, "coredns-config");
         await this.copyDirectory(dnsSource, dnsDest);
-        restored.push('coredns-config');
+        restored.push("coredns-config");
       } catch {
         // DNS config not in backup
       }
 
       // Restore service data
-      const dataSource = join(tempDir, 'data');
+      const dataSource = join(tempDir, "data");
       try {
         await stat(dataSource);
-        const dataDest = join(tuitionDir, 'data');
+        const dataDest = join(tuitionDir, "data");
         await this.copyDirectory(dataSource, dataDest);
-        restored.push('service-data');
+        restored.push("service-data");
       } catch {
         // Data not in backup
       }
 
       // Restore compose files
-      const composeSource = join(tempDir, 'compose-files');
+      const composeSource = join(tempDir, "compose-files");
       try {
         await stat(composeSource);
         const files = await readdir(composeSource);
         for (const file of files) {
-          if (file.endsWith('.yaml') || file.endsWith('.yml')) {
-            const content = await readFile(join(composeSource, file), 'utf-8');
-            await writeFile(join(tuitionDir, file), content, 'utf-8');
+          if (file.endsWith(".yaml") || file.endsWith(".yml")) {
+            const content = await readFile(join(composeSource, file), "utf-8");
+            await writeFile(join(tuitionDir, file), content, "utf-8");
           }
         }
-        restored.push('compose-files');
+        restored.push("compose-files");
       } catch {
         // Compose files not in backup
       }
@@ -340,13 +339,15 @@ export class BackupManager {
   /**
    * List available backups
    */
-  async listBackups(): Promise<Array<{
-    name: string;
-    path: string;
-    size: number;
-    createdAt: string;
-    services: string[];
-  }>> {
+  async listBackups(): Promise<
+    Array<{
+      name: string;
+      path: string;
+      size: number;
+      createdAt: string;
+      services: string[];
+    }>
+  > {
     const backups: Array<{
       name: string;
       path: string;
@@ -357,12 +358,12 @@ export class BackupManager {
 
     try {
       const files = await readdir(this.backupDir);
-      
+
       for (const file of files) {
-        if (file.startsWith('tuition-backup-') && (file.endsWith('.tar') || file.endsWith('.tar.gz'))) {
+        if (file.startsWith("tuition-backup-") && (file.endsWith(".tar") || file.endsWith(".tar.gz"))) {
           const path = join(this.backupDir, file);
           const stats = await stat(path);
-          
+
           // Try to read metadata from archive
           let metadata: Partial<BackupMetadata> = {};
           try {
@@ -370,13 +371,16 @@ export class BackupManager {
             // This is inefficient but works for now
             const tempDir = join(this.backupDir, `.meta-${Date.now()}`);
             await mkdir(tempDir, { recursive: true });
-            await tar.extract({
-              file: path,
-              cwd: tempDir,
-              gzip: file.endsWith('.gz'),
-            }, ['metadata.json']);
-            
-            const content = await readFile(join(tempDir, 'metadata.json'), 'utf-8');
+            await tar.extract(
+              {
+                file: path,
+                cwd: tempDir,
+                gzip: file.endsWith(".gz"),
+              },
+              ["metadata.json"]
+            );
+
+            const content = await readFile(join(tempDir, "metadata.json"), "utf-8");
             metadata = JSON.parse(content);
             await rm(tempDir, { recursive: true, force: true });
           } catch {
@@ -396,9 +400,7 @@ export class BackupManager {
       // Backup directory doesn't exist or is empty
     }
 
-    return backups.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return backups.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   /**
@@ -437,13 +439,13 @@ export class BackupManager {
    */
   private async copyDirectory(source: string, dest: string): Promise<void> {
     await mkdir(dest, { recursive: true });
-    
+
     const entries = await readdir(source, { withFileTypes: true });
-    
+
     for (const entry of entries) {
       const srcPath = join(source, entry.name);
       const destPath = join(dest, entry.name);
-      
+
       if (entry.isDirectory()) {
         await this.copyDirectory(srcPath, destPath);
       } else {
@@ -458,19 +460,19 @@ export class BackupManager {
    */
   private async findComposeFiles(dir: string): Promise<string[]> {
     const files: string[] = [];
-    
+
     try {
       const entries = await readdir(dir, { withFileTypes: true });
-      
+
       for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.docker-compose.yaml')) {
+        if (entry.isFile() && entry.name.endsWith(".docker-compose.yaml")) {
           files.push(join(dir, entry.name));
         }
       }
     } catch {
       // Directory doesn't exist
     }
-    
+
     return files;
   }
 
@@ -478,11 +480,11 @@ export class BackupManager {
    * Format bytes to human readable
    */
   private formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
 
   /**
@@ -497,29 +499,26 @@ export class BackupManager {
     const resolvedPath = resolve(pathValue);
     const pathWithinBackupDir = relative(resolvedBackupDir, resolvedPath);
 
-    if (
-      pathWithinBackupDir.startsWith('..') ||
-      pathWithinBackupDir === ''
-    ) {
+    if (pathWithinBackupDir.startsWith("..") || pathWithinBackupDir === "") {
       return {
         success: false,
-        message: 'Backup path is outside the configured backup directory',
+        message: "Backup path is outside the configured backup directory",
       };
     }
 
     const lower = resolvedPath.toLowerCase();
-    const isValidExtension = lower.endsWith('.tar') || lower.endsWith('.tar.gz');
+    const isValidExtension = lower.endsWith(".tar") || lower.endsWith(".tar.gz");
     if (!isValidExtension) {
       return {
         success: false,
-        message: 'Invalid backup file extension. Expected .tar or .tar.gz',
+        message: "Invalid backup file extension. Expected .tar or .tar.gz",
       };
     }
 
     return {
       success: true,
       path: resolvedPath,
-      message: 'Valid backup path',
+      message: "Valid backup path",
     };
   }
 }

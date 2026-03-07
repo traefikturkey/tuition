@@ -1,0 +1,28 @@
+name: prowlarr
+category: downloads
+description: Indexer manager and proxy for PVR applications supporting Usenet and torrent trackers
+upstreamUrl: https://prowlarr.com/
+image: linuxserver/prowlarr:latest
+
+ports:
+  - host: 9696
+    container: 9696
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  PUID: ${PUID}
+  PGID: ${PGID}
+  UMASK: "002"
+
+volumes:
+  - host: ./data/prowlarr/config
+    container: /config
+
+labels:
+  caddy: prowlarr.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 9696}}"
+
+resourceLimits:
+  cpus: 0.25
+  memory: 256M

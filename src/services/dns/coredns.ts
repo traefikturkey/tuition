@@ -3,18 +3,18 @@
  * Provides zero-configuration DNS for containers
  */
 
-import { writeFile, mkdir, readFile } from 'fs/promises';
-import { join } from 'path';
-import { spawn } from 'child_process';
-import { ComposeManager } from '../docker/compose.js';
-import { docker } from '../docker/client.js';
-import type { ServiceDefinition } from '../../types/index.js';
+import { writeFile, mkdir, readFile } from "fs/promises";
+import { join } from "path";
+import { spawn } from "child_process";
+import { ComposeManager } from "../docker/compose.js";
+import { docker } from "../docker/client.js";
+import type { ServiceDefinition } from "../../types/index.js";
 
 export interface DnsRecord {
   hostname: string;
   ip: string;
-  type: 'A' | 'AAAA' | 'CNAME';
-  source: 'container' | 'static';
+  type: "A" | "AAAA" | "CNAME";
+  source: "container" | "static";
   containerId?: string;
 }
 
@@ -27,8 +27,8 @@ export class CoreDnsManager {
   constructor(projectPath: string) {
     this.projectPath = projectPath;
     this.composeManager = new ComposeManager(projectPath);
-    this.configPath = join(projectPath, 'coredns-config');
-    this.dataPath = join(projectPath, 'coredns-data');
+    this.configPath = join(projectPath, "coredns-config");
+    this.dataPath = join(projectPath, "coredns-data");
   }
 
   /**
@@ -49,19 +49,11 @@ export class CoreDnsManager {
   ): Promise<string> {
     const corefile = this.buildCorefile(enabledServices, staticHosts, upstreamDns);
 
-    await writeFile(
-      join(this.configPath, 'Corefile'),
-      corefile,
-      'utf-8'
-    );
+    await writeFile(join(this.configPath, "Corefile"), corefile, "utf-8");
 
     // Generate hosts file from container labels
     const hosts = this.buildHostsFile(enabledServices, staticHosts);
-    await writeFile(
-      join(this.configPath, 'hosts'),
-      hosts,
-      'utf-8'
-    );
+    await writeFile(join(this.configPath, "hosts"), hosts, "utf-8");
 
     return corefile;
   }
@@ -76,48 +68,45 @@ export class CoreDnsManager {
   ): string {
     const lines: string[] = [];
 
-    lines.push('# Tuition CoreDNS Configuration');
-    lines.push('# Auto-generated - do not edit manually');
-    lines.push('');
-    lines.push('# Listen on port 54 to avoid conflict with systemd-resolved on port 53');
-    lines.push('.:54 {');
-    lines.push('    # Hosts file for static and container entries');
-    lines.push('    hosts /etc/coredns/hosts {');
+    lines.push("# Tuition CoreDNS Configuration");
+    lines.push("# Auto-generated - do not edit manually");
+    lines.push("");
+    lines.push("# Listen on port 54 to avoid conflict with systemd-resolved on port 53");
+    lines.push(".:54 {");
+    lines.push("    # Hosts file for static and container entries");
+    lines.push("    hosts /etc/coredns/hosts {");
     lines.push(`        fallthrough`);
-    lines.push('    }');
-    lines.push('');
-    lines.push('    # Forward to external DNS');
+    lines.push("    }");
+    lines.push("");
+    lines.push("    # Forward to external DNS");
     const upstreamServers = upstreamDns
-      ? [upstreamDns.primary, upstreamDns.backup].filter(Boolean).join(' ')
-      : '8.8.8.8 8.8.4.4';
+      ? [upstreamDns.primary, upstreamDns.backup].filter(Boolean).join(" ")
+      : "8.8.8.8 8.8.4.4";
     lines.push(`    forward . ${upstreamServers} {`);
-    lines.push('        health_check 5s');
-    lines.push('    }');
-    lines.push('');
-    lines.push('    # Cache responses');
-    lines.push('    cache 30');
-    lines.push('');
-    lines.push('    # Logging');
-    lines.push('    log');
-    lines.push('    errors');
-    lines.push('}');
-    lines.push('');
+    lines.push("        health_check 5s");
+    lines.push("    }");
+    lines.push("");
+    lines.push("    # Cache responses");
+    lines.push("    cache 30");
+    lines.push("");
+    lines.push("    # Logging");
+    lines.push("    log");
+    lines.push("    errors");
+    lines.push("}");
+    lines.push("");
 
-    return lines.join('\n');
+    return lines.join("\n");
   }
 
   /**
    * Build hosts file from services and static entries
    */
-  private buildHostsFile(
-    services: ServiceDefinition[],
-    staticHosts: Record<string, string>
-  ): string {
+  private buildHostsFile(services: ServiceDefinition[], staticHosts: Record<string, string>): string {
     const lines: string[] = [];
-    
-    lines.push('# Tuition Internal DNS');
-    lines.push('# Auto-generated from container labels');
-    lines.push('');
+
+    lines.push("# Tuition Internal DNS");
+    lines.push("# Auto-generated from container labels");
+    lines.push("");
 
     // Add static hosts
     for (const [hostname, ip] of Object.entries(staticHosts)) {
@@ -125,19 +114,19 @@ export class CoreDnsManager {
     }
 
     if (Object.keys(staticHosts).length > 0) {
-      lines.push('');
+      lines.push("");
     }
 
     // Add service entries (will be resolved at runtime)
     for (const service of services) {
-      if (service.labels?.['dns.hostname']) {
-        const hostname = service.labels['dns.hostname'];
+      if (service.labels?.["dns.hostname"]) {
+        const hostname = service.labels["dns.hostname"];
         // Container IPs are resolved at runtime by Docker DNS
         lines.push(`# ${hostname} -> ${service.name} (resolved by Docker)`);
       }
     }
 
-    return lines.join('\n');
+    return lines.join("\n");
   }
 
   /**
@@ -145,14 +134,14 @@ export class CoreDnsManager {
    */
   async start(): Promise<{ success: boolean; message: string }> {
     // Ensure Docker network exists
-    const networkExists = await docker.networkExists('tuition');
+    const networkExists = await docker.networkExists("tuition");
     if (!networkExists) {
       try {
-        await docker.createNetwork('tuition');
+        await docker.createNetwork("tuition");
       } catch (error) {
-        return { 
-          success: false, 
-          message: `Failed to create Docker network: ${error}` 
+        return {
+          success: false,
+          message: `Failed to create Docker network: ${error}`,
         };
       }
     }
@@ -161,16 +150,16 @@ export class CoreDnsManager {
     await this.generateComposeFile();
 
     // Check if already running
-    const container = await docker.getContainer('coredns');
-    if (container && container.state === 'running') {
-      return { success: true, message: 'CoreDNS is already running' };
+    const container = await docker.getContainer("coredns");
+    if (container && container.state === "running") {
+      return { success: true, message: "CoreDNS is already running" };
     }
 
     // Start via docker-compose
-    const result = await this.composeManager.up('coredns', { detached: true });
+    const result = await this.composeManager.up("coredns", { detached: true });
 
     if (result.success) {
-      return { success: true, message: 'CoreDNS started successfully' };
+      return { success: true, message: "CoreDNS started successfully" };
     } else {
       return { success: false, message: `Failed to start CoreDNS: ${result.output}` };
     }
@@ -180,10 +169,10 @@ export class CoreDnsManager {
    * Stop CoreDNS container
    */
   async stop(): Promise<{ success: boolean; message: string }> {
-    const result = await this.composeManager.down('coredns');
+    const result = await this.composeManager.down("coredns");
 
     if (result.success) {
-      return { success: true, message: 'CoreDNS stopped' };
+      return { success: true, message: "CoreDNS stopped" };
     } else {
       return { success: false, message: `Failed to stop CoreDNS: ${result.output}` };
     }
@@ -197,7 +186,7 @@ export class CoreDnsManager {
     const result = await this.sendReloadSignal();
 
     if (result.success) {
-      return { success: true, message: 'CoreDNS configuration reloaded' };
+      return { success: true, message: "CoreDNS configuration reloaded" };
     } else {
       // Fallback to restart
       const stopResult = await this.stop();
@@ -217,16 +206,16 @@ export class CoreDnsManager {
   }> {
     let running = false;
     try {
-      const container = await docker.getContainer('coredns');
-      running = container !== null && container.state === 'running';
+      const container = await docker.getContainer("coredns");
+      running = container !== null && container.state === "running";
     } catch {
       running = false;
     }
 
     let hosts = 0;
     try {
-      const hostsFile = await readFile(join(this.configPath, 'hosts'), 'utf-8');
-      hosts = hostsFile.split('\n').filter(line => line && !line.startsWith('#')).length;
+      const hostsFile = await readFile(join(this.configPath, "hosts"), "utf-8");
+      hosts = hostsFile.split("\n").filter((line) => line && !line.startsWith("#")).length;
     } catch {
       // File doesn't exist yet
     }
@@ -240,36 +229,29 @@ export class CoreDnsManager {
    * This allows external DNS queries without NAT/routing issues
    */
   private async generateComposeFile(): Promise<void> {
-    const { stringify: stringifyYaml } = await import('yaml');
-    
+    const { stringify: stringifyYaml } = await import("yaml");
+
     const compose = {
       services: {
         coredns: {
-          image: 'coredns/coredns:latest',
-          container_name: 'coredns',
-          restart: 'unless-stopped',
+          image: "coredns/coredns:latest",
+          container_name: "coredns",
+          restart: "unless-stopped",
           // Use host networking to bind directly to host port 54
           // This makes CoreDNS accessible from external systems (Pi-holes, etc.)
-          network_mode: 'host',
-          ports: [
-            '54:53/tcp',
-            '54:53/udp',
-          ],
+          network_mode: "host",
+          ports: ["54:53/tcp", "54:53/udp"],
           volumes: [
             `${this.configPath}/Corefile:/etc/coredns/Corefile:ro`,
             `${this.configPath}/hosts:/etc/coredns/hosts:ro`,
           ],
-          command: ['-conf', '/etc/coredns/Corefile'],
+          command: ["-conf", "/etc/coredns/Corefile"],
         },
       },
     };
 
     const yaml = stringifyYaml(compose);
-    await writeFile(
-      join(this.projectPath, 'coredns.docker-compose.yaml'),
-      yaml,
-      'utf-8'
-    );
+    await writeFile(join(this.projectPath, "coredns.docker-compose.yaml"), yaml, "utf-8");
   }
 
   /**
@@ -277,30 +259,30 @@ export class CoreDnsManager {
    */
   private async sendReloadSignal(): Promise<{ success: boolean; output: string }> {
     return new Promise((resolve) => {
-      const proc = spawn('docker', ['kill', '-s', 'USR1', 'coredns'], {
+      const proc = spawn("docker", ["kill", "-s", "USR1", "coredns"], {
         cwd: this.projectPath,
       });
 
-      let stdout = '';
-      let stderr = '';
+      let stdout = "";
+      let stderr = "";
 
-      proc.stdout?.on('data', (data: Buffer) => {
-        stdout += data.toString('utf-8');
+      proc.stdout?.on("data", (data: Buffer) => {
+        stdout += data.toString("utf-8");
       });
 
-      proc.stderr?.on('data', (data: Buffer) => {
-        stderr += data.toString('utf-8');
+      proc.stderr?.on("data", (data: Buffer) => {
+        stderr += data.toString("utf-8");
       });
 
-      proc.on('close', (code: number | null) => {
-        const output = stdout + (stderr ? `\n${stderr}` : '');
+      proc.on("close", (code: number | null) => {
+        const output = stdout + (stderr ? `\n${stderr}` : "");
         resolve({
           success: code === 0,
           output: output.trim(),
         });
       });
 
-      proc.on('error', (error: Error) => {
+      proc.on("error", (error: Error) => {
         resolve({
           success: false,
           output: error.message,

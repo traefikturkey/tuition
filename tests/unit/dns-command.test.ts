@@ -2,10 +2,10 @@
  * DNS command tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { DnsCommand } from '../../src/cli/commands/dns.js';
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { DnsCommand } from "../../src/cli/commands/dns.js";
 
-describe('DnsCommand', () => {
+describe("DnsCommand", () => {
   let captured: string[];
   let originalLog: typeof console.log;
   let command: DnsCommand;
@@ -14,7 +14,7 @@ describe('DnsCommand', () => {
     captured = [];
     originalLog = console.log;
     console.log = (...args: unknown[]) => {
-      captured.push(args.map(String).join(' '));
+      captured.push(args.map(String).join(" "));
     };
 
     command = new DnsCommand();
@@ -24,7 +24,7 @@ describe('DnsCommand', () => {
     console.log = originalLog;
   });
 
-  it('shows not initialized message when start is called before init', async () => {
+  it("shows not initialized message when start is called before init", async () => {
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
       config: { exists: () => Promise<boolean> };
@@ -37,11 +37,11 @@ describe('DnsCommand', () => {
 
     await command.start({});
 
-    const output = captured.join('\n');
-    expect(output).toContain('Tuition is not initialized');
+    const output = captured.join("\n");
+    expect(output).toContain("Tuition is not initialized");
   });
 
-  it('passes upstream DNS config to generator on start', async () => {
+  it("passes upstream DNS config to generator on start", async () => {
     let receivedUpstreamDns: { primary: string; backup?: string } | undefined;
 
     const commandMock = command as unknown as {
@@ -72,8 +72,8 @@ describe('DnsCommand', () => {
       loadServices: async () => ({}),
       loadGlobal: async () => ({
         upstreamDns: {
-          primary: '1.1.1.1',
-          backup: '1.0.0.1',
+          primary: "1.1.1.1",
+          backup: "1.0.0.1",
         },
       }),
     };
@@ -81,19 +81,19 @@ describe('DnsCommand', () => {
       generateConfig: async (_enabledServices, _staticHosts, upstreamDns) => {
         receivedUpstreamDns = upstreamDns;
       },
-      start: async () => ({ success: true, message: 'CoreDNS started successfully' }),
+      start: async () => ({ success: true, message: "CoreDNS started successfully" }),
     };
 
     await command.start({});
 
-    expect(receivedUpstreamDns?.primary).toBe('1.1.1.1');
-    expect(receivedUpstreamDns?.backup).toBe('1.0.0.1');
+    expect(receivedUpstreamDns?.primary).toBe("1.1.1.1");
+    expect(receivedUpstreamDns?.backup).toBe("1.0.0.1");
 
-    const output = captured.join('\n');
-    expect(output).toContain('CoreDNS started successfully');
+    const output = captured.join("\n");
+    expect(output).toContain("CoreDNS started successfully");
   });
 
-  it('shows reload failure message during regenerate', async () => {
+  it("shows reload failure message during regenerate", async () => {
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
       config: {
@@ -114,21 +114,21 @@ describe('DnsCommand', () => {
     commandMock.config = {
       loadServices: async () => ({}),
       loadGlobal: async () => ({
-        upstreamDns: { primary: '8.8.8.8' },
+        upstreamDns: { primary: "8.8.8.8" },
       }),
     };
     commandMock.dns = {
       generateConfig: async () => undefined,
-      reload: async () => ({ success: false, message: 'reload failed' }),
+      reload: async () => ({ success: false, message: "reload failed" }),
     };
 
     await command.regenerate({});
 
-    const output = captured.join('\n');
-    expect(output).toContain('Failed to reload: reload failed');
+    const output = captured.join("\n");
+    expect(output).toContain("Failed to reload: reload failed");
   });
 
-  it('shows failure output when stop fails', async () => {
+  it("shows failure output when stop fails", async () => {
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
       dns: {
@@ -138,16 +138,16 @@ describe('DnsCommand', () => {
 
     commandMock.initialize = async () => undefined;
     commandMock.dns = {
-      stop: async () => ({ success: false, message: 'stop failed' }),
+      stop: async () => ({ success: false, message: "stop failed" }),
     };
 
     await command.stop({});
 
-    const output = captured.join('\n');
-    expect(output).toContain('stop failed');
+    const output = captured.join("\n");
+    expect(output).toContain("stop failed");
   });
 
-  it('shows running status details when CoreDNS is up', async () => {
+  it("shows running status details when CoreDNS is up", async () => {
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
       dns: {
@@ -162,13 +162,13 @@ describe('DnsCommand', () => {
 
     await command.status({});
 
-    const output = captured.join('\n');
-    expect(output).toContain('Running:');
-    expect(output).toContain('Host entries: 5');
-    expect(output).toContain('Internal DNS available on port 54');
+    const output = captured.join("\n");
+    expect(output).toContain("Running:");
+    expect(output).toContain("Host entries: 5");
+    expect(output).toContain("Internal DNS available on port 54");
   });
 
-  it('omits running-only hint when CoreDNS is stopped', async () => {
+  it("omits running-only hint when CoreDNS is stopped", async () => {
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
       dns: {
@@ -183,12 +183,12 @@ describe('DnsCommand', () => {
 
     await command.status({});
 
-    const output = captured.join('\n');
-    expect(output).toContain('Host entries: 0');
-    expect(output).not.toContain('Internal DNS available on port 54');
+    const output = captured.join("\n");
+    expect(output).toContain("Host entries: 0");
+    expect(output).not.toContain("Internal DNS available on port 54");
   });
 
-  it('shows success output when regenerate reload succeeds', async () => {
+  it("shows success output when regenerate reload succeeds", async () => {
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
       config: {
@@ -209,17 +209,17 @@ describe('DnsCommand', () => {
     commandMock.config = {
       loadServices: async () => ({}),
       loadGlobal: async () => ({
-        upstreamDns: { primary: '1.1.1.1' },
+        upstreamDns: { primary: "1.1.1.1" },
       }),
     };
     commandMock.dns = {
       generateConfig: async () => undefined,
-      reload: async () => ({ success: true, message: 'ok' }),
+      reload: async () => ({ success: true, message: "ok" }),
     };
 
     await command.regenerate({});
 
-    const output = captured.join('\n');
-    expect(output).toContain('CoreDNS config regenerated and reloaded');
+    const output = captured.join("\n");
+    expect(output).toContain("CoreDNS config regenerated and reloaded");
   });
 });

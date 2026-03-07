@@ -1,8 +1,8 @@
 # Tuition - Project Status
 
-**Version**: 0.1.0  
-**Branch**: `feature/initial-implementation`  
-**Status**: 🚧 **ACTIVE HARDENING - Implementation Ongoing**  
+**Version**: 0.1.0
+**Branch**: `feature/initial-implementation`
+**Status**: 🚧 **ACTIVE HARDENING - Implementation Ongoing**
 **Date**: 2026-03-06
 
 ---
@@ -20,6 +20,16 @@ All 7 implementation phases have been completed successfully:
 - ✅ Phase 7: TUI & Documentation (Blessed interface, comprehensive docs)
 
 ## 🆕 Recent Updates
+
+### Feature Implementation & Coverage Expansion (2026-03-06)
+- State detector module implemented for actual Docker state detection
+- Service dependency auto-resolution added to lifecycle enable flow
+- Data removal implemented for `disable --remove-data`
+- Service catalog expanded to 24 definitions across 10 categories
+- New categories: monitoring, auth, downloads, storage, home-automation, ai, games
+- Multi-command integration tests (init → configure → validate)
+- Docker client behavior tests with mock stubs
+- CLI command coverage for all service actions (disable, restart, update, logs, list, search, show)
 
 ### Security, Logging, and Test Hardening (2026-03-06)
 - Added backup path validation to block restore/delete outside configured backup directory
@@ -52,16 +62,16 @@ All 7 implementation phases have been completed successfully:
 
 ## 📊 Project Statistics
 
-| Metric | Value |
-|--------|-------|
-| **Source Files** | 25 TypeScript modules |
-| **Test Files** | 22 test suites (149 tests) |
-| **Service Definitions** | 8 YAML files |
-| **Documentation** | 4 markdown files |
-| **Total Lines of Code** | ~4,200 lines |
-| **Test Coverage** | Core modules covered |
-| **Compilation Status** | Zero errors ✅ |
-| **Test Status** | 149/149 passing ✅ |
+| Metric                  | Value                      |
+| ----------------------- | -------------------------- |
+| **Source Files**        | 27 TypeScript modules      |
+| **Test Files**          | 24 test suites (185 tests) |
+| **Service Definitions** | 24 YAML files              |
+| **Documentation**       | 4 markdown files           |
+| **Total Lines of Code** | ~5,000 lines               |
+| **Test Coverage**       | Core modules covered       |
+| **Compilation Status**  | Zero errors ✅              |
+| **Test Status**         | 185/185 passing ✅          |
 
 ---
 
@@ -86,53 +96,53 @@ Docker Network (tuition)
 ## 📦 Complete CLI Reference
 
 ### System Commands
-| Command | Description |
-|---------|-------------|
-| `tuition init` | Interactive setup wizard |
-| `tuition validate` | Validate configuration |
-| `tuition config show` | Display current configuration |
-| `tuition config set <key> <value>` | Set configuration value |
+| Command                            | Description                   |
+| ---------------------------------- | ----------------------------- |
+| `tuition init`                     | Interactive setup wizard      |
+| `tuition validate`                 | Validate configuration        |
+| `tuition config show`              | Display current configuration |
+| `tuition config set <key> <value>` | Set configuration value       |
 
 ### Service Management
-| Command | Description |
-|---------|-------------|
-| `tuition service list` | List all services with status |
-| `tuition service show <name>` | Show service details |
-| `tuition service enable <name>` | Enable and start service |
-| `tuition service disable <name>` | Stop and disable service |
-| `tuition service start <name>` | Start service container |
-| `tuition service stop <name>` | Stop service container |
-| `tuition service restart <name>` | Restart service container |
-| `tuition service update <name>` | Pull latest image |
-| `tuition service logs <name>` | View service logs |
-| `tuition service search <query>` | Search service catalog |
+| Command                          | Description                   |
+| -------------------------------- | ----------------------------- |
+| `tuition service list`           | List all services with status |
+| `tuition service show <name>`    | Show service details          |
+| `tuition service enable <name>`  | Enable and start service      |
+| `tuition service disable <name>` | Stop and disable service      |
+| `tuition service start <name>`   | Start service container       |
+| `tuition service stop <name>`    | Stop service container        |
+| `tuition service restart <name>` | Restart service container     |
+| `tuition service update <name>`  | Pull latest image             |
+| `tuition service logs <name>`    | View service logs             |
+| `tuition service search <query>` | Search service catalog        |
 
 ### Infrastructure
-| Command | Description |
-|---------|-------------|
-| `tuition caddy start` | Start Caddy reverse proxy |
-| `tuition caddy stop` | Stop Caddy reverse proxy |
-| `tuition caddy restart` | Restart Caddy |
-| `tuition caddy reload` | Reload configuration (zero-downtime) |
-| `tuition caddy status` | Show Caddy status |
-| `tuition caddy regenerate` | Regenerate Caddyfile |
-| `tuition caddy set-password` | Set admin UI password (bcrypt) |
-| `tuition dns start` | Start CoreDNS |
-| `tuition dns stop` | Stop CoreDNS |
-| `tuition dns status` | Show CoreDNS status |
-| `tuition dns regenerate` | Regenerate CoreDNS config |
+| Command                      | Description                          |
+| ---------------------------- | ------------------------------------ |
+| `tuition caddy start`        | Start Caddy reverse proxy            |
+| `tuition caddy stop`         | Stop Caddy reverse proxy             |
+| `tuition caddy restart`      | Restart Caddy                        |
+| `tuition caddy reload`       | Reload configuration (zero-downtime) |
+| `tuition caddy status`       | Show Caddy status                    |
+| `tuition caddy regenerate`   | Regenerate Caddyfile                 |
+| `tuition caddy set-password` | Set admin UI password (bcrypt)       |
+| `tuition dns start`          | Start CoreDNS                        |
+| `tuition dns stop`           | Stop CoreDNS                         |
+| `tuition dns status`         | Show CoreDNS status                  |
+| `tuition dns regenerate`     | Regenerate CoreDNS config            |
 
 ### Disaster Recovery
-| Command | Description |
-|---------|-------------|
-| `tuition backup create` | Create backup archive |
-| `tuition backup list` | List available backups |
-| `tuition backup restore <n>` | Restore backup #n |
-| `tuition backup delete <n>` | Delete backup #n |
+| Command                      | Description            |
+| ---------------------------- | ---------------------- |
+| `tuition backup create`      | Create backup archive  |
+| `tuition backup list`        | List available backups |
+| `tuition backup restore <n>` | Restore backup #n      |
+| `tuition backup delete <n>`  | Delete backup #n       |
 
 ### Interactive TUI
-| Command | Description |
-|---------|-------------|
+| Command       | Description                      |
+| ------------- | -------------------------------- |
 | `tuition tui` | Launch blessed-based terminal UI |
 
 ---
@@ -153,14 +163,14 @@ bun test --coverage
 
 ### Test Suites (149 tests total)
 
-| Suite | Tests | Coverage |
-|-------|-------|----------|
-| Config Manager | 11 | Configuration loading, saving, validation |
-| Config Validator | 8 | Input validation, error handling |
-| Service Catalog | 14 | Service discovery, search, filtering |
-| Caddyfile Generator | 8 | Configuration generation, parsing |
-| Docker Compose | 5 | Compose file generation |
-| Backup Manager | 8 | Archive creation, restoration |
+| Suite               | Tests | Coverage                                  |
+| ------------------- | ----- | ----------------------------------------- |
+| Config Manager      | 11    | Configuration loading, saving, validation |
+| Config Validator    | 8     | Input validation, error handling          |
+| Service Catalog     | 14    | Service discovery, search, filtering      |
+| Caddyfile Generator | 8     | Configuration generation, parsing         |
+| Docker Compose      | 5     | Compose file generation                   |
+| Backup Manager      | 8     | Archive creation, restoration             |
 
 **All tests passing**: 149/149 ✅
 
@@ -351,12 +361,12 @@ bun run index.ts tui           # Launch TUI
 
 ## 🔄 Git History
 
-| Commit | Description |
-|--------|-------------|
+| Commit    | Description                                   |
+| --------- | --------------------------------------------- |
 | `67d210c` | Initial implementation (34 files, 6326 lines) |
-| `aece860` | Unit test suite (54 tests, 6 test files) |
+| `aece860` | Unit test suite (54 tests, 6 test files)      |
 
-**Branch**: `feature/initial-implementation`  
+**Branch**: `feature/initial-implementation`
 **Status**: Ready for merge to main
 
 ---
@@ -399,8 +409,8 @@ Contributions welcome! Please ensure:
 
 ---
 
-**Status**: Production Ready ✅  
-**Tests**: 54/54 Passing ✅  
+**Status**: Production Ready ✅
+**Tests**: 54/54 Passing ✅
 **Compilation**: Zero Errors ✅
 
 *Last updated: 2026-02-16*

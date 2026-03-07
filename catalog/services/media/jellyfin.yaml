@@ -1,0 +1,39 @@
+name: jellyfin
+category: media
+description: Free software media system for managing and streaming movies, TV shows, and music
+upstreamUrl: https://jellyfin.org/
+image: jellyfin/jellyfin:latest
+
+ports:
+  - host: 8096
+    container: 8096
+    protocol: tcp
+  - host: 8920
+    container: 8920
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  PUID: ${PUID}
+  PGID: ${PGID}
+
+volumes:
+  - host: ./data/jellyfin/config
+    container: /config
+  - host: ./data/jellyfin/cache
+    container: /cache
+  - host: ${MEDIA_PATH}/tv
+    container: /data/tv
+  - host: ${MEDIA_PATH}/movies
+    container: /data/movies
+  - host: ${MEDIA_PATH}/music
+    container: /data/music
+
+labels:
+  caddy: jellyfin.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 8096}}"
+
+resourceLimits:
+  cpus: 2.0
+  memory: 2G
+  gpus: true

@@ -1,0 +1,27 @@
+name: prometheus
+category: monitoring
+description: Open-source systems monitoring and alerting toolkit for collecting and querying metrics
+upstreamUrl: https://prometheus.io/
+image: prom/prometheus:latest
+
+ports:
+  - host: 9090
+    container: 9090
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+
+volumes:
+  - host: ./data/prometheus/config
+    container: /etc/prometheus
+  - host: ./data/prometheus/data
+    container: /prometheus
+
+labels:
+  caddy: prometheus.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 9090}}"
+
+resourceLimits:
+  cpus: 0.5
+  memory: 512M

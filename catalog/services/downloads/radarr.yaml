@@ -1,0 +1,32 @@
+name: radarr
+category: downloads
+description: PVR for Usenet and BitTorrent users to manage and download movies automatically
+upstreamUrl: https://radarr.video/
+image: linuxserver/radarr:latest
+
+ports:
+  - host: 7878
+    container: 7878
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  PUID: ${PUID}
+  PGID: ${PGID}
+  UMASK: "002"
+
+volumes:
+  - host: ./data/radarr/config
+    container: /config
+  - host: ${MEDIA_PATH}/movies
+    container: /movies
+  - host: ${MEDIA_PATH}/downloads
+    container: /downloads
+
+labels:
+  caddy: radarr.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 7878}}"
+
+resourceLimits:
+  cpus: 0.5
+  memory: 512M

@@ -1,0 +1,38 @@
+name: syncthing
+category: storage
+description: Continuous file synchronization program for keeping files in sync across multiple devices
+upstreamUrl: https://syncthing.net/
+image: linuxserver/syncthing:latest
+
+ports:
+  - host: 8384
+    container: 8384
+    protocol: tcp
+  - host: 22000
+    container: 22000
+    protocol: tcp
+  - host: 22000
+    container: 22000
+    protocol: udp
+  - host: 21027
+    container: 21027
+    protocol: udp
+
+environment:
+  TZ: ${TZ}
+  PUID: ${PUID}
+  PGID: ${PGID}
+
+volumes:
+  - host: ./data/syncthing/config
+    container: /config
+  - host: ./data/syncthing/data
+    container: /data
+
+labels:
+  caddy: sync.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 8384}}"
+
+resourceLimits:
+  cpus: 0.5
+  memory: 512M

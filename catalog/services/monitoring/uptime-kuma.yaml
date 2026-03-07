@@ -1,0 +1,25 @@
+name: uptime-kuma
+category: monitoring
+description: Self-hosted monitoring tool with status pages, notifications, and uptime tracking
+upstreamUrl: https://github.com/louislam/uptime-kuma
+image: louislam/uptime-kuma:latest
+
+ports:
+  - host: 3001
+    container: 3001
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+
+volumes:
+  - host: ./data/uptime-kuma/data
+    container: /app/data
+
+labels:
+  caddy: uptime.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 3001}}"
+
+resourceLimits:
+  cpus: 0.25
+  memory: 256M

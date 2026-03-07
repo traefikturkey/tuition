@@ -1,4 +1,4 @@
-declare module 'bcrypt' {
+declare module "bcrypt" {
   const bcrypt: {
     hash(data: string, saltOrRounds: string | number): Promise<string>;
     compare(data: string, encrypted: string): Promise<boolean>;
@@ -7,7 +7,7 @@ declare module 'bcrypt' {
   export default bcrypt;
 }
 
-declare module 'bun:test' {
+declare module "bun:test" {
   type MaybePromise<T = void> = T | Promise<T>;
 
   export function describe(name: string, fn: () => MaybePromise): void;

@@ -1,0 +1,32 @@
+name: sonarr
+category: downloads
+description: PVR for Usenet and BitTorrent users to manage and download TV series automatically
+upstreamUrl: https://sonarr.tv/
+image: linuxserver/sonarr:latest
+
+ports:
+  - host: 8989
+    container: 8989
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  PUID: ${PUID}
+  PGID: ${PGID}
+  UMASK: "002"
+
+volumes:
+  - host: ./data/sonarr/config
+    container: /config
+  - host: ${MEDIA_PATH}/tv
+    container: /tv
+  - host: ${MEDIA_PATH}/downloads
+    container: /downloads
+
+labels:
+  caddy: sonarr.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 8989}}"
+
+resourceLimits:
+  cpus: 0.5
+  memory: 512M

@@ -16,6 +16,34 @@ This document outlines the phased implementation strategy for Tuition, a termina
 - Integration coverage added for CLI security behavior
 - Additional unit coverage added for lifecycle manager and service command flows
 - New low-impact service definitions added: `openspeedtest`, `webtop`
+- State detector module implemented (`src/core/state/detector.ts`)
+- Service dependency auto-resolution added to lifecycle enable flow
+- Data removal implemented for `disable --remove-data` (replaces TODO stub)
+- Service catalog expanded to 20 definitions across 9 categories
+- New categories: monitoring (grafana, prometheus, uptime-kuma), auth (authelia), downloads (sonarr, radarr, prowlarr), storage (nextcloud, syncthing), home-automation (home-assistant), ai (ollama, open-webui), games (minecraft), media (jellyfin, photoprism), development (portainer)
+- Multi-command integration test added (init → configure → validate → reload)
+- Docker client behavior tests expanded beyond method-existence stubs
+- CLI command coverage expanded for disable, restart, update, logs, list, search, show
+
+### Remaining Implementation Steps (Next Pass)
+
+1. ~~Close CLI command behavior coverage gaps~~ Done
+2. ~~Strengthen CLI parser/dispatch confidence~~ Done
+3. ~~Complete security hardening follow-through~~ Done
+4. ~~Increase integration-level confidence~~ Done
+5. ~~Keep docs synchronized with delivered state~~ Done
+6. **Prepare PR-ready handoff artifacts**
+    - Produce a concise change summary grouped by security, logging, coverage, and service catalog updates.
+    - Validate final gate status (make lint, make test) at head before handoff.
+
+### Future Feature Work
+
+1. **Docker event-based DNS registration** - Replace manual generateConfig() calls with a Docker event watcher for automatic DNS record creation when containers start/stop.
+2. **Database dump integration** - Add per-service database dump support (PostgreSQL pg_dump, MySQL mysqldump) to the backup workflow.
+3. **Remote backup destinations** - Extend backup manager with S3, rsync, or other offsite transport for 3-2-1 strategy.
+4. **Backup scheduler** - Add cron-based or systemd timer integration for automated backup scheduling.
+5. **TUI component extraction** - Extract reusable blessed widgets from inline view code into src/tui/components/.
+6. **GPU passthrough configuration** - Add detection and configuration for hardware-accelerated services.
 
 ---
 
@@ -23,16 +51,16 @@ This document outlines the phased implementation strategy for Tuition, a termina
 
 Based on the Decision Points in the PRD:
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **Language** | **TypeScript/Bun** | Fast runtime, modern ecosystem, excellent for CLI/TUI tools, good Docker API libraries |
-| **UI Approach** | **Hybrid (CLI + TUI)** | CLI for scripting/automation, TUI for discoverability and guided workflows |
-| **Reverse Proxy** | **Caddy** | Automatic HTTPS, straightforward Caddyfile generation, Cloudflare DNS challenge support |
-| **Config Format** | **YAML** | Docker ecosystem standard, familiar to target users, human-readable |
-| **Service Catalog** | **Bundled with tool** | Version-locked compatibility, simpler distribution, controlled quality |
-| **Update Strategy** | **Notified + User Action** | Awareness without surprises, allows breaking change review |
-| **Database Strategy** | **Dedicated per service** | Better isolation, independent recovery, simpler operations |
-| **Internal DNS** | **Label-based (CoreDNS)** | Zero-config, Docker-native, automatic registration |
+| Decision              | Choice                     | Rationale                                                                               |
+| --------------------- | -------------------------- | --------------------------------------------------------------------------------------- |
+| **Language**          | **TypeScript/Bun**         | Fast runtime, modern ecosystem, excellent for CLI/TUI tools, good Docker API libraries  |
+| **UI Approach**       | **Hybrid (CLI + TUI)**     | CLI for scripting/automation, TUI for discoverability and guided workflows              |
+| **Reverse Proxy**     | **Caddy**                  | Automatic HTTPS, straightforward Caddyfile generation, Cloudflare DNS challenge support |
+| **Config Format**     | **YAML**                   | Docker ecosystem standard, familiar to target users, human-readable                     |
+| **Service Catalog**   | **Bundled with tool**      | Version-locked compatibility, simpler distribution, controlled quality                  |
+| **Update Strategy**   | **Notified + User Action** | Awareness without surprises, allows breaking change review                              |
+| **Database Strategy** | **Dedicated per service**  | Better isolation, independent recovery, simpler operations                              |
+| **Internal DNS**      | **Label-based (CoreDNS)**  | Zero-config, Docker-native, automatic registration                                      |
 
 ---
 
@@ -386,25 +414,25 @@ tuition/
 
 ## Risk Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| Docker API complexity | Use established libraries (dockerode), thorough testing |
-| Traefik configuration errors | Validation before application, rollback capability |
-| SSL certificate failures | Graceful fallback, clear error messages |
-| State tracking inaccuracy | Verify actual Docker state, not marker files |
-| Breaking Docker changes | Pin tested versions, update testing |
-| Configuration complexity | Guided setup, sensible defaults, validation |
+| Risk                         | Mitigation                                              |
+| ---------------------------- | ------------------------------------------------------- |
+| Docker API complexity        | Use established libraries (dockerode), thorough testing |
+| Traefik configuration errors | Validation before application, rollback capability      |
+| SSL certificate failures     | Graceful fallback, clear error messages                 |
+| State tracking inaccuracy    | Verify actual Docker state, not marker files            |
+| Breaking Docker changes      | Pin tested versions, update testing                     |
+| Configuration complexity     | Guided setup, sensible defaults, validation             |
 
 ---
 
 ## Milestones
 
-| Milestone | Target | Criteria |
-|-----------|--------|----------|
-| **MVP** | Week 4 | Basic config, catalog, enable/disable working |
-| **Alpha** | Week 8 | Reverse proxy, SSL, lifecycle complete |
-| **Beta** | Week 12 | DNS, DR, TUI functional |
-| **v1.0** | Week 16 | All features complete, tested, documented |
+| Milestone | Target  | Criteria                                      |
+| --------- | ------- | --------------------------------------------- |
+| **MVP**   | Week 4  | Basic config, catalog, enable/disable working |
+| **Alpha** | Week 8  | Reverse proxy, SSL, lifecycle complete        |
+| **Beta**  | Week 12 | DNS, DR, TUI functional                       |
+| **v1.0**  | Week 16 | All features complete, tested, documented     |
 
 ---
 

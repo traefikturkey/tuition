@@ -2,14 +2,14 @@
  * CLI command dispatch tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { createCli } from '../../src/cli/commands/index.js';
-import { InitCommand } from '../../src/cli/commands/init.js';
-import { ValidateCommand } from '../../src/cli/commands/validate.js';
-import { BackupCommand } from '../../src/cli/commands/backup.js';
-import { ServiceCommand } from '../../src/cli/commands/service.js';
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { createCli } from "../../src/cli/commands/index.js";
+import { InitCommand } from "../../src/cli/commands/init.js";
+import { ValidateCommand } from "../../src/cli/commands/validate.js";
+import { BackupCommand } from "../../src/cli/commands/backup.js";
+import { ServiceCommand } from "../../src/cli/commands/service.js";
 
-describe('CLI command dispatch', () => {
+describe("CLI command dispatch", () => {
   const originalInitExecute = InitCommand.prototype.execute;
   const originalValidateExecute = ValidateCommand.prototype.execute;
   const originalBackupRestore = BackupCommand.prototype.restore;
@@ -32,7 +32,7 @@ describe('CLI command dispatch', () => {
     process.exit = originalExit;
   });
 
-  it('dispatches init command with parsed path option', async () => {
+  it("dispatches init command with parsed path option", async () => {
     let receivedPath: string | undefined;
 
     InitCommand.prototype.execute = async (options: { path?: string }) => {
@@ -40,12 +40,12 @@ describe('CLI command dispatch', () => {
     };
 
     const cli = createCli();
-    await cli.parseAsync(['node', 'tuition', 'init', '--path', '/tmp/custom-config']);
+    await cli.parseAsync(["node", "tuition", "init", "--path", "/tmp/custom-config"]);
 
-    expect(receivedPath).toBe('/tmp/custom-config');
+    expect(receivedPath).toBe("/tmp/custom-config");
   });
 
-  it('exits with code 0 when validate succeeds', async () => {
+  it("exits with code 0 when validate succeeds", async () => {
     let exitCode: number | undefined;
 
     ValidateCommand.prototype.execute = async () => true;
@@ -55,12 +55,12 @@ describe('CLI command dispatch', () => {
     }) as typeof process.exit;
 
     const cli = createCli();
-    await cli.parseAsync(['node', 'tuition', 'validate']);
+    await cli.parseAsync(["node", "tuition", "validate"]);
 
     expect(exitCode).toBe(0);
   });
 
-  it('exits with code 1 when validate fails', async () => {
+  it("exits with code 1 when validate fails", async () => {
     let exitCode: number | undefined;
 
     ValidateCommand.prototype.execute = async () => false;
@@ -70,13 +70,13 @@ describe('CLI command dispatch', () => {
     }) as typeof process.exit;
 
     const cli = createCli();
-    await cli.parseAsync(['node', 'tuition', 'validate']);
+    await cli.parseAsync(["node", "tuition", "validate"]);
 
     expect(exitCode).toBe(1);
   });
 
-  it('dispatches backup restore with identifier and parsed flags', async () => {
-    let receivedIdentifier = '';
+  it("dispatches backup restore with identifier and parsed flags", async () => {
+    let receivedIdentifier = "";
     let receivedOptions: { dryRun?: boolean; force?: boolean; path?: string } = {};
 
     BackupCommand.prototype.restore = async (
@@ -89,25 +89,25 @@ describe('CLI command dispatch', () => {
 
     const cli = createCli();
     await cli.parseAsync([
-      'node',
-      'tuition',
-      'backup',
-      'restore',
-      'my-backup.tar.gz',
-      '--dry-run',
-      '--force',
-      '--path',
-      '/tmp/restore-config',
+      "node",
+      "tuition",
+      "backup",
+      "restore",
+      "my-backup.tar.gz",
+      "--dry-run",
+      "--force",
+      "--path",
+      "/tmp/restore-config",
     ]);
 
-    expect(receivedIdentifier).toBe('my-backup.tar.gz');
+    expect(receivedIdentifier).toBe("my-backup.tar.gz");
     expect(receivedOptions.dryRun).toBe(true);
     expect(receivedOptions.force).toBe(true);
-    expect(receivedOptions.path).toBe('/tmp/restore-config');
+    expect(receivedOptions.path).toBe("/tmp/restore-config");
   });
 
-  it('dispatches service logs with numeric tail parsing and follow flag', async () => {
-    let receivedName = '';
+  it("dispatches service logs with numeric tail parsing and follow flag", async () => {
+    let receivedName = "";
     let receivedOptions: { tail?: number; follow?: boolean } = {};
 
     ServiceCommand.prototype.logs = async (
@@ -120,19 +120,19 @@ describe('CLI command dispatch', () => {
 
     const cli = createCli();
     await cli.parseAsync([
-      'node',
-      'tuition',
-      'service',
-      'logs',
-      'whoami',
-      '--tail',
-      '25',
-      '--follow',
-      '--path',
-      '/tmp/service-config',
+      "node",
+      "tuition",
+      "service",
+      "logs",
+      "whoami",
+      "--tail",
+      "25",
+      "--follow",
+      "--path",
+      "/tmp/service-config",
     ]);
 
-    expect(receivedName).toBe('whoami');
+    expect(receivedName).toBe("whoami");
     expect(receivedOptions.tail).toBe(25);
     expect(receivedOptions.follow).toBe(true);
   });

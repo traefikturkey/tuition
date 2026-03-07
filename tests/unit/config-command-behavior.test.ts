@@ -2,11 +2,11 @@
  * Config command behavior tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { ConfigCommand } from '../../src/cli/commands/config.js';
-import { ConfigManager } from '../../src/core/config/manager.js';
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { ConfigCommand } from "../../src/cli/commands/config.js";
+import { ConfigManager } from "../../src/core/config/manager.js";
 
-describe('ConfigCommand behavior', () => {
+describe("ConfigCommand behavior", () => {
   let captured: string[];
   let originalLog: typeof console.log;
 
@@ -19,7 +19,7 @@ describe('ConfigCommand behavior', () => {
     captured = [];
     originalLog = console.log;
     console.log = (...args: unknown[]) => {
-      captured.push(args.map(String).join(' '));
+      captured.push(args.map(String).join(" "));
     };
 
     ConfigManager.prototype.exists = originalExists;
@@ -37,41 +37,41 @@ describe('ConfigCommand behavior', () => {
     ConfigManager.prototype.saveGlobal = originalSaveGlobal;
   });
 
-  it('shows not initialized message for show command', async () => {
+  it("shows not initialized message for show command", async () => {
     ConfigManager.prototype.exists = async () => false;
 
     const command = new ConfigCommand();
     await command.show({});
 
-    const output = captured.join('\n');
-    expect(output).toContain('Tuition is not initialized');
+    const output = captured.join("\n");
+    expect(output).toContain("Tuition is not initialized");
   });
 
-  it('redacts sensitive values in show output', async () => {
+  it("redacts sensitive values in show output", async () => {
     ConfigManager.prototype.exists = async () => true;
     ConfigManager.prototype.load = async () => ({
       global: {
-        hostname: 'test-host',
-        domain: 'example.com',
-        adminEmail: 'admin@example.com',
-        timezone: 'UTC',
+        hostname: "test-host",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
         puid: 1000,
         pgid: 1000,
-        dnsProvider: 'cloudflare',
-        cloudflareToken: 'top-secret',
-        adminPasswordHash: '$2b$10$hash',
+        dnsProvider: "cloudflare",
+        cloudflareToken: "top-secret",
+        adminPasswordHash: "$2b$10$hash",
         upstreamDns: {
-          primary: '1.1.1.1',
-          backup: '1.0.0.1',
+          primary: "1.1.1.1",
+          backup: "1.0.0.1",
         },
       },
       infrastructure: {},
       services: {
         demo: {
           enabled: true,
-          imageTag: 'latest',
+          imageTag: "latest",
           environment: {
-            apiToken: 'token-123',
+            apiToken: "token-123",
           },
         },
       },
@@ -80,36 +80,36 @@ describe('ConfigCommand behavior', () => {
     const command = new ConfigCommand();
     await command.show({});
 
-    const output = captured.join('\n');
-    expect(output).toContain('[REDACTED]');
-    expect(output).not.toContain('top-secret');
-    expect(output).not.toContain('token-123');
+    const output = captured.join("\n");
+    expect(output).toContain("[REDACTED]");
+    expect(output).not.toContain("top-secret");
+    expect(output).not.toContain("token-123");
   });
 
-  it('prints invalid key format for malformed set key', async () => {
+  it("prints invalid key format for malformed set key", async () => {
     ConfigManager.prototype.exists = async () => true;
 
     const command = new ConfigCommand();
-    await command.set('global', 'value', {});
+    await command.set("global", "value", {});
 
-    const output = captured.join('\n');
-    expect(output).toContain('Invalid key format');
+    const output = captured.join("\n");
+    expect(output).toContain("Invalid key format");
   });
 
-  it('sets global boolean and saves config', async () => {
+  it("sets global boolean and saves config", async () => {
     ConfigManager.prototype.exists = async () => true;
 
     const globalConfig = {
-      hostname: 'test-host',
-      domain: 'example.com',
-      adminEmail: 'admin@example.com',
-      timezone: 'UTC',
+      hostname: "test-host",
+      domain: "example.com",
+      adminEmail: "admin@example.com",
+      timezone: "UTC",
       puid: 1000,
       pgid: 1000,
-      dnsProvider: 'cloudflare' as const,
-      cloudflareToken: 'token',
+      dnsProvider: "cloudflare" as const,
+      cloudflareToken: "token",
       upstreamDns: {
-        primary: '1.1.1.1',
+        primary: "1.1.1.1",
       },
     };
 
@@ -121,39 +121,39 @@ describe('ConfigCommand behavior', () => {
     };
 
     const command = new ConfigCommand();
-    await command.set('global.puid', '2000', {});
+    await command.set("global.puid", "2000", {});
 
     expect((saved as { puid: number }).puid).toBe(2000);
-    expect(captured.join('\n')).toContain('Set global.puid = 2000');
+    expect(captured.join("\n")).toContain("Set global.puid = 2000");
   });
 
-  it('prints unknown section for unsupported config section', async () => {
+  it("prints unknown section for unsupported config section", async () => {
     ConfigManager.prototype.exists = async () => true;
 
     const command = new ConfigCommand();
-    await command.set('services.demo.enabled', 'true', {});
+    await command.set("services.demo.enabled", "true", {});
 
-    const output = captured.join('\n');
-    expect(output).toContain('Unknown configuration section: services');
+    const output = captured.join("\n");
+    expect(output).toContain("Unknown configuration section: services");
   });
 
-  it('rejects unsafe global key names', async () => {
+  it("rejects unsafe global key names", async () => {
     ConfigManager.prototype.exists = async () => true;
 
     const command = new ConfigCommand();
-    await command.set('global.__proto__', 'pollute', {});
+    await command.set("global.__proto__", "pollute", {});
 
-    const output = captured.join('\n');
-    expect(output).toContain('Unsafe configuration key');
+    const output = captured.join("\n");
+    expect(output).toContain("Unsafe configuration key");
   });
 
-  it('rejects nested global key paths', async () => {
+  it("rejects nested global key paths", async () => {
     ConfigManager.prototype.exists = async () => true;
 
     const command = new ConfigCommand();
-    await command.set('global.hostname.extra', 'value', {});
+    await command.set("global.hostname.extra", "value", {});
 
-    const output = captured.join('\n');
-    expect(output).toContain('Invalid key format');
+    const output = captured.join("\n");
+    expect(output).toContain("Invalid key format");
   });
 });

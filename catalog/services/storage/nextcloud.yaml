@@ -1,0 +1,35 @@
+name: nextcloud
+category: storage
+description: Self-hosted cloud platform for file sync, sharing, and collaboration
+upstreamUrl: https://nextcloud.com/
+image: nextcloud:latest
+
+ports:
+  - host: 8082
+    container: 80
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+  MYSQL_DATABASE: nextcloud
+  MYSQL_USER: nextcloud
+  MYSQL_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
+  MYSQL_HOST: nextcloud-db
+
+volumes:
+  - host: ./data/nextcloud/html
+    container: /var/www/html
+  - host: ./data/nextcloud/data
+    container: /var/www/html/data
+
+labels:
+  caddy: cloud.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 80}}"
+
+database:
+  type: mysql
+  required: true
+
+resourceLimits:
+  cpus: 1.0
+  memory: 1G

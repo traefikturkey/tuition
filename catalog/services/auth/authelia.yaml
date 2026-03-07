@@ -1,0 +1,25 @@
+name: authelia
+category: auth
+description: Single sign-on and two-factor authentication server for securing web applications
+upstreamUrl: https://www.authelia.com/
+image: authelia/authelia:latest
+
+ports:
+  - host: 9091
+    container: 9091
+    protocol: tcp
+
+environment:
+  TZ: ${TZ}
+
+volumes:
+  - host: ./data/authelia/config
+    container: /config
+
+labels:
+  caddy: auth.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 9091}}"
+
+resourceLimits:
+  cpus: 0.25
+  memory: 256M
