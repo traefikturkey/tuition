@@ -120,7 +120,7 @@ export class CoreDnsManager {
   /**
    * Start CoreDNS container
    */
-  async start(): Promise<{ success: boolean; message: string }> {
+  async start(dnsCluster?: DnsClusterConfig): Promise<{ success: boolean; message: string }> {
     // Ensure Docker network exists
     const networkExists = await docker.networkExists("tuition");
     if (!networkExists) {
@@ -134,8 +134,8 @@ export class CoreDnsManager {
       }
     }
 
-    // Generate compose file
-    await this.generateComposeFile();
+    // Generate compose file with optional cluster configuration
+    await this.generateComposeFile(dnsCluster);
 
     // Check if already running
     const container = await docker.getContainer("coredns");
@@ -240,7 +240,7 @@ export class CoreDnsManager {
     const compose = {
       services: {
         coredns: {
-          image: "ghcr.io/traefikturkey/joyride:coredns",
+          image: "ghcr.io/traefikturkey/joyride:latest",
           container_name: "coredns",
           restart: "unless-stopped",
           // Host networking for direct port 54 binding and HOSTIP auto-detection

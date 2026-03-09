@@ -304,6 +304,9 @@ describe("CLI command dispatch", () => {
     patchSet.patch(DnsCommand.prototype, "configure", async () => {
       calls.push("dns:configure");
     });
+    patchSet.patch(DnsCommand.prototype, "cluster", async () => {
+      calls.push("dns:cluster");
+    });
     patchSet.patch(BackupCommand.prototype, "create", async () => {
       calls.push("backup:create");
     });
@@ -331,6 +334,7 @@ describe("CLI command dispatch", () => {
       ["node", "tuition", "dns", "status"],
       ["node", "tuition", "dns", "regenerate"],
       ["node", "tuition", "dns", "configure"],
+      ["node", "tuition", "dns", "cluster"],
       ["node", "tuition", "backup", "create"],
       ["node", "tuition", "backup", "list"],
       ["node", "tuition", "backup", "delete", "backup.tar.gz"],
@@ -356,6 +360,7 @@ describe("CLI command dispatch", () => {
       "dns:status",
       "dns:regenerate",
       "dns:configure",
+      "dns:cluster",
       "backup:create",
       "backup:list",
       "backup:delete",

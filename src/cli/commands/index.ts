@@ -287,6 +287,15 @@ export function createCli(): Command {
       await cmd.configure();
     });
 
+  dnsCmd
+    .command("cluster")
+    .description("Configure DNS clustering interactively")
+    .option("-p, --path <path>", "Custom configuration path")
+    .action(async (options) => {
+      const cmd = new DnsCommand(options.path);
+      await cmd.cluster();
+    });
+
   // Backup command group
   const backupCmd = program.command("backup").description("Manage backups and disaster recovery");
 

@@ -54,12 +54,19 @@ export class DnsCommand {
     await this.dns.generateConfig(enabledServices);
     console.log(chalk.green(`✓ Generated CoreDNS config for ${enabledServices.length} services`));
 
+    // Load cluster configuration from global config
+    const globalConfig = await this.config.loadGlobal();
+    const dnsCluster = globalConfig.dnsCluster;
+
     console.log(chalk.blue('Starting CoreDNS...'));
-    const result = await this.dns.start();
+    const result = await this.dns.start(dnsCluster);
 
     if (result.success) {
       console.log(chalk.green(`✓ ${result.message}`));
       console.log(chalk.gray('Internal DNS server running on port 54'));
+      if (dnsCluster?.enabled) {
+        console.log(chalk.green(`✓ Clustering enabled (node: ${dnsCluster.nodeName ?? 'default'})`));
+      }
     } else {
       console.log(chalk.red(`✗ ${result.message}`));
     }
@@ -97,6 +104,18 @@ export class DnsCommand {
       console.log(chalk.gray('\n  Internal DNS available on port 54'));
       console.log(chalk.gray('  Configure your system to use 127.0.0.1 as DNS server'));
     }
+
+    // Show cluster info if configured
+    if (await this.config.exists()) {
+      const globalConfig = await this.config.loadGlobal();
+      if (globalConfig.dnsCluster?.enabled) {
+        console.log(`\n  Cluster: enabled`);
+        console.log(`  Node: ${globalConfig.dnsCluster.nodeName ?? 'default'}`);
+        if (globalConfig.dnsCluster.clusterSeeds?.length) {
+          console.log(`  Seeds: ${globalConfig.dnsCluster.clusterSeeds.join(', ')}`);
+        }
+      }
+    }
     
     console.log();
   }
@@ -130,6 +149,101 @@ export class DnsCommand {
     } else {
       console.log(chalk.red(`✗ Failed to reload: ${result.message}`));
     }
+  }
+
+  /**
+   * Configure DNS clustering interactively
+   */
+  async cluster(): Promise<void> {
+    if (!(await this.config.exists())) {
+      console.log(chalk.red('Tuition is not initialized. Run: tuition init'));
+      return;
+    }
+
+    const globalConfig = await this.config.loadGlobal();
+    const validator = new ConfigValidator();
+
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    const ask = (question: string): Promise<string> => {
+      return new Promise((resolve) => {
+        rl.question(question, resolve);
+      });
+    };
+
+    console.log(chalk.blue('\nConfigure DNS Clustering\n'));
+
+    // Show current configuration
+    const current = globalConfig.dnsCluster;
+    if (current?.enabled) {
+      console.log(chalk.gray(`Current: enabled (node: ${current.nodeName ?? 'default'})\n`));
+    }
+
+    const enableAnswer = await ask('Enable DNS clustering? (y/n): ');
+    const enabled = enableAnswer.trim().toLowerCase() === 'y';
+
+    if (!enabled) {
+      globalConfig.dnsCluster = {
+        ...globalConfig.dnsCluster,
+        enabled: false,
+      };
+      await this.config.saveGlobal(globalConfig);
+      rl.close();
+      console.log(chalk.green('\n✓ DNS cluster configuration saved'));
+      return;
+    }
+
+    const defaultNodeName = globalConfig.hostname ?? '';
+    const nodeNameInput = await ask(`Node name [${defaultNodeName}]: `);
+    const nodeName = nodeNameInput.trim() || defaultNodeName;
+
+    const secretInput = await ask('Cluster secret (optional): ');
+    const clusterSecret = secretInput.trim() || undefined;
+
+    // Seed IPs with validation loop
+    let clusterSeeds: string[] = [];
+    while (true) {
+      const seedsInput = await ask('Cluster seeds (comma-separated IPs, optional): ');
+      const seedsRaw = seedsInput.trim();
+
+      if (!seedsRaw) {
+        clusterSeeds = [];
+        break;
+      }
+
+      const seeds = seedsRaw.split(',').map(s => s.trim()).filter(Boolean);
+      const invalidSeeds = seeds.filter(s => {
+        const testConfig = {
+          ...globalConfig,
+          dnsCluster: { enabled: true, clusterSeeds: [s] },
+        };
+        const result = validator.validateGlobal(testConfig);
+        return result.errors.some(e => e.field === 'dnsCluster.clusterSeeds');
+      });
+
+      if (invalidSeeds.length > 0) {
+        console.log(chalk.red(`Invalid IP address(es): ${invalidSeeds.join(', ')}. Please try again.`));
+        continue;
+      }
+
+      clusterSeeds = seeds;
+      break;
+    }
+
+    globalConfig.dnsCluster = {
+      enabled: true,
+      nodeName,
+      clusterSecret,
+      clusterSeeds,
+    };
+
+    await this.config.saveGlobal(globalConfig);
+    rl.close();
+    console.log(chalk.green('\n✓ DNS cluster configuration saved'));
+    console.log(chalk.gray('Restart CoreDNS to apply: tuition dns start'));
   }
 
   /**

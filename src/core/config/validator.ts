@@ -80,6 +80,19 @@ export class ConfigValidator {
       });
     }
 
+    // Validate DNS cluster seed IPs when clustering is enabled
+    if (config.dnsCluster?.enabled && config.dnsCluster.clusterSeeds) {
+      for (const seed of config.dnsCluster.clusterSeeds) {
+        if (!this.isValidIp(seed)) {
+          errors.push({
+            field: 'dnsCluster.clusterSeeds',
+            message: 'Cluster seed must be a valid IP address',
+            value: seed,
+          });
+        }
+      }
+    }
+
     return {
       valid: errors.length === 0,
       errors,

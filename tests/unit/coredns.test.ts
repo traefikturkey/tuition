@@ -160,7 +160,7 @@ describe("CoreDnsManager", () => {
       patchSet.patch(docker, "getContainer", async () => ({
         id: "coredns-id",
         name: "coredns",
-        image: "ghcr.io/traefikturkey/joyride:coredns",
+        image: "ghcr.io/traefikturkey/joyride:latest",
         state: "running",
         status: "Up",
         ports: [],
@@ -199,6 +199,67 @@ describe("CoreDnsManager", () => {
       const result = await manager.start();
 
       expect(result).toEqual({ success: true, message: "CoreDNS started successfully" });
+    });
+
+    it("forwards dnsCluster config to generateComposeFile", async () => {
+      let receivedCluster: DnsClusterConfig | undefined;
+
+      patchSet.patch(docker, "networkExists", async () => true);
+      patchSet.patch(docker, "getContainer", async () => null);
+      patchSet.patch(
+        manager as unknown as {
+          generateComposeFile: (dnsCluster?: DnsClusterConfig) => Promise<void>;
+        },
+        "generateComposeFile",
+        async (dnsCluster?: DnsClusterConfig) => {
+          receivedCluster = dnsCluster;
+        }
+      );
+      patchSet.patch(
+        manager as unknown as { composeManager: { up: () => Promise<{ success: boolean; output: string }> } },
+        "composeManager",
+        {
+          up: async () => ({ success: true, output: "started" }),
+        } as never
+      );
+
+      const clusterConfig: DnsClusterConfig = {
+        enabled: true,
+        nodeName: "test-node",
+        clusterSecret: "secret123",
+        clusterSeeds: ["10.0.0.5"],
+      };
+
+      await manager.start(clusterConfig);
+
+      expect(receivedCluster).toEqual(clusterConfig);
+    });
+
+    it("passes undefined cluster config when not provided", async () => {
+      let receivedCluster: DnsClusterConfig | undefined | null = null;
+
+      patchSet.patch(docker, "networkExists", async () => true);
+      patchSet.patch(docker, "getContainer", async () => null);
+      patchSet.patch(
+        manager as unknown as {
+          generateComposeFile: (dnsCluster?: DnsClusterConfig) => Promise<void>;
+        },
+        "generateComposeFile",
+        async (dnsCluster?: DnsClusterConfig) => {
+          receivedCluster = dnsCluster;
+        }
+      );
+      patchSet.patch(
+        manager as unknown as { composeManager: { up: () => Promise<{ success: boolean; output: string }> } },
+        "composeManager",
+        {
+          up: async () => ({ success: true, output: "started" }),
+        } as never
+      );
+
+      await manager.start();
+
+      expect(receivedCluster).toBeUndefined();
     });
 
     it("reports compose startup failures", async () => {
@@ -289,7 +350,7 @@ describe("CoreDnsManager", () => {
 
       const composeContent = await readFile(join(tempDir, "coredns.docker-compose.yaml"), "utf-8");
 
-      expect(composeContent).toContain("ghcr.io/traefikturkey/joyride:coredns");
+      expect(composeContent).toContain("ghcr.io/traefikturkey/joyride:latest");
       expect(composeContent).toContain("network_mode: host");
       expect(composeContent).not.toContain("ports:");
     });

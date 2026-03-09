@@ -82,13 +82,14 @@ describe("DnsCommand", () => {
       config: {
         exists: () => Promise<boolean>;
         loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+        loadGlobal: () => Promise<Record<string, unknown>>;
       };
       dns: {
         generateConfig: (
           enabledServices: unknown[],
           staticHosts?: Record<string, string>
         ) => Promise<void>;
-        start: () => Promise<{ success: boolean; message: string }>;
+        start: (dnsCluster?: unknown) => Promise<{ success: boolean; message: string }>;
       };
     };
 
@@ -96,6 +97,7 @@ describe("DnsCommand", () => {
     commandMock.config = {
       exists: async () => true,
       loadServices: async () => ({}),
+      loadGlobal: async () => ({}),
     };
     commandMock.dns = {
       generateConfig: async () => {
@@ -253,12 +255,20 @@ describe("DnsCommand", () => {
   it("shows running status details when CoreDNS is up", async () => {
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<Record<string, unknown>>;
+      };
       dns: {
         status: () => Promise<{ running: boolean; hosts: number }>;
       };
     };
 
     commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({}),
+    };
     commandMock.dns = {
       status: async () => ({ running: true, hosts: 5 }),
     };
@@ -274,12 +284,20 @@ describe("DnsCommand", () => {
   it("omits running-only hint when CoreDNS is stopped", async () => {
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<Record<string, unknown>>;
+      };
       dns: {
         status: () => Promise<{ running: boolean; hosts: number }>;
       };
     };
 
     commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({}),
+    };
     commandMock.dns = {
       status: async () => ({ running: false, hosts: 0 }),
     };
@@ -569,5 +587,393 @@ describe("DnsCommand", () => {
     expect(consoleCapture.output.join("\n")).toContain("Invalid IP address. Please try again.");
     expect(consoleCapture.output.join("\n")).toContain("Failed to reload CoreDNS: reload failed");
     expect(consoleCapture.output.join("\n")).toContain("restart CoreDNS manually");
+  });
+
+  it("start loads dnsCluster from global config and passes to dns.start", async () => {
+    let receivedCluster: unknown;
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        exists: () => Promise<boolean>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+        loadGlobal: () => Promise<{
+          dnsCluster?: {
+            enabled: boolean;
+            nodeName?: string;
+            clusterSecret?: string;
+            clusterSeeds?: string[];
+          };
+        }>;
+      };
+      dns: {
+        generateConfig: (enabledServices: unknown[]) => Promise<void>;
+        start: (dnsCluster?: unknown) => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      exists: async () => true,
+      loadServices: async () => ({}),
+      loadGlobal: async () => ({
+        dnsCluster: {
+          enabled: true,
+          nodeName: "my-node",
+          clusterSeeds: ["10.0.0.2"],
+        },
+      }),
+    };
+    commandMock.dns = {
+      generateConfig: async () => undefined,
+      start: async (dnsCluster) => {
+        receivedCluster = dnsCluster;
+        return { success: true, message: "CoreDNS started successfully" };
+      },
+    };
+
+    await command.start({});
+
+    expect(receivedCluster).toEqual({
+      enabled: true,
+      nodeName: "my-node",
+      clusterSeeds: ["10.0.0.2"],
+    });
+    const output = consoleCapture.output.join("\n");
+    expect(output).toContain("Clustering enabled");
+    expect(output).toContain("my-node");
+  });
+
+  it("start passes undefined cluster config when not configured", async () => {
+    let receivedCluster: unknown = "sentinel";
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        exists: () => Promise<boolean>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+        loadGlobal: () => Promise<Record<string, unknown>>;
+      };
+      dns: {
+        generateConfig: (enabledServices: unknown[]) => Promise<void>;
+        start: (dnsCluster?: unknown) => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      exists: async () => true,
+      loadServices: async () => ({}),
+      loadGlobal: async () => ({}),
+    };
+    commandMock.dns = {
+      generateConfig: async () => undefined,
+      start: async (dnsCluster) => {
+        receivedCluster = dnsCluster;
+        return { success: true, message: "CoreDNS started successfully" };
+      },
+    };
+
+    await command.start({});
+
+    expect(receivedCluster).toBeUndefined();
+    expect(consoleCapture.output.join("\n")).not.toContain("Clustering");
+  });
+
+  it("status shows cluster info when clustering is enabled", async () => {
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<{
+          dnsCluster?: {
+            enabled: boolean;
+            nodeName?: string;
+            clusterSeeds?: string[];
+          };
+        }>;
+      };
+      dns: {
+        status: () => Promise<{ running: boolean; hosts: number }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({
+        dnsCluster: {
+          enabled: true,
+          nodeName: "test-node",
+          clusterSeeds: ["10.0.0.5", "10.0.0.6"],
+        },
+      }),
+    };
+    commandMock.dns = {
+      status: async () => ({ running: true, hosts: 3 }),
+    };
+
+    await command.status({});
+
+    const output = consoleCapture.output.join("\n");
+    expect(output).toContain("Cluster: enabled");
+    expect(output).toContain("test-node");
+  });
+
+  it("status shows cluster disabled when not configured", async () => {
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<Record<string, unknown>>;
+      };
+      dns: {
+        status: () => Promise<{ running: boolean; hosts: number }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({}),
+    };
+    commandMock.dns = {
+      status: async () => ({ running: true, hosts: 1 }),
+    };
+
+    await command.status({});
+
+    const output = consoleCapture.output.join("\n");
+    expect(output).not.toContain("Cluster:");
+  });
+
+  it("cluster command enables clustering with seeds", async () => {
+    const interfaceMock = mockReadlineAnswers(["y", "my-node", "shared-secret", "10.0.0.2,10.0.0.3"]);
+    let savedConfig: Record<string, unknown> | undefined;
+
+    const commandMock = command as unknown as {
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<Record<string, unknown>>;
+        saveGlobal: (config: Record<string, unknown>) => Promise<void>;
+      };
+    };
+
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({
+        hostname: "lab",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "token",
+        upstreamDns: { primary: "1.1.1.1" },
+      }),
+      saveGlobal: async (config) => {
+        savedConfig = config;
+      },
+    };
+
+    await command.cluster();
+
+    expect(interfaceMock.wasClosed()).toBe(true);
+    const cluster = (savedConfig as Record<string, unknown>)?.dnsCluster as {
+      enabled: boolean;
+      nodeName: string;
+      clusterSecret: string;
+      clusterSeeds: string[];
+    };
+    expect(cluster.enabled).toBe(true);
+    expect(cluster.nodeName).toBe("my-node");
+    expect(cluster.clusterSecret).toBe("shared-secret");
+    expect(cluster.clusterSeeds).toEqual(["10.0.0.2", "10.0.0.3"]);
+    expect(consoleCapture.output.join("\n")).toContain("DNS cluster configuration saved");
+  });
+
+  it("cluster command disables clustering", async () => {
+    const interfaceMock = mockReadlineAnswers(["n"]);
+    let savedConfig: Record<string, unknown> | undefined;
+
+    const commandMock = command as unknown as {
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<Record<string, unknown>>;
+        saveGlobal: (config: Record<string, unknown>) => Promise<void>;
+      };
+    };
+
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({
+        hostname: "lab",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "token",
+        upstreamDns: { primary: "1.1.1.1" },
+        dnsCluster: {
+          enabled: true,
+          nodeName: "old-node",
+          clusterSecret: "old-secret",
+          clusterSeeds: ["10.0.0.99"],
+        },
+      }),
+      saveGlobal: async (config) => {
+        savedConfig = config;
+      },
+    };
+
+    await command.cluster();
+
+    expect(interfaceMock.wasClosed()).toBe(true);
+    const cluster = (savedConfig as Record<string, unknown>)?.dnsCluster as {
+      enabled: boolean;
+    };
+    expect(cluster.enabled).toBe(false);
+    expect(consoleCapture.output.join("\n")).toContain("DNS cluster configuration saved");
+  });
+
+  it("cluster command shows current cluster config", async () => {
+    mockReadlineAnswers(["n"]);
+
+    const commandMock = command as unknown as {
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<Record<string, unknown>>;
+        saveGlobal: (config: Record<string, unknown>) => Promise<void>;
+      };
+    };
+
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({
+        hostname: "lab",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "token",
+        upstreamDns: { primary: "1.1.1.1" },
+        dnsCluster: {
+          enabled: true,
+          nodeName: "existing-node",
+          clusterSeeds: ["10.0.0.5"],
+        },
+      }),
+      saveGlobal: async () => undefined,
+    };
+
+    await command.cluster();
+
+    const output = consoleCapture.output.join("\n");
+    expect(output).toContain("Current: enabled");
+    expect(output).toContain("existing-node");
+  });
+
+  it("cluster command shows not initialized message", async () => {
+    const commandMock = command as unknown as {
+      config: { exists: () => Promise<boolean> };
+    };
+
+    commandMock.config = {
+      exists: async () => false,
+    };
+
+    await command.cluster();
+
+    expect(consoleCapture.output.join("\n")).toContain("Tuition is not initialized");
+  });
+
+  it("cluster command uses hostname as default node name", async () => {
+    const interfaceMock = mockReadlineAnswers(["y", "", "", ""]);
+    let savedConfig: Record<string, unknown> | undefined;
+
+    const commandMock = command as unknown as {
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<Record<string, unknown>>;
+        saveGlobal: (config: Record<string, unknown>) => Promise<void>;
+      };
+    };
+
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({
+        hostname: "nxs-svc-dev",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "token",
+        upstreamDns: { primary: "1.1.1.1" },
+      }),
+      saveGlobal: async (config) => {
+        savedConfig = config;
+      },
+    };
+
+    await command.cluster();
+
+    expect(interfaceMock.wasClosed()).toBe(true);
+    const cluster = (savedConfig as Record<string, unknown>)?.dnsCluster as {
+      enabled: boolean;
+      nodeName: string;
+      clusterSeeds: string[];
+    };
+    expect(cluster.enabled).toBe(true);
+    expect(cluster.nodeName).toBe("nxs-svc-dev");
+    expect(cluster.clusterSeeds).toEqual([]);
+  });
+
+  it("cluster command validates invalid seed IPs", async () => {
+    const interfaceMock = mockReadlineAnswers(["y", "node-1", "", "999.999.999.999", "10.0.0.2"]);
+    let savedConfig: Record<string, unknown> | undefined;
+
+    const commandMock = command as unknown as {
+      config: {
+        exists: () => Promise<boolean>;
+        loadGlobal: () => Promise<Record<string, unknown>>;
+        saveGlobal: (config: Record<string, unknown>) => Promise<void>;
+      };
+    };
+
+    commandMock.config = {
+      exists: async () => true,
+      loadGlobal: async () => ({
+        hostname: "lab",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "token",
+        upstreamDns: { primary: "1.1.1.1" },
+      }),
+      saveGlobal: async (config) => {
+        savedConfig = config;
+      },
+    };
+
+    await command.cluster();
+
+    expect(interfaceMock.wasClosed()).toBe(true);
+    const output = consoleCapture.output.join("\n");
+    expect(output).toContain("Invalid IP");
+    const cluster = (savedConfig as Record<string, unknown>)?.dnsCluster as {
+      enabled: boolean;
+      clusterSeeds: string[];
+    };
+    expect(cluster.clusterSeeds).toEqual(["10.0.0.2"]);
   });
 });

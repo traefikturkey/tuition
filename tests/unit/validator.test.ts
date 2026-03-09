@@ -229,6 +229,93 @@ describe("ConfigValidator", () => {
       expect(result.valid).toBe(true);
       expect(result.errors.some((e) => e.field === "cloudflareToken")).toBe(false);
     });
+
+    it("should accept valid dnsCluster configuration", () => {
+      const config: GlobalConfig = {
+        hostname: "test-server",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "test-token",
+        upstreamDns: { primary: "8.8.8.8" },
+        dnsCluster: {
+          enabled: true,
+          nodeName: "node-1",
+          clusterSecret: "secret",
+          clusterSeeds: ["10.0.0.2", "10.0.0.3"],
+        },
+      };
+
+      const result = validator.validateGlobal(config);
+      expect(result.valid).toBe(true);
+    });
+
+    it("should fail on invalid cluster seed IPs", () => {
+      const config: GlobalConfig = {
+        hostname: "test-server",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "test-token",
+        upstreamDns: { primary: "8.8.8.8" },
+        dnsCluster: {
+          enabled: true,
+          clusterSeeds: ["999.999.999.999", "not-an-ip"],
+        },
+      };
+
+      const result = validator.validateGlobal(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.filter((e) => e.field === "dnsCluster.clusterSeeds")).toHaveLength(2);
+    });
+
+    it("should not validate cluster seeds when clustering is disabled", () => {
+      const config: GlobalConfig = {
+        hostname: "test-server",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "test-token",
+        upstreamDns: { primary: "8.8.8.8" },
+        dnsCluster: {
+          enabled: false,
+          clusterSeeds: ["not-valid"],
+        },
+      };
+
+      const result = validator.validateGlobal(config);
+      expect(result.valid).toBe(true);
+    });
+
+    it("should accept dnsCluster with no seeds (broadcast discovery)", () => {
+      const config: GlobalConfig = {
+        hostname: "test-server",
+        domain: "example.com",
+        adminEmail: "admin@example.com",
+        timezone: "UTC",
+        puid: 1000,
+        pgid: 1000,
+        dnsProvider: "cloudflare",
+        cloudflareToken: "test-token",
+        upstreamDns: { primary: "8.8.8.8" },
+        dnsCluster: {
+          enabled: true,
+          nodeName: "node-1",
+        },
+      };
+
+      const result = validator.validateGlobal(config);
+      expect(result.valid).toBe(true);
+    });
   });
 
   describe("validateService", () => {
