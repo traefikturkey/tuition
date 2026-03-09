@@ -596,8 +596,12 @@ export class ServiceDiagnostics {
     const content = current === 'Starting log stream...' ? text : current + text;
     this.logElement.setContent(content);
 
-    // Auto-scroll to bottom
-    this.logElement.setScrollPerc(100);
+    // Auto-scroll to bottom (guard against blessed _clines not yet initialized)
+    try {
+      this.logElement.setScrollPerc(100);
+    } catch {
+      // _clines may be undefined before first render/layout
+    }
     this.screen.render();
   }
 
