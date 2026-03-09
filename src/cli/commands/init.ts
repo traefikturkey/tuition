@@ -45,10 +45,10 @@ export class InitCommand {
     await manager.saveGlobal(config);
     console.log(chalk.green('\n✓ Saved global configuration'));
 
-    // Generate initial CoreDNS configuration with upstream DNS
+    // Generate initial CoreDNS configuration
     const dnsManager = new CoreDnsManager(manager.getTuitionDir());
     await dnsManager.initialize();
-    await dnsManager.generateConfig([], {}, config.upstreamDns);
+    await dnsManager.generateConfig([]);
     console.log(chalk.green('✓ Generated CoreDNS configuration'));
 
     // Generate secrets file

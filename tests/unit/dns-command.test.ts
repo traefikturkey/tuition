@@ -74,26 +74,19 @@ describe("DnsCommand", () => {
     expect(initializeCalls).toBe(1);
   });
 
-  it("passes upstream DNS config to generator on start", async () => {
-    let receivedUpstreamDns: { primary: string; backup?: string } | undefined;
+  it("calls generateConfig without upstream DNS on start (Joyride uses drop behavior)", async () => {
+    let generateConfigCalled = false;
 
     const commandMock = command as unknown as {
       initialize: () => Promise<void>;
       config: {
         exists: () => Promise<boolean>;
         loadServices: () => Promise<Record<string, { enabled: boolean }>>;
-        loadGlobal: () => Promise<{
-          upstreamDns: {
-            primary: string;
-            backup?: string;
-          };
-        }>;
       };
       dns: {
         generateConfig: (
           enabledServices: unknown[],
-          staticHosts: Record<string, string>,
-          upstreamDns?: { primary: string; backup?: string }
+          staticHosts?: Record<string, string>
         ) => Promise<void>;
         start: () => Promise<{ success: boolean; message: string }>;
       };
@@ -103,24 +96,17 @@ describe("DnsCommand", () => {
     commandMock.config = {
       exists: async () => true,
       loadServices: async () => ({}),
-      loadGlobal: async () => ({
-        upstreamDns: {
-          primary: "1.1.1.1",
-          backup: "1.0.0.1",
-        },
-      }),
     };
     commandMock.dns = {
-      generateConfig: async (_enabledServices, _staticHosts, upstreamDns) => {
-        receivedUpstreamDns = upstreamDns;
+      generateConfig: async () => {
+        generateConfigCalled = true;
       },
       start: async () => ({ success: true, message: "CoreDNS started successfully" }),
     };
 
     await command.start({});
 
-    expect(receivedUpstreamDns?.primary).toBe("1.1.1.1");
-    expect(receivedUpstreamDns?.backup).toBe("1.0.0.1");
+    expect(generateConfigCalled).toBe(true);
 
     const output = consoleCapture.output.join("\n");
     expect(output).toContain("CoreDNS started successfully");
@@ -412,8 +398,7 @@ describe("DnsCommand", () => {
       dns: {
         generateConfig: (
           enabledServices: unknown[],
-          staticHosts: Record<string, string>,
-          upstreamDns?: { primary: string; backup?: string }
+          staticHosts?: Record<string, string>
         ) => Promise<void>;
         reload: () => Promise<{ success: boolean; message: string }>;
       };
@@ -468,12 +453,8 @@ describe("DnsCommand", () => {
           upstreamDns?: { primary: string; backup?: string };
         }
       | undefined;
-    let generateConfigArgs:
-      | {
-          services: unknown[];
-          upstreamDns?: { primary: string; backup?: string };
-        }
-      | undefined;
+    let generateConfigCalled = false;
+    let generateConfigServices: unknown[] | undefined;
 
     const commandMock = command as unknown as {
       config: {
@@ -485,8 +466,7 @@ describe("DnsCommand", () => {
       dns: {
         generateConfig: (
           enabledServices: unknown[],
-          staticHosts: Record<string, string>,
-          upstreamDns?: { primary: string; backup?: string }
+          staticHosts?: Record<string, string>
         ) => Promise<void>;
         reload: () => Promise<{ success: boolean; message: string }>;
       };
@@ -513,8 +493,9 @@ describe("DnsCommand", () => {
       }),
     };
     commandMock.dns = {
-      generateConfig: async (enabledServices, _staticHosts, upstreamDns) => {
-        generateConfigArgs = { services: enabledServices, upstreamDns };
+      generateConfig: async (enabledServices) => {
+        generateConfigCalled = true;
+        generateConfigServices = enabledServices;
       },
       reload: async () => ({ success: true, message: "reloaded" }),
     };
@@ -529,8 +510,8 @@ describe("DnsCommand", () => {
 
     expect(interfaceMock.wasClosed()).toBe(true);
     expect(savedConfig?.upstreamDns).toEqual({ primary: "1.1.1.1", backup: "1.0.0.1" });
-    expect(generateConfigArgs?.services).toHaveLength(1);
-    expect(generateConfigArgs?.upstreamDns).toEqual({ primary: "1.1.1.1", backup: "1.0.0.1" });
+    expect(generateConfigCalled).toBe(true);
+    expect(generateConfigServices).toHaveLength(1);
     expect(consoleCapture.output.join("\n")).toContain("Current upstream DNS: 9.9.9.9");
     expect(consoleCapture.output.join("\n")).toContain("CoreDNS reloaded with new upstream DNS");
   });
@@ -553,8 +534,7 @@ describe("DnsCommand", () => {
       dns: {
         generateConfig: (
           enabledServices: unknown[],
-          staticHosts: Record<string, string>,
-          upstreamDns?: { primary: string; backup?: string }
+          staticHosts?: Record<string, string>
         ) => Promise<void>;
         reload: () => Promise<{ success: boolean; message: string }>;
       };

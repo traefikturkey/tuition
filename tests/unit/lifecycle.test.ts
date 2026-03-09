@@ -327,7 +327,7 @@ describe("LifecycleManager", () => {
   });
 
   describe("private helpers", () => {
-    it("should register tuition and Caddy hostnames in CoreDNS static hosts", async () => {
+    it("should register only tuition hostname in static hosts (services handled by Joyride labels)", async () => {
       patchSet.patch(
         (manager as unknown as { configManager: Record<string, unknown> }).configManager,
         "loadServices" as keyof Record<string, unknown>,
@@ -372,16 +372,12 @@ describe("LifecycleManager", () => {
       );
 
       let capturedStaticHosts: Record<string, string> | undefined;
-      let capturedServices: unknown[] | undefined;
-      let capturedUpstreamDns: unknown;
 
       patchSet.patch(
         (manager as unknown as { dnsManager: Record<string, unknown> }).dnsManager,
         "generateConfig" as keyof Record<string, unknown>,
-        (async (services: unknown[], staticHosts: Record<string, string>, upstreamDns: unknown) => {
-          capturedServices = services;
+        (async (services: unknown[], staticHosts: Record<string, string>) => {
           capturedStaticHosts = staticHosts;
-          capturedUpstreamDns = upstreamDns;
           return "corefile";
         }) as never
       );
@@ -397,13 +393,10 @@ describe("LifecycleManager", () => {
         }
       ).updateDnsConfig();
 
-      expect(capturedServices).toHaveLength(2);
+      // Only tuition hostname — service subdomains handled by Joyride via coredns.host.name labels
       expect(capturedStaticHosts).toEqual({
         "nxs-svc-dev.nexus-central.tech": "172.30.20.50",
-        "webtop.nexus-central.tech": "172.30.20.50",
-        "whoami.nexus-central.tech": "172.30.20.50",
       });
-      expect(capturedUpstreamDns).toEqual({ primary: "1.1.1.1", backup: "1.0.0.1" });
     });
 
     it("should create only relative service directories and expand MEDIA_PATH", async () => {

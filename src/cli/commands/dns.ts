@@ -51,8 +51,7 @@ export class DnsCommand {
     }
 
     console.log(chalk.blue('Generating CoreDNS configuration...'));
-    const globalConfig = await this.config.loadGlobal();
-    await this.dns.generateConfig(enabledServices, {}, globalConfig.upstreamDns);
+    await this.dns.generateConfig(enabledServices);
     console.log(chalk.green(`✓ Generated CoreDNS config for ${enabledServices.length} services`));
 
     console.log(chalk.blue('Starting CoreDNS...'));
@@ -122,8 +121,7 @@ export class DnsCommand {
     }
 
     console.log(chalk.blue(`Regenerating CoreDNS config for ${enabledServices.length} services...`));
-    const globalConfig = await this.config.loadGlobal();
-    await this.dns.generateConfig(enabledServices, {}, globalConfig.upstreamDns);
+    await this.dns.generateConfig(enabledServices);
     
     const result = await this.dns.reload();
     
@@ -249,7 +247,7 @@ export class DnsCommand {
       }
     }
 
-    await this.dns.generateConfig(enabledServices, {}, globalConfig.upstreamDns);
+    await this.dns.generateConfig(enabledServices);
     
     const result = await this.dns.reload();
     

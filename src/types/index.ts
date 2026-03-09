@@ -8,6 +8,13 @@ export interface UpstreamDnsConfig {
   backup?: string;
 }
 
+export interface DnsClusterConfig {
+  enabled: boolean;
+  nodeName?: string;
+  clusterSecret?: string;
+  clusterSeeds?: string[];
+}
+
 export interface GlobalConfig {
   hostname: string;
   domain: string;
@@ -19,6 +26,7 @@ export interface GlobalConfig {
   cloudflareToken?: string;
   upstreamDns: UpstreamDnsConfig;
   adminPasswordHash?: string;  // bcrypt hash for Caddy admin UI
+  dnsCluster?: DnsClusterConfig;
 }
 
 export interface InfrastructureConfig {

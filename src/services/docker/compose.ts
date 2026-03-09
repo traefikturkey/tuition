@@ -66,7 +66,7 @@ export class ComposeManager {
       environment: resolvedEnv,
       ports: this.formatPorts(definition.ports || []),
       volumes: resolvedVolumes,
-      labels: definition.labels,
+      labels: this.buildLabels(definition.labels, envVars),
       networks: ["tuition"],
       restart: "unless-stopped",
       deploy: definition.resourceLimits
@@ -287,6 +287,34 @@ export class ComposeManager {
     }
 
     return resolved;
+  }
+
+  /**
+   * Build container labels, auto-generating coredns.host.name from caddy label
+   * so Joyride can discover services for DNS registration via Docker labels
+   */
+  private buildLabels(
+    labels: Record<string, string> | undefined,
+    envVars: Record<string, string>
+  ): Record<string, string> | undefined {
+    if (!labels) {
+      return undefined;
+    }
+
+    const caddyLabel = labels["caddy"];
+    if (!caddyLabel) {
+      return labels;
+    }
+
+    // Resolve ${DOMAIN} placeholder to generate the FQDN for DNS
+    const resolvedHostname = caddyLabel.replace(/\$\{(\w+)\}/g, (match, varName) => {
+      return envVars[varName] || match;
+    });
+
+    return {
+      ...labels,
+      "coredns.host.name": resolvedHostname,
+    };
   }
 
   /**

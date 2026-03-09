@@ -1,14 +1,16 @@
 /**
- * CoreDNS manager for internal DNS resolution
- * Provides zero-configuration DNS for containers
+ * CoreDNS manager using Joyride (traefikturkey/joyride)
+ * Provides Docker label-based DNS registration with optional clustering
  */
 
 import { writeFile, mkdir, readFile } from "fs/promises";
 import { join } from "path";
+import { hostname as osHostname } from "os";
 import { spawn } from "child_process";
 import { ComposeManager } from "../docker/compose.js";
 import { docker } from "../docker/client.js";
-import type { ServiceDefinition } from "../../types/index.js";
+import type { ServiceDefinition, DnsClusterConfig } from "../../types/index.js";
+import { detectHostIp } from "../../utils/network.js";
 
 export interface DnsRecord {
   hostname: string;
@@ -41,35 +43,33 @@ export class CoreDnsManager {
   }
 
   /**
-   * Generate Corefile from enabled services
+   * Generate Corefile and static hosts file
+   * Joyride handles Docker service DNS via container labels automatically.
+   * Only static hosts (non-Docker entries like tuition hostname) go in the hosts file.
    */
   async generateConfig(
     enabledServices: ServiceDefinition[],
-    staticHosts: Record<string, string> = {},
-    upstreamDns?: { primary: string; backup?: string }
+    staticHosts: Record<string, string> = {}
   ): Promise<string> {
-    const corefile = this.buildCorefile(enabledServices, staticHosts, upstreamDns);
+    const corefile = this.buildCorefile();
 
     await writeFile(join(this.configPath, "Corefile"), corefile, "utf-8");
 
-    // Generate hosts file from container labels
-    const hosts = this.buildHostsFile(enabledServices, staticHosts);
+    // Only static hosts — Docker service DNS is handled by Joyride via labels
+    const hosts = this.buildHostsFile(staticHosts);
     await writeFile(join(this.configPath, "hosts"), hosts, "utf-8");
 
     return corefile;
   }
 
   /**
-   * Build CoreDNS Corefile
+   * Build Corefile for Joyride with docker-cluster plugin
+   * Uses split DNS (drop unknown queries) so Pi-hole/EdgeRouter handles upstream
    */
-  private buildCorefile(
-    services: ServiceDefinition[],
-    staticHosts: Record<string, string>,
-    upstreamDns?: { primary: string; backup?: string }
-  ): string {
+  private buildCorefile(): string {
     const lines: string[] = [];
 
-    lines.push("# Tuition CoreDNS Configuration");
+    lines.push("# Tuition DNS Configuration (Joyride)");
     lines.push("# Auto-generated - do not edit manually");
     lines.push("");
     lines.push("# Listen on port 54 to avoid conflict with systemd-resolved on port 53");
@@ -77,17 +77,13 @@ export class CoreDnsManager {
     lines.push("    # Bind explicitly to IPv4 on all interfaces for external accessibility");
     lines.push("    bind 0.0.0.0");
     lines.push("");
-    lines.push("    # Hosts file for static and container entries");
-    lines.push("    hosts /etc/coredns/hosts {");
-    lines.push(`        fallthrough`);
+    lines.push("    # Docker label-based DNS — watches containers for coredns.host.name labels");
+    lines.push("    docker-cluster {");
     lines.push("    }");
     lines.push("");
-    lines.push("    # Forward to external DNS");
-    const upstreamServers = upstreamDns
-      ? [upstreamDns.primary, upstreamDns.backup].filter(Boolean).join(" ")
-      : "8.8.8.8 8.8.4.4";
-    lines.push(`    forward . ${upstreamServers} {`);
-    lines.push("        health_check 5s");
+    lines.push("    # Static hosts for non-Docker entries (tuition hostname, NAS, printers)");
+    lines.push("    hosts /etc/hosts.d/hosts {");
+    lines.push("        fallthrough");
     lines.push("    }");
     lines.push("");
     lines.push("    # Cache responses");
@@ -103,31 +99,19 @@ export class CoreDnsManager {
   }
 
   /**
-   * Build hosts file from services and static entries
+   * Build hosts file with only static (non-Docker) entries
+   * Docker service DNS is handled by Joyride via coredns.host.name container labels
    */
-  private buildHostsFile(services: ServiceDefinition[], staticHosts: Record<string, string>): string {
+  private buildHostsFile(staticHosts: Record<string, string>): string {
     const lines: string[] = [];
 
-    lines.push("# Tuition Internal DNS");
-    lines.push("# Auto-generated from container labels");
+    lines.push("# Tuition Static DNS Hosts");
+    lines.push("# Auto-generated - do not edit manually");
+    lines.push("# Docker service DNS is handled by Joyride via container labels");
     lines.push("");
 
-    // Add static hosts
     for (const [hostname, ip] of Object.entries(staticHosts)) {
       lines.push(`${ip} ${hostname}`);
-    }
-
-    if (Object.keys(staticHosts).length > 0) {
-      lines.push("");
-    }
-
-    // Add service entries with dns.hostname labels
-    for (const service of services) {
-      if (service.labels?.["dns.hostname"]) {
-        const hostname = service.labels["dns.hostname"];
-        // Container IPs are resolved at runtime by Docker DNS
-        lines.push(`# ${hostname} -> ${service.name} (container DNS, no static IP)`);
-      }
     }
 
     return lines.join("\n");
@@ -228,26 +212,44 @@ export class CoreDnsManager {
   }
 
   /**
-   * Generate docker-compose.yaml for CoreDNS
+   * Generate docker-compose.yaml for Joyride (CoreDNS fork)
    * Uses host networking to bind directly to host interfaces on port 54
-   * This allows external DNS queries without NAT/routing issues
+   * Mounts Docker socket for container label discovery
    */
-  private async generateComposeFile(): Promise<void> {
+  private async generateComposeFile(dnsCluster?: DnsClusterConfig): Promise<void> {
     const { stringify: stringifyYaml } = await import("yaml");
+
+    const hostIp = detectHostIp() ?? "127.0.0.1";
+
+    const environment: Record<string, string> = {
+      HOSTIP: hostIp,
+      DNS_UNKNOWN_ACTION: "drop",
+      DOCKER_SOCKET: "/var/run/docker.sock",
+      CLUSTER_ENABLED: String(dnsCluster?.enabled ?? false),
+      NODE_NAME: dnsCluster?.nodeName ?? osHostname(),
+    };
+
+    // Only include cluster secrets/seeds when clustering is configured
+    if (dnsCluster?.clusterSecret) {
+      environment.CLUSTER_SECRET = dnsCluster.clusterSecret;
+    }
+    if (dnsCluster?.clusterSeeds && dnsCluster.clusterSeeds.length > 0) {
+      environment.CLUSTER_SEEDS = dnsCluster.clusterSeeds.join(",");
+    }
 
     const compose = {
       services: {
         coredns: {
-          image: "coredns/coredns:latest",
+          image: "ghcr.io/traefikturkey/joyride:coredns",
           container_name: "coredns",
           restart: "unless-stopped",
-          // Use host networking to bind directly to host port 54
-          // This makes CoreDNS accessible from external systems (Pi-holes, etc.)
-          // Ports are not published when using host networking
+          // Host networking for direct port 54 binding and HOSTIP auto-detection
           network_mode: "host",
+          environment,
           volumes: [
             `${this.configPath}/Corefile:/etc/coredns/Corefile:ro`,
-            `${this.configPath}/hosts:/etc/coredns/hosts:ro`,
+            `${this.configPath}/hosts:/etc/hosts.d/hosts:ro`,
+            "/var/run/docker.sock:/var/run/docker.sock:ro",
           ],
           command: ["-conf", "/etc/coredns/Corefile"],
         },

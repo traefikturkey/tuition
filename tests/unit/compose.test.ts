@@ -142,6 +142,91 @@ describe("ComposeManager", () => {
         memory: "512M",
       });
     });
+
+    it("should auto-generate coredns.host.name label from caddy label", async () => {
+      const definition: ServiceDefinition = {
+        name: "sonarr",
+        category: "downloads",
+        description: "TV automation",
+        image: "linuxserver/sonarr:latest",
+        labels: {
+          caddy: "sonarr.${DOMAIN}",
+          "caddy.reverse_proxy": "{{upstreams 8989}}",
+        },
+      };
+
+      const path = await composeManager.generateCompose("sonarr", definition, {
+        DOMAIN: "nexus-central.tech",
+      });
+      const content = await readFile(path, "utf-8");
+      const compose = parseYaml(content) as {
+        services: Record<string, { labels: Record<string, string> }>;
+      };
+
+      expect(compose.services.sonarr?.labels["coredns.host.name"]).toBe("sonarr.nexus-central.tech");
+    });
+
+    it("should not add coredns.host.name when no caddy label exists", async () => {
+      const definition: ServiceDefinition = {
+        name: "test",
+        category: "dns",
+        description: "Test",
+        image: "test:latest",
+        labels: {
+          "some.other.label": "value",
+        },
+      };
+
+      const path = await composeManager.generateCompose("test", definition, {});
+      const content = await readFile(path, "utf-8");
+      const compose = parseYaml(content) as {
+        services: Record<string, { labels: Record<string, string> }>;
+      };
+
+      expect(compose.services.test?.labels["coredns.host.name"]).toBeUndefined();
+    });
+
+    it("should not add coredns.host.name when service has no labels", async () => {
+      const definition: ServiceDefinition = {
+        name: "test",
+        category: "dns",
+        description: "Test",
+        image: "test:latest",
+      };
+
+      const path = await composeManager.generateCompose("test", definition, {});
+      const content = await readFile(path, "utf-8");
+      const compose = parseYaml(content) as {
+        services: Record<string, { labels?: Record<string, string> }>;
+      };
+
+      expect(compose.services.test?.labels).toBeUndefined();
+    });
+
+    it("should resolve DOMAIN placeholder in coredns.host.name", async () => {
+      const definition: ServiceDefinition = {
+        name: "webtop",
+        category: "media",
+        description: "Desktop",
+        image: "linuxserver/webtop:latest",
+        labels: {
+          caddy: "webtop.${DOMAIN}",
+          "caddy.reverse_proxy": "{{upstreams 3000}}",
+        },
+      };
+
+      const path = await composeManager.generateCompose("webtop", definition, {
+        DOMAIN: "example.com",
+      });
+      const content = await readFile(path, "utf-8");
+      const compose = parseYaml(content) as {
+        services: Record<string, { labels: Record<string, string> }>;
+      };
+
+      expect(compose.services.webtop?.labels["coredns.host.name"]).toBe("webtop.example.com");
+      // Original caddy label should be preserved as-is (unresolved)
+      expect(compose.services.webtop?.labels["caddy"]).toBe("webtop.${DOMAIN}");
+    });
   });
 
   describe("command execution wrappers", () => {

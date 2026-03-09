@@ -1,5 +1,5 @@
 /**
- * CoreDNS manager tests
+ * CoreDNS manager tests (Joyride-based)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
@@ -7,7 +7,7 @@ import { CoreDnsManager } from "../../src/services/dns/coredns.js";
 import { mkdtemp, rm, readFile, access, writeFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import type { ServiceDefinition } from "../../src/types/index.js";
+import type { ServiceDefinition, DnsClusterConfig } from "../../src/types/index.js";
 import { docker } from "../../src/services/docker/client.js";
 import { createPatchSet } from "../helpers/test-utils.js";
 
@@ -34,7 +34,6 @@ describe("CoreDnsManager", () => {
       const configDir = join(tempDir, "coredns-config");
       const dataDir = join(tempDir, "coredns-data");
 
-      // Check directories exist (access returns undefined/null on success)
       const configExists = await access(configDir)
         .then(() => true)
         .catch(() => false);
@@ -53,34 +52,28 @@ describe("CoreDnsManager", () => {
   });
 
   describe("generateConfig", () => {
-    it("should generate Corefile with default upstream DNS", async () => {
+    it("should generate Corefile with docker-cluster block", async () => {
       await manager.initialize();
 
-      const services: ServiceDefinition[] = [];
-      const corefile = await manager.generateConfig(services);
+      const corefile = await manager.generateConfig([]);
 
-      expect(corefile).toContain("# Tuition CoreDNS Configuration");
+      expect(corefile).toContain("# Tuition DNS Configuration (Joyride)");
       expect(corefile).toContain("bind 0.0.0.0");
-      expect(corefile).toContain("forward . 8.8.8.8 8.8.4.4");
-      expect(corefile).toContain("health_check 5s");
+      expect(corefile).toContain("docker-cluster {");
       expect(corefile).toContain("cache 30");
+      expect(corefile).not.toContain("forward");
     });
 
-    it("should use custom upstream DNS when provided", async () => {
+    it("should include static hosts file reference in Corefile", async () => {
       await manager.initialize();
 
-      const services: ServiceDefinition[] = [];
-      const upstreamDns = {
-        primary: "1.1.1.1",
-        backup: "1.0.0.1",
-      };
+      const corefile = await manager.generateConfig([]);
 
-      const corefile = await manager.generateConfig(services, {}, upstreamDns);
-
-      expect(corefile).toContain("forward . 1.1.1.1 1.0.0.1");
+      expect(corefile).toContain("hosts /etc/hosts.d/hosts");
+      expect(corefile).toContain("fallthrough");
     });
 
-    it("should generate hosts file with static entries", async () => {
+    it("should generate hosts file with only static entries", async () => {
       await manager.initialize();
 
       const staticHosts = {
@@ -97,7 +90,7 @@ describe("CoreDnsManager", () => {
       expect(hostsContent).toContain("10.0.0.2 another.example.com");
     });
 
-    it("should include service entries in hosts file", async () => {
+    it("should not include service dns.hostname entries in hosts file", async () => {
       await manager.initialize();
 
       const services: ServiceDefinition[] = [
@@ -115,7 +108,17 @@ describe("CoreDnsManager", () => {
       const hostsPath = join(tempDir, "coredns-config", "hosts");
       const hostsContent = await readFile(hostsPath, "utf-8");
 
-      expect(hostsContent).toContain("# dns.internal -> pihole (container DNS, no static IP)");
+      // Joyride handles Docker services via labels — no hosts file entries
+      expect(hostsContent).not.toContain("dns.internal");
+    });
+
+    it("should not include forward plugin (split DNS via drop)", async () => {
+      await manager.initialize();
+
+      const corefile = await manager.generateConfig([]);
+
+      expect(corefile).not.toContain("forward");
+      expect(corefile).not.toContain("8.8.8.8");
     });
   });
 
@@ -123,7 +126,6 @@ describe("CoreDnsManager", () => {
     it("should return hosts count from file", async () => {
       await manager.initialize();
 
-      // Create a hosts file with entries
       const hostsContent = `10.0.0.1 test1.example.com
 10.0.0.2 test2.example.com
 # This is a comment
@@ -131,7 +133,7 @@ describe("CoreDnsManager", () => {
       await writeFile(join(tempDir, "coredns-config", "hosts"), hostsContent, "utf-8");
 
       const status = await manager.status();
-      expect(status.hosts).toBe(2); // Only the two non-comment lines
+      expect(status.hosts).toBe(2);
     });
 
     it("should return zero hosts when no hosts file exists", async () => {
@@ -139,27 +141,6 @@ describe("CoreDnsManager", () => {
 
       const status = await manager.status();
       expect(status.hosts).toBe(0);
-    });
-
-    it("should return zero hosts when no hosts file exists", async () => {
-      await manager.initialize();
-
-      const status = await manager.status();
-      expect(status.hosts).toBe(0);
-    });
-
-    it("should count hosts from hosts file", async () => {
-      await manager.initialize();
-
-      // Create a hosts file with entries
-      const hostsContent = `10.0.0.1 test1.example.com
-10.0.0.2 test2.example.com
-# This is a comment
-`;
-      await writeFile(join(tempDir, "coredns-config", "hosts"), hostsContent, "utf-8");
-
-      const status = await manager.status();
-      expect(status.hosts).toBe(2); // Only the two non-comment lines
     });
 
     it("should return running false when Docker inspection throws", async () => {
@@ -179,7 +160,7 @@ describe("CoreDnsManager", () => {
       patchSet.patch(docker, "getContainer", async () => ({
         id: "coredns-id",
         name: "coredns",
-        image: "coredns/coredns:latest",
+        image: "ghcr.io/traefikturkey/joyride:coredns",
         state: "running",
         status: "Up",
         ports: [],
@@ -302,15 +283,82 @@ describe("CoreDnsManager", () => {
   });
 
   describe("generateComposeFile", () => {
-    it("writes a host-networked compose file for CoreDNS", async () => {
+    it("writes a host-networked compose file with Joyride image", async () => {
+      await manager.initialize();
       await (manager as unknown as { generateComposeFile: () => Promise<void> }).generateComposeFile();
 
       const composeContent = await readFile(join(tempDir, "coredns.docker-compose.yaml"), "utf-8");
 
+      expect(composeContent).toContain("ghcr.io/traefikturkey/joyride:coredns");
       expect(composeContent).toContain("network_mode: host");
       expect(composeContent).not.toContain("ports:");
-      expect(composeContent).toContain("/etc/coredns/Corefile:ro");
-      expect(composeContent).toContain("-conf");
+    });
+
+    it("mounts the Docker socket for container label discovery", async () => {
+      await manager.initialize();
+      await (manager as unknown as { generateComposeFile: () => Promise<void> }).generateComposeFile();
+
+      const composeContent = await readFile(join(tempDir, "coredns.docker-compose.yaml"), "utf-8");
+
+      expect(composeContent).toContain("/var/run/docker.sock:/var/run/docker.sock:ro");
+    });
+
+    it("mounts Corefile and static hosts directory", async () => {
+      await manager.initialize();
+      await (manager as unknown as { generateComposeFile: () => Promise<void> }).generateComposeFile();
+
+      const composeContent = await readFile(join(tempDir, "coredns.docker-compose.yaml"), "utf-8");
+
+      expect(composeContent).toContain("/Corefile:/etc/coredns/Corefile:ro");
+      expect(composeContent).toContain("/hosts:/etc/hosts.d/hosts:ro");
+    });
+
+    it("includes Joyride environment variables", async () => {
+      await manager.initialize();
+      await (manager as unknown as { generateComposeFile: () => Promise<void> }).generateComposeFile();
+
+      const composeContent = await readFile(join(tempDir, "coredns.docker-compose.yaml"), "utf-8");
+
+      expect(composeContent).toContain("DNS_UNKNOWN_ACTION");
+      expect(composeContent).toContain("drop");
+      expect(composeContent).toContain("DOCKER_SOCKET");
+    });
+
+    it("disables clustering by default", async () => {
+      await manager.initialize();
+      await (manager as unknown as { generateComposeFile: () => Promise<void> }).generateComposeFile();
+
+      const composeContent = await readFile(join(tempDir, "coredns.docker-compose.yaml"), "utf-8");
+
+      expect(composeContent).toContain("CLUSTER_ENABLED");
+      expect(composeContent).toContain("false");
+    });
+
+    it("enables clustering when dnsCluster config is provided", async () => {
+      await manager.initialize();
+      const clusterConfig: DnsClusterConfig = {
+        enabled: true,
+        nodeName: "node-1",
+        clusterSecret: "mysecret",
+        clusterSeeds: ["10.0.0.2", "10.0.0.3"],
+      };
+
+      await (
+        manager as unknown as {
+          generateComposeFile: (dnsCluster?: DnsClusterConfig) => Promise<void>;
+        }
+      ).generateComposeFile(clusterConfig);
+
+      const composeContent = await readFile(join(tempDir, "coredns.docker-compose.yaml"), "utf-8");
+
+      expect(composeContent).toContain("CLUSTER_ENABLED");
+      expect(composeContent).toContain("\"true\"");
+      expect(composeContent).toContain("NODE_NAME");
+      expect(composeContent).toContain("node-1");
+      expect(composeContent).toContain("CLUSTER_SECRET");
+      expect(composeContent).toContain("mysecret");
+      expect(composeContent).toContain("CLUSTER_SEEDS");
+      expect(composeContent).toContain("10.0.0.2,10.0.0.3");
     });
   });
 

@@ -61,53 +61,30 @@ export class LifecycleManager {
   }
 
   /**
-   * Update CoreDNS configuration for all enabled services
+   * Update CoreDNS configuration for static hosts
+   * Docker service DNS is handled by Joyride via coredns.host.name container labels.
+   * Only the tuition hostname needs a static hosts file entry.
    */
   private async updateDnsConfig(): Promise<void> {
-    const services = await this.configManager.loadServices();
     const globalConfig = await this.configManager.loadGlobal();
-
-    // Get enabled services
-    const enabledServiceNames = Object.entries(services)
-      .filter(([, config]) => config.enabled)
-      .map(([name]) => name);
-
-    // Load service definitions
-    const enabledServices = [];
-    for (const name of enabledServiceNames) {
-      const def = await catalog.get(name);
-      if (def) {
-        enabledServices.push(def);
-      }
-    }
 
     // Detect the host's LAN IP so external DNS clients can route to it
     const hostIp = this.detectHostIp();
     const staticHosts: Record<string, string> = {};
 
     if (hostIp) {
-      // Register tuition hostname (e.g., nxs-tuition.nexus-central.tech)
+      // Register tuition hostname (e.g., nxs-svc-dev.nexus-central.tech)
       const tuitionHostname = `${globalConfig.hostname}.${globalConfig.domain}`;
       staticHosts[tuitionHostname] = hostIp;
 
-      // Register service subdomains from Caddy labels so Pi-hole/external
-      // DNS can resolve them to the reverse proxy host
-      for (const service of enabledServices) {
-        if (service.labels?.["caddy"]) {
-          const caddyLabel = service.labels["caddy"];
-          const subdomain = caddyLabel.replace(/\.?\$\{DOMAIN\}/g, "");
-          if (subdomain) {
-            const fqdn = `${subdomain}.${globalConfig.domain}`;
-            staticHosts[fqdn] = hostIp;
-          }
-        }
-      }
+      // Service subdomains are handled by Joyride via coredns.host.name labels
+      // injected at compose generation time — no static hosts needed
     }
 
-    // Regenerate CoreDNS config with static hosts and upstream DNS
-    await this.dnsManager.generateConfig(enabledServices, staticHosts, globalConfig.upstreamDns);
+    // Regenerate static hosts file
+    await this.dnsManager.generateConfig([], staticHosts);
 
-    // Reload CoreDNS to apply changes
+    // Reload CoreDNS to pick up static hosts changes
     await this.dnsManager.reload();
   }
 
