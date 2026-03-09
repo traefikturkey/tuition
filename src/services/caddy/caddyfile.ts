@@ -132,8 +132,8 @@ export class CaddyfileGenerator {
       }
     }
 
-    // Remove ${DOMAIN} placeholder and preserve any separator dots
-    const domain = caddyDomain.replace(/\$\{DOMAIN\}/g, "");
+    // Remove ${DOMAIN} placeholder and any leftover separator dots
+    const domain = caddyDomain.replace(/\.?\$\{DOMAIN\}/g, "");
 
     return {
       domain,

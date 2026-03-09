@@ -28,7 +28,7 @@ describe('CaddyfileGenerator', () => {
       };
 
       const caddyfile = generator.generate(config);
-      
+
       expect(caddyfile).toContain('admin@example.com');
       expect(caddyfile).toContain('*.example.com');
       expect(caddyfile).toContain('dns cloudflare');
@@ -50,7 +50,7 @@ describe('CaddyfileGenerator', () => {
       };
 
       const caddyfile = generator.generate(config);
-      
+
       expect(caddyfile).toContain('service1.example.com');
       expect(caddyfile).toContain('service2.example.com');
       expect(caddyfile).toContain('svc1:80');
@@ -105,9 +105,9 @@ describe('CaddyfileGenerator', () => {
       };
 
       const route = generator.parseServiceLabels(service);
-      
+
       expect(route).not.toBeNull();
-      expect(route?.domain).toBe('pihole.'); // ${DOMAIN} placeholder is stripped
+      expect(route?.domain).toBe('pihole');
       expect(route?.service).toBe('pihole');
       expect(route?.port).toBe(80);
       expect(route?.upstream).toBe('pihole');
@@ -190,7 +190,30 @@ describe('CaddyfileGenerator', () => {
       const route = generator.parseServiceLabels(service);
 
       expect(route?.port).toBe(80);
-      expect(route?.domain).toBe('grafana.');
+      expect(route?.domain).toBe('grafana');
+    });
+
+    it('should generate a route without double dots when the caddy label uses ${DOMAIN}', () => {
+      const config = {
+        email: 'admin@example.com',
+        domain: 'nexus-central.tech',
+        dnsProvider: 'cloudflare',
+        dnsCredentials: {},
+        routes: [
+          {
+            domain: 'webtop',
+            service: 'webtop',
+            port: 3000,
+            tls: true,
+            upstream: 'webtop',
+          },
+        ],
+      };
+
+      const caddyfile = generator.generate(config);
+
+      expect(caddyfile).toContain('webtop.nexus-central.tech {');
+      expect(caddyfile).not.toContain('webtop..nexus-central.tech {');
     });
 
     it('should ignore sparse port entries and keep the parsed upstream port', () => {
@@ -239,7 +262,7 @@ describe('CaddyfileGenerator', () => {
       ];
 
       const routes = generator.extractRoutes(services);
-      
+
       expect(routes).toHaveLength(2);
       expect(routes[0]?.service).toBe('pihole');
       expect(routes[1]?.service).toBe('plex');
