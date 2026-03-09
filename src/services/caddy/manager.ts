@@ -3,7 +3,7 @@
  * Handles Caddy container lifecycle and configuration
  */
 
-import { writeFile, readFile, access, mkdir } from "fs/promises";
+import { writeFile, readFile, access, mkdir, open } from "fs/promises";
 import { constants } from "fs";
 import { join } from "path";
 import { spawn } from "child_process";
@@ -66,8 +66,15 @@ export class CaddyManager {
     // Generate Caddyfile
     const caddyfile = caddyfileGenerator.generate(caddyConfig);
 
-    // Write to disk
-    await writeFile(this.caddyfilePath, caddyfile, "utf-8");
+    // Write to disk in-place (truncate + write) to preserve the file inode.
+    // A normal writeFile does an atomic rename which creates a new inode,
+    // breaking Docker bind mounts that reference the original inode.
+    const fh = await open(this.caddyfilePath, "w");
+    try {
+      await fh.writeFile(caddyfile, "utf-8");
+    } finally {
+      await fh.close();
+    }
 
     return caddyfile;
   }

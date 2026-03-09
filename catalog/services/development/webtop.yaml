@@ -23,5 +23,5 @@ labels:
   caddy.reverse_proxy: "{{upstreams 3000}}"
 
 resourceLimits:
-  cpus: 0.5
-  memory: 512M
+  cpus: 1.0
+  memory: 2048M
