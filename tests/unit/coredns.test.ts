@@ -58,9 +58,11 @@ describe("CoreDnsManager", () => {
       const corefile = await manager.generateConfig([]);
 
       expect(corefile).toContain("# Tuition DNS Configuration (Joyride)");
-      expect(corefile).toContain("bind 0.0.0.0");
+      expect(corefile).not.toContain("bind");
       expect(corefile).toContain("docker-cluster {");
+      expect(corefile).toContain("host_ip 0.0.0.0");
       expect(corefile).toContain("cache 30");
+      expect(corefile).toContain("health :5454");
       expect(corefile).not.toContain("forward");
     });
 

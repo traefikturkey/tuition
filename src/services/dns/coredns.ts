@@ -74,16 +74,14 @@ export class CoreDnsManager {
     lines.push("");
     lines.push("# Listen on port 54 to avoid conflict with systemd-resolved on port 53");
     lines.push(".:54 {");
-    lines.push("    # Bind explicitly to IPv4 on all interfaces for external accessibility");
-    lines.push("    bind 0.0.0.0");
-    lines.push("");
-    lines.push("    # Docker label-based DNS — watches containers for coredns.host.name labels");
-    lines.push("    docker-cluster {");
-    lines.push("    }");
-    lines.push("");
     lines.push("    # Static hosts for non-Docker entries (tuition hostname, NAS, printers)");
     lines.push("    hosts /etc/hosts.d/hosts {");
     lines.push("        fallthrough");
+    lines.push("    }");
+    lines.push("");
+    lines.push("    # Docker label-based DNS — watches containers for coredns.host.name labels");
+    lines.push("    docker-cluster {");
+    lines.push("        host_ip 0.0.0.0");
     lines.push("    }");
     lines.push("");
     lines.push("    # Cache responses");
@@ -92,6 +90,9 @@ export class CoreDnsManager {
     lines.push("    # Logging");
     lines.push("    log");
     lines.push("    errors");
+    lines.push("");
+    lines.push("    # Health check endpoint");
+    lines.push("    health :5454");
     lines.push("}");
     lines.push("");
 
