@@ -60,6 +60,7 @@ describe("CoreDnsManager", () => {
       const corefile = await manager.generateConfig(services);
 
       expect(corefile).toContain("# Tuition CoreDNS Configuration");
+      expect(corefile).toContain("bind 0.0.0.0");
       expect(corefile).toContain("forward . 8.8.8.8 8.8.4.4");
       expect(corefile).toContain("health_check 5s");
       expect(corefile).toContain("cache 30");
@@ -114,7 +115,7 @@ describe("CoreDnsManager", () => {
       const hostsPath = join(tempDir, "coredns-config", "hosts");
       const hostsContent = await readFile(hostsPath, "utf-8");
 
-      expect(hostsContent).toContain("# dns.internal -> pihole (resolved by Docker)");
+      expect(hostsContent).toContain("# dns.internal -> pihole (container DNS, no static IP)");
     });
   });
 
@@ -307,7 +308,7 @@ describe("CoreDnsManager", () => {
       const composeContent = await readFile(join(tempDir, "coredns.docker-compose.yaml"), "utf-8");
 
       expect(composeContent).toContain("network_mode: host");
-      expect(composeContent).toContain("54:53/tcp");
+      expect(composeContent).not.toContain("ports:");
       expect(composeContent).toContain("/etc/coredns/Corefile:ro");
       expect(composeContent).toContain("-conf");
     });

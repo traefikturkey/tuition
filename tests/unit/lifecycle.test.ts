@@ -327,6 +327,85 @@ describe("LifecycleManager", () => {
   });
 
   describe("private helpers", () => {
+    it("should register tuition and Caddy hostnames in CoreDNS static hosts", async () => {
+      patchSet.patch(
+        (manager as unknown as { configManager: Record<string, unknown> }).configManager,
+        "loadServices" as keyof Record<string, unknown>,
+        (async () => ({
+          webtop: { enabled: true },
+          whoami: { enabled: true },
+          disabled: { enabled: false },
+        })) as never
+      );
+      patchSet.patch(
+        (manager as unknown as { configManager: Record<string, unknown> }).configManager,
+        "loadGlobal" as keyof Record<string, unknown>,
+        (async () => ({
+          hostname: "nxs-svc-dev",
+          domain: "nexus-central.tech",
+          upstreamDns: { primary: "1.1.1.1", backup: "1.0.0.1" },
+        })) as never
+      );
+      patchSet.patch(catalog, "get", async (name: string) => {
+        if (name === "webtop") {
+          return {
+            name: "webtop",
+            category: "remote-access",
+            labels: { caddy: "webtop.${DOMAIN}" },
+          } as never;
+        }
+
+        if (name === "whoami") {
+          return {
+            name: "whoami",
+            category: "development",
+            labels: { caddy: "whoami.${DOMAIN}" },
+          } as never;
+        }
+
+        return undefined;
+      });
+      patchSet.patch(
+        manager as unknown as { detectHostIp: () => string | null },
+        "detectHostIp",
+        (() => "172.30.20.50") as never
+      );
+
+      let capturedStaticHosts: Record<string, string> | undefined;
+      let capturedServices: unknown[] | undefined;
+      let capturedUpstreamDns: unknown;
+
+      patchSet.patch(
+        (manager as unknown as { dnsManager: Record<string, unknown> }).dnsManager,
+        "generateConfig" as keyof Record<string, unknown>,
+        (async (services: unknown[], staticHosts: Record<string, string>, upstreamDns: unknown) => {
+          capturedServices = services;
+          capturedStaticHosts = staticHosts;
+          capturedUpstreamDns = upstreamDns;
+          return "corefile";
+        }) as never
+      );
+      patchSet.patch(
+        (manager as unknown as { dnsManager: Record<string, unknown> }).dnsManager,
+        "reload" as keyof Record<string, unknown>,
+        (async () => ({ success: true, message: "reloaded" })) as never
+      );
+
+      await (
+        manager as unknown as {
+          updateDnsConfig: () => Promise<void>;
+        }
+      ).updateDnsConfig();
+
+      expect(capturedServices).toHaveLength(2);
+      expect(capturedStaticHosts).toEqual({
+        "nxs-svc-dev.nexus-central.tech": "172.30.20.50",
+        "webtop.nexus-central.tech": "172.30.20.50",
+        "whoami.nexus-central.tech": "172.30.20.50",
+      });
+      expect(capturedUpstreamDns).toEqual({ primary: "1.1.1.1", backup: "1.0.0.1" });
+    });
+
     it("should create only relative service directories and expand MEDIA_PATH", async () => {
       await (
         manager as unknown as {

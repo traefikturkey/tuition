@@ -15,6 +15,7 @@ import { CaddyManager } from "../../services/caddy/manager.js";
 import { CoreDnsManager } from "../../services/dns/coredns.js";
 import type { ServiceDefinition, ServiceConfig } from "../../types/index.js";
 import { logger } from "../../utils/logger.js";
+import { detectHostIp } from "../../utils/network.js";
 
 export type ServiceState = "available" | "enabled" | "running" | "stopped" | "disabled";
 
@@ -36,6 +37,7 @@ export class LifecycleManager {
   private composeManager: ComposeManager;
   private caddyManager: CaddyManager;
   private dnsManager: CoreDnsManager;
+  private detectHostIp = detectHostIp;
 
   constructor(configPath?: string) {
     this.configManager = new ConfigManager(configPath);
@@ -79,14 +81,27 @@ export class LifecycleManager {
       }
     }
 
-    // Get Docker host IP for tuition hostname registration
-    const hostIp = await docker.getNetworkGateway("tuition");
+    // Detect the host's LAN IP so external DNS clients can route to it
+    const hostIp = this.detectHostIp();
     const staticHosts: Record<string, string> = {};
 
     if (hostIp) {
       // Register tuition hostname (e.g., nxs-tuition.nexus-central.tech)
       const tuitionHostname = `${globalConfig.hostname}.${globalConfig.domain}`;
       staticHosts[tuitionHostname] = hostIp;
+
+      // Register service subdomains from Caddy labels so Pi-hole/external
+      // DNS can resolve them to the reverse proxy host
+      for (const service of enabledServices) {
+        if (service.labels?.["caddy"]) {
+          const caddyLabel = service.labels["caddy"];
+          const subdomain = caddyLabel.replace(/\.?\$\{DOMAIN\}/g, "");
+          if (subdomain) {
+            const fqdn = `${subdomain}.${globalConfig.domain}`;
+            staticHosts[fqdn] = hostIp;
+          }
+        }
+      }
     }
 
     // Regenerate CoreDNS config with static hosts and upstream DNS
@@ -206,7 +221,7 @@ export class LifecycleManager {
       TZ: globalConfig.timezone,
       PUID: String(globalConfig.puid),
       PGID: String(globalConfig.pgid),
-      HOST_IP: "127.0.0.1", // Will be detected
+      HOST_IP: this.detectHostIp() ?? "127.0.0.1",
       MEDIA_PATH: "./data/media", // Default media path
       ...options.customEnv,
     };

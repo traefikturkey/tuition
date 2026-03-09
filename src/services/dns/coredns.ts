@@ -74,6 +74,9 @@ export class CoreDnsManager {
     lines.push("");
     lines.push("# Listen on port 54 to avoid conflict with systemd-resolved on port 53");
     lines.push(".:54 {");
+    lines.push("    # Bind explicitly to IPv4 on all interfaces for external accessibility");
+    lines.push("    bind 0.0.0.0");
+    lines.push("");
     lines.push("    # Hosts file for static and container entries");
     lines.push("    hosts /etc/coredns/hosts {");
     lines.push(`        fallthrough`);
@@ -118,12 +121,12 @@ export class CoreDnsManager {
       lines.push("");
     }
 
-    // Add service entries (will be resolved at runtime)
+    // Add service entries with dns.hostname labels
     for (const service of services) {
       if (service.labels?.["dns.hostname"]) {
         const hostname = service.labels["dns.hostname"];
         // Container IPs are resolved at runtime by Docker DNS
-        lines.push(`# ${hostname} -> ${service.name} (resolved by Docker)`);
+        lines.push(`# ${hostname} -> ${service.name} (container DNS, no static IP)`);
       }
     }
 
@@ -240,8 +243,8 @@ export class CoreDnsManager {
           restart: "unless-stopped",
           // Use host networking to bind directly to host port 54
           // This makes CoreDNS accessible from external systems (Pi-holes, etc.)
+          // Ports are not published when using host networking
           network_mode: "host",
-          ports: ["54:53/tcp", "54:53/udp"],
           volumes: [
             `${this.configPath}/Corefile:/etc/coredns/Corefile:ro`,
             `${this.configPath}/hosts:/etc/coredns/hosts:ro`,
