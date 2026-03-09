@@ -141,7 +141,9 @@ export class StatusDashboard {
           bg: 'blue',
         },
       },
-      items: services.map(s => this.formatServiceRow(s)),
+      items: services
+        .filter(s => s.state !== 'available')
+        .map(s => this.formatServiceRow(s)),
     });
 
     // Docker status box
