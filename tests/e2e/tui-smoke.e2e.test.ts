@@ -14,7 +14,12 @@ import { CaddyManager } from "../../src/services/caddy/manager.js";
 import { CoreDnsManager } from "../../src/services/dns/coredns.js";
 import { docker } from "../../src/services/docker/client.js";
 import { captureConsoleLog, createPatchSet, stubProcessExit } from "../helpers/test-utils.js";
-import { createBlessedFactory, FakeBlessedElement, FakeBlessedScreen, findChildByLabel } from "../helpers/fake-blessed.js";
+import {
+  createBlessedFactory,
+  FakeBlessedElement,
+  FakeBlessedScreen,
+  findChildByLabel,
+} from "../helpers/fake-blessed.js";
 
 async function waitFor<T>(resolveValue: () => T | undefined, attempts = 10): Promise<T | undefined> {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -69,19 +74,27 @@ describe("TUI e2e smoke", () => {
       upstreamDns: { primary: "1.1.1.1" },
     });
 
-    patchSet.patch(LifecycleManager.prototype, "listAll", async () => [
-      {
-        name: "whoami",
-        state: "running",
-        definition: { category: "development" },
-      },
-    ] as never);
+    patchSet.patch(
+      LifecycleManager.prototype,
+      "listAll",
+      async () =>
+        [
+          {
+            name: "whoami",
+            state: "running",
+            definition: { category: "development" },
+          },
+        ] as never
+    );
     patchSet.patch(CaddyManager.prototype, "status", async () => ({ running: true, configValid: true, routes: 1 }));
     patchSet.patch(CoreDnsManager.prototype, "status", async () => ({ running: true, hosts: 1 }));
     patchSet.patch(docker, "info", async () => ({ ServerVersion: "26.1.0", Containers: 1, Images: 5 }));
-    patchSet.patch(docker, "listContainers", async () => [
-      { id: "1", name: "whoami", image: "test", state: "running", status: "Up", ports: [], labels: {} },
-    ] as never);
+    patchSet.patch(
+      docker,
+      "listContainers",
+      async () =>
+        [{ id: "1", name: "whoami", image: "test", state: "running", status: "Up", ports: [], labels: {} }] as never
+    );
 
     const app = new TuiApp(configPath);
     await app.run();

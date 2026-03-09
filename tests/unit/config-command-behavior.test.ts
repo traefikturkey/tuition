@@ -88,14 +88,15 @@ describe("ConfigCommand behavior", () => {
 
   it("shows only the global section when infrastructure and services are empty", async () => {
     ConfigManager.prototype.exists = async () => true;
-    ConfigManager.prototype.load = async () => ({
-      global: {
-        hostname: "test-host",
-        domain: "example.com",
-      },
-      infrastructure: undefined,
-      services: {},
-    } as never);
+    ConfigManager.prototype.load = async () =>
+      ({
+        global: {
+          hostname: "test-host",
+          domain: "example.com",
+        },
+        infrastructure: undefined,
+        services: {},
+      }) as never;
 
     const command = new ConfigCommand();
     await command.show({});
@@ -108,23 +109,24 @@ describe("ConfigCommand behavior", () => {
 
   it("shows infrastructure and multiple service configurations when present", async () => {
     ConfigManager.prototype.exists = async () => true;
-    ConfigManager.prototype.load = async () => ({
-      global: {
-        hostname: "test-host",
-        domain: "example.com",
-      },
-      infrastructure: {
-        reverseProxy: "caddy",
-      },
-      services: {
-        whoami: {
-          enabled: true,
+    ConfigManager.prototype.load = async () =>
+      ({
+        global: {
+          hostname: "test-host",
+          domain: "example.com",
         },
-        redis: {
-          enabled: false,
+        infrastructure: {
+          reverseProxy: "caddy",
         },
-      },
-    } as never);
+        services: {
+          whoami: {
+            enabled: true,
+          },
+          redis: {
+            enabled: false,
+          },
+        },
+      }) as never;
 
     const command = new ConfigCommand();
     await command.show({});

@@ -48,11 +48,7 @@ describe("ConfigCommand redaction", () => {
   });
 
   it("should redact sensitive keys in top-level arrays and preserve undefined entries", () => {
-    const input = [
-      { clientSecret: "secret-1", name: "svc1" },
-      undefined,
-      { apiKey: "secret-2", name: "svc2" },
-    ];
+    const input = [{ clientSecret: "secret-1", name: "svc1" }, undefined, { apiKey: "secret-2", name: "svc2" }];
 
     const result = redactSensitiveValues(input);
 

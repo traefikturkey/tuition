@@ -189,7 +189,11 @@ describe("BackupManager", () => {
     it("should restore configuration and compose files from a created backup", async () => {
       await mkdir(join(tempDir, "config", "services"), { recursive: true });
       await writeFile(join(tempDir, "config", "global.yaml"), "hostname: before\ndomain: example.com", "utf-8");
-      await writeFile(join(tempDir, "whoami.docker-compose.yaml"), "services:\n  whoami:\n    image: traefik/whoami", "utf-8");
+      await writeFile(
+        join(tempDir, "whoami.docker-compose.yaml"),
+        "services:\n  whoami:\n    image: traefik/whoami",
+        "utf-8"
+      );
 
       const createResult = await backupManager.createBackup({
         includeConfigs: true,

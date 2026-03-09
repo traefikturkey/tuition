@@ -407,15 +407,20 @@ describe("Multi-command flow integration", () => {
       imageTag: "latest",
     });
 
-    patchSet.patch(catalog, "get", async (name: string) => ({
-      name,
-      category: "development",
-      description: "HTTP echo service",
-      image: "traefik/whoami:latest",
-      labels: {
-        caddy: `${name}.${"${DOMAIN}"}`,
-      },
-    }) as never);
+    patchSet.patch(
+      catalog,
+      "get",
+      async (name: string) =>
+        ({
+          name,
+          category: "development",
+          description: "HTTP echo service",
+          image: "traefik/whoami:latest",
+          labels: {
+            caddy: `${name}.${"${DOMAIN}"}`,
+          },
+        }) as never
+    );
 
     patchSet.patch(CaddyManager.prototype, "initialize", async () => undefined);
     patchSet.patch(CaddyManager.prototype, "generateConfig", async () => "generated");

@@ -375,12 +375,17 @@ describe("DnsCommand", () => {
       },
       reload: async () => ({ success: true, message: "reloaded" }),
     };
-    patchSet.patch(catalog, "get", async (name: string) => ({
-      name,
-      category: "development",
-      description: "service",
-      image: "test:latest",
-    }) as never);
+    patchSet.patch(
+      catalog,
+      "get",
+      async (name: string) =>
+        ({
+          name,
+          category: "development",
+          description: "service",
+          image: "test:latest",
+        }) as never
+    );
 
     await command.regenerate({});
 
