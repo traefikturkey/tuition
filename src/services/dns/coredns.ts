@@ -137,13 +137,7 @@ export class CoreDnsManager {
     // Generate compose file with optional cluster configuration
     await this.generateComposeFile(dnsCluster);
 
-    // Check if already running
-    const container = await docker.getContainer("coredns");
-    if (container && container.state === "running") {
-      return { success: true, message: "CoreDNS is already running" };
-    }
-
-    // Start via docker-compose
+    // Start via docker-compose (idempotent — recreates container if config changed)
     const result = await this.composeManager.up("coredns", { detached: true });
 
     if (result.success) {

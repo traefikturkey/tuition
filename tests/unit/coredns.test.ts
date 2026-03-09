@@ -155,7 +155,9 @@ describe("CoreDnsManager", () => {
   });
 
   describe("start", () => {
-    it("returns early when CoreDNS is already running", async () => {
+    it("calls compose up even when CoreDNS is already running", async () => {
+      let upCalled = false;
+
       patchSet.patch(docker, "networkExists", async () => true);
       patchSet.patch(docker, "getContainer", async () => ({
         id: "coredns-id",
@@ -166,10 +168,30 @@ describe("CoreDnsManager", () => {
         ports: [],
         labels: {},
       }));
+      patchSet.patch(
+        manager as unknown as { generateComposeFile: () => Promise<void> },
+        "generateComposeFile",
+        async () => undefined
+      );
+      patchSet.patch(
+        manager as unknown as {
+          composeManager: {
+            up: (name: string, options?: Record<string, unknown>) => Promise<{ success: boolean; output: string }>;
+          };
+        },
+        "composeManager",
+        {
+          up: async () => {
+            upCalled = true;
+            return { success: true, output: "started" };
+          },
+        } as never
+      );
 
       const result = await manager.start();
 
-      expect(result).toEqual({ success: true, message: "CoreDNS is already running" });
+      expect(upCalled).toBe(true);
+      expect(result).toEqual({ success: true, message: "CoreDNS started successfully" });
     });
 
     it("starts CoreDNS when the network already exists", async () => {
