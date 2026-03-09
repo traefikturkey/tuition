@@ -215,14 +215,9 @@ export class CaddyManager {
       environment: {
         CF_API_TOKEN: "${CF_API_TOKEN}",
       },
+      dns: ["1.1.1.1", "8.8.8.8"],
       cap_add: ["NET_ADMIN"], // Required for HTTP/3
     };
-
-    // Note: Docker's dns configuration only accepts IP addresses (not IP:port)
-    // Since CoreDNS uses host networking on port 54 (to avoid conflict with systemd-resolved on 53),
-    // we cannot use Docker's native DNS configuration. Caddy will use Docker's default DNS resolver
-    // (127.0.0.11) which forwards to the host's configured DNS servers.
-    // For ACME DNS challenges, Caddy uses the Cloudflare DNS plugin which handles resolution internally.
 
     const compose = {
       services: {

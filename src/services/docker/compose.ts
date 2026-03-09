@@ -67,6 +67,7 @@ export class ComposeManager {
       ports: this.formatPorts(definition.ports || []),
       volumes: resolvedVolumes,
       labels: definition.labels,
+      networks: ["tuition"],
       restart: "unless-stopped",
       deploy: definition.resourceLimits
         ? {

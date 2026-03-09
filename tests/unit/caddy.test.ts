@@ -410,6 +410,11 @@ describe("CaddyManager", () => {
       expect(content).toContain("80:80");
       expect(content).toContain("443:443/udp");
       expect(content).toContain("CF_API_TOKEN: ${CF_API_TOKEN}");
+      expect(content).toContain("dns:");
+      expect(content).toContain("- 1.1.1.1");
+      expect(content).toContain("- 8.8.8.8");
+      expect(content).toContain("networks:");
+      expect(content).toContain("- tuition");
       expect(content).toContain("external: true");
     });
   });

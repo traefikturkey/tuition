@@ -41,13 +41,14 @@ describe("ComposeManager", () => {
       expect(path).toContain("test-service.docker-compose.yaml");
       const content = await readFile(path, "utf-8");
       const compose = parseYaml(content) as {
-        services: Record<string, { image: string; container_name: string; restart: string }>;
+        services: Record<string, { image: string; container_name: string; restart: string; networks?: string[] }>;
         networks: Record<string, { driver: string; external: boolean }>;
       };
 
       expect(compose.services["test-service"]?.image).toBe("test:latest");
       expect(compose.services["test-service"]?.container_name).toBe("test-service");
       expect(compose.services["test-service"]?.restart).toBe("unless-stopped");
+      expect(compose.services["test-service"]?.networks).toEqual(["tuition"]);
       expect(compose.networks?.tuition).toEqual({ driver: "bridge", external: true });
     });
 
