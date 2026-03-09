@@ -105,6 +105,7 @@ export class TuiApp {
       width: 12,
       height: 3,
       content: ' {center}[S]ervices{/center} ',
+      tags: true,
       mouse: true,
       keys: true,
       style: {
@@ -123,6 +124,7 @@ export class TuiApp {
       width: 14,
       height: 3,
       content: ' {center}[D]ashboard{/center} ',
+      tags: true,
       mouse: true,
       keys: true,
       style: {
@@ -141,6 +143,7 @@ export class TuiApp {
       width: 10,
       height: 3,
       content: ' {center}[Q]uit{/center} ',
+      tags: true,
       mouse: true,
       keys: true,
       style: {
