@@ -71,6 +71,7 @@ export class StatusDashboard {
       left: 0,
       width: '50%',
       height: 8,
+      tags: true,
       border: {
         type: 'line',
       },
@@ -90,6 +91,7 @@ export class StatusDashboard {
       left: '50%',
       width: '50%',
       height: 8,
+      tags: true,
       border: {
         type: 'line',
       },
@@ -130,6 +132,7 @@ export class StatusDashboard {
       keys: true,
       mouse: true,
       vi: true,
+      tags: true,
       style: {
         item: {
           fg: 'white',
@@ -148,6 +151,7 @@ export class StatusDashboard {
       left: 0,
       width: '100%',
       height: 'shrink',
+      tags: true,
       border: {
         type: 'line',
       },

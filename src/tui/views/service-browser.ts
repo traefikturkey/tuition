@@ -51,6 +51,7 @@ export class ServiceBrowser {
       keys: true,
       mouse: true,
       vi: true,
+      tags: true,
       border: {
         type: 'line',
       },
@@ -77,6 +78,7 @@ export class ServiceBrowser {
       left: '40%',
       width: '60%',
       height: '100%-2',
+      tags: true,
       border: {
         type: 'line',
       },
@@ -108,6 +110,7 @@ export class ServiceBrowser {
       width: 12,
       height: 3,
       content: ' {center}Enable{/center} ',
+      tags: true,
       border: {
         type: 'line',
       },
@@ -129,6 +132,7 @@ export class ServiceBrowser {
       width: 12,
       height: 3,
       content: ' {center}Disable{/center} ',
+      tags: true,
       border: {
         type: 'line',
       },
@@ -150,6 +154,7 @@ export class ServiceBrowser {
       width: 10,
       height: 3,
       content: ' {center}Start{/center} ',
+      tags: true,
       border: {
         type: 'line',
       },
@@ -171,6 +176,7 @@ export class ServiceBrowser {
       width: 10,
       height: 3,
       content: ' {center}Stop{/center} ',
+      tags: true,
       border: {
         type: 'line',
       },
