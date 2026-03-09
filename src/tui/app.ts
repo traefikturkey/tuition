@@ -18,6 +18,7 @@ export class TuiApp {
   private lifecycleManager: LifecycleManager;
   private caddyManager: CaddyManager;
   private dnsManager: CoreDnsManager;
+  private persistentElements = new Set<Widgets.BlessedElement>();
 
   constructor(configPath?: string) {
     this.configManager = new ConfigManager(configPath);
@@ -65,7 +66,7 @@ export class TuiApp {
     });
 
     // Create header
-    blessed.box({
+    const header = blessed.box({
       parent: this.screen,
       top: 0,
       left: 0,
@@ -168,8 +169,12 @@ export class TuiApp {
       process.exit(0);
     });
 
+    // Keyboard shortcuts matching the button labels
+    this.screen.key(['s'], () => this.showServiceBrowser());
+    this.screen.key(['d'], () => this.showDashboard());
+
     // Create status bar
-    blessed.box({
+    const statusBar = blessed.box({
       parent: this.screen,
       bottom: 0,
       left: 0,
@@ -181,6 +186,11 @@ export class TuiApp {
         bg: 'blue',
       },
     });
+
+    // Track persistent elements so clearContent() preserves them
+    this.persistentElements.add(header);
+    this.persistentElements.add(menuBox);
+    this.persistentElements.add(statusBar);
 
     // Initial view - show dashboard
     this.showDashboard();
@@ -218,12 +228,11 @@ export class TuiApp {
    * Clear content area (preserve header, menu, status bar)
    */
   private clearContent(): void {
-    // Remove all elements except header (0), menu (1), and status bar (last)
-    const children = this.screen.children.filter(
-      (_, index) => index > 1 && index < this.screen.children.length - 1
+    const toDestroy = (this.screen.children as Widgets.BlessedElement[]).filter(
+      (child) => !this.persistentElements.has(child)
     );
-    
-    for (const child of children) {
+
+    for (const child of toDestroy) {
       child.destroy();
     }
   }

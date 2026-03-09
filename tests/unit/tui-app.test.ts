@@ -119,6 +119,32 @@ describe("TuiApp", () => {
     patchSet.restore();
   });
 
+  it("switches views via keyboard shortcuts", async () => {
+    let dashboardRenderCalls = 0;
+    let browserRenderCalls = 0;
+
+    patchSet.patch(StatusDashboard.prototype, "render", async () => {
+      dashboardRenderCalls += 1;
+    });
+    patchSet.patch(ServiceBrowser.prototype, "render", async () => {
+      browserRenderCalls += 1;
+    });
+
+    const app = new TuiApp();
+    const screenRef = (app as unknown as { screen: FakeBlessedScreen }).screen;
+
+    // 's' key should switch to service browser
+    await screenRef.emitAsync("key:s");
+    expect(browserRenderCalls).toBe(1);
+
+    // 'd' key should switch to dashboard
+    const beforeDashboard = dashboardRenderCalls;
+    await screenRef.emitAsync("key:d");
+    expect(dashboardRenderCalls).toBeGreaterThan(beforeDashboard);
+
+    patchSet.restore();
+  });
+
   it("exits immediately on escape key", async () => {
     const exitStub = stubProcessExit();
     patchSet.patch(StatusDashboard.prototype, "render", async () => undefined);
