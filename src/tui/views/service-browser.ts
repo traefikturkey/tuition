@@ -26,10 +26,10 @@ export class ServiceBrowser {
     // Create main container
     const container = blessed.box({
       parent: this.screen,
-      top: 6,
+      top: 4,
       left: 0,
       right: 0,
-      height: '100%-7',
+      height: '100%-5',
       border: {
         type: 'line',
       },
