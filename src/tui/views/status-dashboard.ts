@@ -17,19 +17,22 @@ export class StatusDashboard {
   private lifecycleManager: LifecycleManager;
   private caddyManager: CaddyManager;
   private dnsManager: CoreDnsManager;
+  private onServiceSelect?: (serviceName: string) => void;
 
   constructor(
     screen: Widgets.Screen,
     configManager: ConfigManager,
     lifecycleManager: LifecycleManager,
     caddyManager: CaddyManager,
-    dnsManager: CoreDnsManager
+    dnsManager: CoreDnsManager,
+    onServiceSelect?: (serviceName: string) => void
   ) {
     this.screen = screen;
     this.configManager = configManager;
     this.lifecycleManager = lifecycleManager;
     this.caddyManager = caddyManager;
     this.dnsManager = dnsManager;
+    this.onServiceSelect = onServiceSelect;
   }
 
   /**
@@ -122,6 +125,9 @@ export class StatusDashboard {
       },
     });
 
+    // Filter out available services for the status list
+    const visibleServices = services.filter(s => s.state !== 'available');
+
     // Create service status list
     const serviceList = blessed.list({
       parent: servicesBox,
@@ -141,9 +147,15 @@ export class StatusDashboard {
           bg: 'blue',
         },
       },
-      items: services
-        .filter(s => s.state !== 'available')
-        .map(s => this.formatServiceRow(s)),
+      items: visibleServices.map(s => this.formatServiceRow(s)),
+    });
+
+    // Open diagnostics when Enter is pressed on a service
+    serviceList.on('select', (_item: unknown, index: number) => {
+      const service = visibleServices[index];
+      if (service && this.onServiceSelect) {
+        this.onServiceSelect(service.name);
+      }
     });
 
     // Docker status box

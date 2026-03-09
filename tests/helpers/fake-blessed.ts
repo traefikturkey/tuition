@@ -14,10 +14,12 @@ export class FakeBlessedElement {
   askHandler?: (err: Error | null, value: string) => void;
   displayedMessage?: string;
   renderCount = 0;
+  style: Record<string, unknown>;
 
   constructor(public readonly options: Record<string, unknown> = {}) {
     this.content = String(options.content || "");
     this.items = Array.isArray(options.items) ? (options.items as string[]) : [];
+    this.style = (options.style as Record<string, unknown>) || {};
 
     const parent = options.parent as FakeBlessedElement | undefined;
     parent?.children.push(this);
@@ -45,6 +47,14 @@ export class FakeBlessedElement {
 
   setContent(content: string): void {
     this.content = content;
+  }
+
+  getContent(): string {
+    return this.content;
+  }
+
+  setScrollPerc(_perc: number): void {
+    // no-op for fake
   }
 
   setItems(items: string[]): void {

@@ -72,7 +72,65 @@ describe("StatusDashboard", () => {
   it("shows a Docker access error when Docker info retrieval fails", async () => {
     patchSet.patch(docker, "info", async () => {
       throw new Error("daemon unavailable");
-    });
+  it("calls onServiceSelect when Enter is pressed on a service", async () => {
+    patchSet.patch(docker, "info", async () => ({ ServerVersion: "26.1.0", Containers: 2, Images: 12 }));
+    patchSet.patch(docker, "listContainers", async () => []);
+
+    let selectedService: string | undefined;
+    const onServiceSelect = (name: string) => {
+      selectedService = name;
+    };
+
+    const dashboard = new StatusDashboard(
+      screen as never,
+      configManager as never,
+      lifecycleManager as never,
+      caddyManager as never,
+      dnsManager as never,
+      onServiceSelect
+    );
+
+    await dashboard.render();
+
+    const container = findChildByLabel(screen, " Dashboard ");
+    const serviceStatusBox = container ? findChildByLabel(container, " Service Status ") : undefined;
+
+    // The service list is the first child of the service status box
+    const serviceList = serviceStatusBox?.children[0];
+    expect(serviceList).toBeDefined();
+
+    // Simulate selecting the first service (index 0 = whoami)
+    await serviceList?.emitAsync("select", {}, 0);
+
+    expect(selectedService).toBe("whoami");
+
+    patchSet.restore();
+  });
+
+  it("does not call onServiceSelect when callback is not provided", async () => {
+    patchSet.patch(docker, "info", async () => ({ ServerVersion: "26.1.0", Containers: 2, Images: 12 }));
+    patchSet.patch(docker, "listContainers", async () => []);
+
+    const dashboard = new StatusDashboard(
+      screen as never,
+      configManager as never,
+      lifecycleManager as never,
+      caddyManager as never,
+      dnsManager as never
+    );
+
+    await dashboard.render();
+
+    const container = findChildByLabel(screen, " Dashboard ");
+    const serviceStatusBox = container ? findChildByLabel(container, " Service Status ") : undefined;
+    const serviceList = serviceStatusBox?.children[0];
+
+    // Should not throw even without callback
+    await serviceList?.emitAsync("select", {}, 0);
+
+    patchSet.restore();
+  });
+});
 
     const dashboard = new StatusDashboard(
       screen as never,

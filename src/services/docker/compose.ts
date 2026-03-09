@@ -3,7 +3,7 @@
  * Manages docker-compose files and container orchestration
  */
 
-import { spawn } from "child_process";
+import { spawn, type ChildProcess } from "child_process";
 import { writeFile, mkdir, access } from "fs/promises";
 import { constants } from "fs";
 import { join, dirname } from "path";
@@ -210,6 +210,32 @@ export class ComposeManager {
     }
 
     return this.execDocker(args);
+  }
+
+  /**
+   * Stream logs from a service via docker compose logs -f.
+   * Returns the spawned ChildProcess so the caller can read stdout/stderr
+   * and kill the process when done.
+   */
+  streamLogs(
+    name: string,
+    options: {
+      tail?: number;
+    } = {}
+  ): ChildProcess {
+    const composePath = join(this.projectPath, `${name}.docker-compose.yaml`);
+    const args = ["compose", "-f", composePath, "-p", name, "logs", "-f"];
+
+    if (options.tail) {
+      args.push("--tail", String(options.tail));
+    }
+
+    const proc = this.spawnProcess("docker", args, {
+      cwd: this.projectPath,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    return proc;
   }
 
   /**

@@ -7,6 +7,7 @@ import blessed from 'blessed';
 import type { Widgets } from 'blessed';
 import { ServiceBrowser } from './views/service-browser.js';
 import { StatusDashboard } from './views/status-dashboard.js';
+import { ServiceDiagnostics } from './views/service-diagnostics.js';
 import { LifecycleManager } from '../core/lifecycle/manager.js';
 import { CaddyManager } from '../services/caddy/manager.js';
 import { CoreDnsManager } from '../services/dns/coredns.js';
@@ -216,9 +217,28 @@ export class TuiApp {
       this.configManager,
       this.lifecycleManager,
       this.caddyManager,
-      this.dnsManager
+      this.dnsManager,
+      (serviceName: string) => this.showDiagnostics(serviceName)
     );
     await dashboard.render();
+  }
+
+  /**
+   * Show service diagnostics view for a specific service
+   */
+  private async showDiagnostics(serviceName: string): Promise<void> {
+    this.clearContent();
+
+    const diagnostics = new ServiceDiagnostics(
+      this.screen,
+      serviceName,
+      this.lifecycleManager,
+      this.configManager,
+      this.caddyManager,
+      this.dnsManager,
+      () => this.showDashboard()
+    );
+    await diagnostics.render();
   }
 
   /**
