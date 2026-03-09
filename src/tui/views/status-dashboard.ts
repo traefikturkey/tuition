@@ -51,7 +51,7 @@ export class StatusDashboard {
       parent: this.screen,
       top: 6,
       left: 0,
-      width: '100%',
+      right: 0,
       height: '100%-7',
       border: {
         type: 'line',
@@ -89,7 +89,7 @@ export class StatusDashboard {
       parent: container,
       top: 0,
       left: '50%',
-      width: '50%',
+      right: 0,
       height: 8,
       tags: true,
       border: {
@@ -109,7 +109,7 @@ export class StatusDashboard {
       parent: container,
       top: 8,
       left: 0,
-      width: '100%',
+      right: 0,
       height: '50%',
       border: {
         type: 'line',
@@ -127,8 +127,8 @@ export class StatusDashboard {
       parent: servicesBox,
       top: 0,
       left: 0,
-      width: '100%',
-      height: '100%',
+      right: 0,
+      bottom: 0,
       keys: true,
       mouse: true,
       vi: true,
@@ -149,7 +149,7 @@ export class StatusDashboard {
       parent: container,
       bottom: 0,
       left: 0,
-      width: '100%',
+      right: 0,
       height: 'shrink',
       tags: true,
       border: {
