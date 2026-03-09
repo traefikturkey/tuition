@@ -106,6 +106,17 @@ export function createCli(): Command {
     });
 
   serviceCmd
+    .command("remove <name>")
+    .description("Remove a service completely (config + data)")
+    .option("--keep-data", "Preserve service data directory")
+    .option("--force", "Skip confirmation prompt")
+    .option("-p, --path <path>", "Custom configuration path")
+    .action(async (name, options) => {
+      const cmd = new ServiceCommand(options.path);
+      await cmd.remove(name, options);
+    });
+
+  serviceCmd
     .command("start <name>")
     .description("Start a service")
     .option("-p, --path <path>", "Custom configuration path")

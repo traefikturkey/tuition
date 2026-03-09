@@ -195,6 +195,29 @@ export class ServiceBrowser {
       keys: true,
     });
 
+    const btnRemove = blessed.button({
+      parent: buttons,
+      left: 54,
+      top: 0,
+      width: 12,
+      height: 3,
+      content: 'Remove',
+      align: 'center',
+      valign: 'middle',
+      border: {
+        type: 'line',
+      },
+      style: {
+        fg: 'white',
+        bg: 'red',
+        focus: {
+          bg: 'cyan',
+        },
+      },
+      mouse: true,
+      keys: true,
+    });
+
     // Update details when selection changes
     list.on('select', (item, index) => {
       const service = services[index];
@@ -244,6 +267,22 @@ export class ServiceBrowser {
         const result = await this.lifecycleManager.stop(service.name);
         this.showMessage(result.message, result.success ? 'green' : 'red');
         await this.refresh(list, services);
+      }
+    });
+
+    btnRemove.on('press', async () => {
+      const service = services[selectedIndex];
+      if (service) {
+        this.showConfirm(
+          `Remove service '${service.name}'?\nThis will delete configuration and all data.`,
+          async (confirmed) => {
+            if (confirmed) {
+              const result = await this.lifecycleManager.remove(service.name);
+              this.showMessage(result.message, result.success ? 'green' : 'red');
+              await this.refresh(list, services);
+            }
+          }
+        );
       }
     });
 
@@ -337,6 +376,35 @@ export class ServiceBrowser {
 
     msg.display(message, 3, () => {
       msg.destroy();
+    });
+  }
+
+  /**
+   * Show a confirmation dialog
+   */
+  private showConfirm(message: string, callback: (confirmed: boolean) => void): void {
+    const dialog = blessed.question({
+      parent: this.screen,
+      border: 'line',
+      height: 'shrink',
+      width: 'half',
+      top: 'center',
+      left: 'center',
+      label: ' Confirm ',
+      tags: true,
+      keys: true,
+      vi: true,
+      style: {
+        border: {
+          fg: 'red',
+        },
+      },
+    });
+
+    dialog.ask(message, (err, value) => {
+      dialog.destroy();
+      this.screen.render();
+      callback(!err && value === 'yes');
     });
   }
 

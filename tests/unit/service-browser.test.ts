@@ -23,6 +23,7 @@ describe("ServiceBrowser", () => {
     disable: (name: string) => Promise<{ success: boolean; message: string }>;
     start: (name: string) => Promise<{ success: boolean; message: string }>;
     stop: (name: string) => Promise<{ success: boolean; message: string }>;
+    remove: (name: string) => Promise<{ success: boolean; message: string }>;
   };
 
   beforeEach(() => {
@@ -34,6 +35,7 @@ describe("ServiceBrowser", () => {
     patchSet.patch(blessed, "list", factory.list as unknown as typeof blessed.list);
     patchSet.patch(blessed, "button", factory.button as unknown as typeof blessed.button);
     patchSet.patch(blessed, "message", factory.message as unknown as typeof blessed.message);
+    patchSet.patch(blessed, "question", factory.question as unknown as typeof blessed.question);
 
     services = [
       {
@@ -58,6 +60,7 @@ describe("ServiceBrowser", () => {
       disable: async () => ({ success: true, message: "disabled whoami" }),
       start: async () => ({ success: true, message: "started whoami" }),
       stop: async () => ({ success: true, message: "stopped whoami" }),
+      remove: async () => ({ success: true, message: "removed whoami" }),
     };
   });
 
@@ -128,6 +131,74 @@ describe("ServiceBrowser", () => {
     expect(actions).toEqual(["enable:whoami", "disable:whoami", "start:whoami", "stop:whoami"]);
     expect(list?.items[0]).toContain("whoami");
     expect(screen.renderCount).toBeGreaterThan(0);
+
+    patchSet.restore();
+  });
+
+  it("shows confirmation dialog and calls remove when confirmed", async () => {
+    const actions: string[] = [];
+    lifecycleManager.remove = async (name: string) => {
+      actions.push(`remove:${name}`);
+      return { success: true, message: "removed whoami" };
+    };
+
+    const browser = new ServiceBrowser(screen as never, lifecycleManager as never);
+    await browser.render();
+
+    const container = findChildByLabel(screen, " Services ");
+    const list = container ? findChildByLabel(container, " Available ") : undefined;
+    const removeButton = container ? findChildByContent(container, "Remove") : undefined;
+
+    expect(removeButton).toBeDefined();
+
+    // Select the first service
+    await list?.emitAsync("select", {}, 0);
+
+    // Press the remove button — this opens the confirmation dialog
+    await removeButton?.emitAsync("press");
+
+    // Find the confirmation dialog by its label
+    const confirmDialog = findChildByLabel(screen, " Confirm ");
+    expect(confirmDialog).toBeDefined();
+
+    // Simulate confirming by calling the askHandler with 'yes'
+    confirmDialog?.askHandler?.(null, "yes");
+
+    // Wait for async callback to complete
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(actions).toEqual(["remove:whoami"]);
+
+    patchSet.restore();
+  });
+
+  it("does not call remove when confirmation is declined", async () => {
+    const actions: string[] = [];
+    lifecycleManager.remove = async (name: string) => {
+      actions.push(`remove:${name}`);
+      return { success: true, message: "removed whoami" };
+    };
+
+    const browser = new ServiceBrowser(screen as never, lifecycleManager as never);
+    await browser.render();
+
+    const container = findChildByLabel(screen, " Services ");
+    const list = container ? findChildByLabel(container, " Available ") : undefined;
+    const removeButton = container ? findChildByContent(container, "Remove") : undefined;
+
+    await list?.emitAsync("select", {}, 0);
+    await removeButton?.emitAsync("press");
+
+    const confirmDialog = findChildByLabel(screen, " Confirm ");
+    expect(confirmDialog).toBeDefined();
+
+    // Simulate declining by calling the askHandler with 'no'
+    confirmDialog?.askHandler?.(null, "no");
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(actions).toEqual([]);
+    expect(confirmDialog?.destroyed).toBe(true);
 
     patchSet.restore();
   });

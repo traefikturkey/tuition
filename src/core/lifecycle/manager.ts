@@ -329,6 +329,76 @@ export class LifecycleManager {
   }
 
   /**
+   * Remove a service completely, returning it to 'available' state.
+   * Stops the container, deletes the config file, removes the compose file,
+   * and by default removes service data (override with keepData).
+   */
+  async remove(
+    name: string,
+    options: {
+      keepData?: boolean;
+    } = {}
+  ): Promise<{ success: boolean; message: string }> {
+    const config = await this.configManager.loadService(name);
+
+    if (!config) {
+      return {
+        success: false,
+        message: `Service '${name}' has no configuration to remove`,
+      };
+    }
+
+    // Stop the service if it's running
+    const stopResult = await this.stop(name);
+    if (!stopResult.success && !stopResult.message.includes("Failed to stop")) {
+      // Ignore stop failures (service may already be stopped)
+    }
+
+    // Remove service data unless keepData is set
+    if (!options.keepData) {
+      const dataDir = join(this.configManager.getTuitionDir(), "data", name);
+      try {
+        await rm(dataDir, { recursive: true, force: true });
+        logger.info("lifecycle.manager", `Removed data directory for service '${name}'`);
+      } catch (error) {
+        logger.warn("lifecycle.manager", `Failed to remove data for '${name}': ${error}`);
+      }
+    }
+
+    // Remove compose file
+    const composePath = join(this.configManager.getTuitionDir(), `${name}.docker-compose.yaml`);
+    try {
+      await rm(composePath, { force: true });
+    } catch (error) {
+      logger.warn("lifecycle.manager", `Failed to remove compose file for '${name}': ${error}`);
+    }
+
+    // Delete the service config file
+    await this.configManager.deleteService(name);
+
+    // Update Caddy configuration to remove route
+    try {
+      await this.updateCaddyConfig();
+    } catch (error) {
+      logger.warn("lifecycle.manager", `Failed to update Caddy configuration: ${error}`);
+    }
+
+    // Update CoreDNS configuration
+    try {
+      await this.updateDnsConfig();
+    } catch (error) {
+      logger.warn("lifecycle.manager", `Failed to update CoreDNS configuration: ${error}`);
+    }
+
+    return {
+      success: true,
+      message: options.keepData
+        ? `Service '${name}' removed (data preserved)`
+        : `Service '${name}' removed`,
+    };
+  }
+
+  /**
    * Start a service
    */
   async start(name: string): Promise<{ success: boolean; message: string }> {

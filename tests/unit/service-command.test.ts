@@ -163,6 +163,94 @@ describe("ServiceCommand", () => {
     expect(output).toContain("Service disabled");
   });
 
+  it("prints success message when remove succeeds with force", async () => {
+    (
+      command as unknown as {
+        lifecycle: {
+          initialize: () => Promise<void>;
+          remove: () => Promise<{ success: boolean; message: string }>;
+        };
+      }
+    ).lifecycle = {
+      initialize: async () => undefined,
+      remove: async () => ({ success: true, message: "Service 'whoami' removed" }),
+    };
+
+    await command.remove("whoami", { force: true });
+
+    const output = captured.join("\n");
+    expect(output).toContain("Service 'whoami' removed");
+  });
+
+  it("prints failure message when remove fails with force", async () => {
+    (
+      command as unknown as {
+        lifecycle: {
+          initialize: () => Promise<void>;
+          remove: () => Promise<{ success: boolean; message: string }>;
+        };
+      }
+    ).lifecycle = {
+      initialize: async () => undefined,
+      remove: async () => ({ success: false, message: "has no configuration to remove" }),
+    };
+
+    await command.remove("whoami", { force: true });
+
+    const output = captured.join("\n");
+    expect(output).toContain("has no configuration to remove");
+  });
+
+  it("passes keepData option to lifecycle remove", async () => {
+    let receivedOptions: { keepData?: boolean } | undefined;
+
+    (
+      command as unknown as {
+        lifecycle: {
+          initialize: () => Promise<void>;
+          remove: (_name: string, options: { keepData?: boolean }) => Promise<{ success: boolean; message: string }>;
+        };
+      }
+    ).lifecycle = {
+      initialize: async () => undefined,
+      remove: async (_name, options) => {
+        receivedOptions = options;
+        return { success: true, message: "Service removed" };
+      },
+    };
+
+    await command.remove("whoami", { force: true, keepData: true });
+
+    expect(receivedOptions).toEqual({ keepData: true });
+  });
+
+  it("cancels remove when not confirmed and not forced", async () => {
+    let removeCalled = false;
+
+    (
+      command as unknown as {
+        lifecycle: {
+          initialize: () => Promise<void>;
+          remove: () => Promise<{ success: boolean; message: string }>;
+        };
+      }
+    ).lifecycle = {
+      initialize: async () => undefined,
+      remove: async () => {
+        removeCalled = true;
+        return { success: true, message: "removed" };
+      },
+    };
+
+    // Patch confirmAction to return false
+    patchSet.patch(command, "confirmAction" as keyof typeof command, (async () => false) as never);
+
+    await command.remove("whoami", {});
+
+    expect(removeCalled).toBe(false);
+    expect(captured.join("\n")).toContain("Remove cancelled");
+  });
+
   it("prints success message when restart succeeds", async () => {
     (
       command as unknown as {

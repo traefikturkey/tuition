@@ -6,6 +6,7 @@ import { ConfigManager } from '../../core/config/manager.js';
 import { catalog } from '../../core/catalog/loader.js';
 import { LifecycleManager } from '../../core/lifecycle/manager.js';
 import chalk from 'chalk';
+import readline from 'readline';
 
 export class ServiceCommand {
   private lifecycle: LifecycleManager;
@@ -146,6 +147,60 @@ export class ServiceCommand {
     } else {
       console.log(chalk.red(`✗ ${result.message}`));
     }
+  }
+
+  /**
+   * Remove a service completely (config + data)
+   */
+  async remove(name: string, options: {
+    keepData?: boolean;
+    force?: boolean;
+    path?: string;
+  }): Promise<void> {
+    await this.initialize();
+
+    if (!options.force) {
+      const dataWarning = options.keepData
+        ? 'configuration will be deleted (data preserved)'
+        : 'configuration and all data will be permanently deleted';
+
+      console.log(chalk.yellow(`\nWarning: ${dataWarning} for service '${name}'.`));
+
+      const confirmed = await this.confirmAction(`Are you sure you want to remove '${name}'? (y/N) `);
+      if (!confirmed) {
+        console.log(chalk.gray('Remove cancelled.'));
+        return;
+      }
+    }
+
+    console.log(chalk.blue(`\nRemoving service '${name}'...\n`));
+
+    const result = await this.lifecycle.remove(name, {
+      keepData: options.keepData,
+    });
+
+    if (result.success) {
+      console.log(chalk.green(`✓ ${result.message}`));
+    } else {
+      console.log(chalk.red(`✗ ${result.message}`));
+    }
+  }
+
+  /**
+   * Prompt user for confirmation
+   */
+  private confirmAction(prompt: string): Promise<boolean> {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    return new Promise((resolve) => {
+      rl.question(prompt, (answer) => {
+        rl.close();
+        resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+      });
+    });
   }
 
   /**

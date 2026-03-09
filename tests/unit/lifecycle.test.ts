@@ -180,6 +180,58 @@ describe("LifecycleManager", () => {
     });
   });
 
+  describe("remove", () => {
+    it("should fail when service has no configuration", async () => {
+      const result = await manager.remove("nonexistent-service");
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("has no configuration to remove");
+    });
+
+    it("should remove an enabled service and delete config", async () => {
+      await manager.initialize();
+      await manager.enable("whoami", { autoStart: false });
+      patchSet.patch(manager, "stop", async () => ({
+        success: true,
+        message: "stopped",
+      }));
+
+      const result = await manager.remove("whoami");
+      expect(result.success).toBe(true);
+      expect(result.message).toBe("Service 'whoami' removed");
+
+      // Config should be gone — service should be back to available
+      const service = await manager.getService("whoami");
+      expect(service?.state).toBe("available");
+    });
+
+    it("should preserve data when keepData is set", async () => {
+      await manager.initialize();
+      await manager.enable("whoami", { autoStart: false });
+      patchSet.patch(manager, "stop", async () => ({
+        success: true,
+        message: "stopped",
+      }));
+
+      const result = await manager.remove("whoami", { keepData: true });
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("data preserved");
+    });
+
+    it("should remove a disabled service", async () => {
+      await manager.initialize();
+      await manager.enable("whoami", { autoStart: false });
+      patchSet.patch(manager, "stop", async () => ({
+        success: true,
+        message: "stopped",
+      }));
+      await manager.disable("whoami");
+
+      const result = await manager.remove("whoami");
+      expect(result.success).toBe(true);
+      expect(result.message).toBe("Service 'whoami' removed");
+    });
+  });
+
   describe("start", () => {
     it("should create the Docker network before starting when it does not exist", async () => {
       let createNetworkCalled = false;

@@ -181,6 +181,30 @@ describe("ConfigManager", () => {
     });
   });
 
+  describe("deleteService", () => {
+    it("should delete an existing service config and return true", async () => {
+      await configManager.initialize();
+      await configManager.saveService("doomed", {
+        enabled: true,
+        imageTag: "latest",
+        environment: {},
+      });
+
+      const result = await configManager.deleteService("doomed");
+      expect(result).toBe(true);
+
+      const loaded = await configManager.loadService("doomed");
+      expect(loaded).toBeUndefined();
+    });
+
+    it("should return false when the service config does not exist", async () => {
+      await configManager.initialize();
+
+      const result = await configManager.deleteService("nonexistent");
+      expect(result).toBe(false);
+    });
+  });
+
   describe("paths", () => {
     it("should expose the tuition and config directories for a custom path", () => {
       expect(configManager.getConfigPath()).toBe(join(tempDir, "config"));

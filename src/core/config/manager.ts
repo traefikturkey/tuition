@@ -3,7 +3,7 @@
  * Handles loading, validation, and persistence of tiered configuration
  */
 
-import { readFile, writeFile, mkdir, access, readdir } from "fs/promises";
+import { readFile, writeFile, mkdir, access, readdir, rm } from "fs/promises";
 import { constants } from "fs";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { join } from "path";
@@ -176,6 +176,23 @@ export class ConfigManager {
     const path = join(this.configPath, "services", `${name}.yaml`);
     const yaml = stringifyYaml(config);
     await this.writeSecureFile(path, yaml);
+  }
+
+  /**
+   * Delete service configuration file
+   */
+  async deleteService(name: string): Promise<boolean> {
+    const path = join(this.configPath, "services", `${name}.yaml`);
+
+    try {
+      await rm(path);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return false;
+      }
+      throw error;
+    }
   }
 
   /**
