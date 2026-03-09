@@ -112,7 +112,7 @@ export class DnsCommand {
         console.log(`\n  Cluster: enabled`);
         console.log(`  Node: ${globalConfig.dnsCluster.nodeName ?? 'default'}`);
         if (globalConfig.dnsCluster.clusterSeeds?.length) {
-          console.log(`  Seeds: ${globalConfig.dnsCluster.clusterSeeds.join(', ')}`);
+          console.log(`  Seeds: ${globalConfig.dnsCluster.clusterSeeds.map(ip => `${ip}:7946`).join(', ')}`);
         }
       }
     }
@@ -206,7 +206,7 @@ export class DnsCommand {
     // Seed IPs with validation loop
     let clusterSeeds: string[] = [];
     while (true) {
-      const seedsInput = await ask('Cluster seeds (comma-separated IPs, optional): ');
+      const seedsInput = await ask('Cluster seeds (comma-separated IPs, port 7946 added automatically, optional): ');
       const seedsRaw = seedsInput.trim();
 
       if (!seedsRaw) {

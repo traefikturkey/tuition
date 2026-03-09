@@ -407,6 +407,7 @@ describe("CoreDnsManager", () => {
       expect(composeContent).toContain("DNS_UNKNOWN_ACTION");
       expect(composeContent).toContain("drop");
       expect(composeContent).toContain("DOCKER_SOCKET");
+      expect(composeContent).toContain("unix:///var/run/docker.sock");
     });
 
     it("disables clustering by default", async () => {
@@ -443,7 +444,7 @@ describe("CoreDnsManager", () => {
       expect(composeContent).toContain("CLUSTER_SECRET");
       expect(composeContent).toContain("mysecret");
       expect(composeContent).toContain("CLUSTER_SEEDS");
-      expect(composeContent).toContain("10.0.0.2,10.0.0.3");
+      expect(composeContent).toContain("10.0.0.2:7946,10.0.0.3:7946");
     });
   });
 

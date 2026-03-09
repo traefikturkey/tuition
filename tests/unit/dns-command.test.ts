@@ -718,6 +718,8 @@ describe("DnsCommand", () => {
     const output = consoleCapture.output.join("\n");
     expect(output).toContain("Cluster: enabled");
     expect(output).toContain("test-node");
+    expect(output).toContain("10.0.0.5:7946");
+    expect(output).toContain("10.0.0.6:7946");
   });
 
   it("status shows cluster disabled when not configured", async () => {

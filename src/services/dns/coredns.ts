@@ -219,7 +219,7 @@ export class CoreDnsManager {
     const environment: Record<string, string> = {
       HOSTIP: hostIp,
       DNS_UNKNOWN_ACTION: "drop",
-      DOCKER_SOCKET: "/var/run/docker.sock",
+      DOCKER_SOCKET: "unix:///var/run/docker.sock",
       CLUSTER_ENABLED: String(dnsCluster?.enabled ?? false),
       NODE_NAME: dnsCluster?.nodeName ?? osHostname(),
     };
@@ -229,7 +229,7 @@ export class CoreDnsManager {
       environment.CLUSTER_SECRET = dnsCluster.clusterSecret;
     }
     if (dnsCluster?.clusterSeeds && dnsCluster.clusterSeeds.length > 0) {
-      environment.CLUSTER_SEEDS = dnsCluster.clusterSeeds.join(",");
+      environment.CLUSTER_SEEDS = dnsCluster.clusterSeeds.map(ip => `${ip}:7946`).join(",");
     }
 
     const compose = {
