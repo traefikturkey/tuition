@@ -2,7 +2,7 @@
  * Configuration validation
  */
 
-import type { GlobalConfig, ServiceConfig } from '../../types/index.js';
+import type { GlobalConfig, ServiceConfig, InfrastructureConfig } from '../../types/index.js';
 
 export interface ValidationError {
   field: string;
@@ -97,6 +97,52 @@ export class ConfigValidator {
       valid: errors.length === 0,
       errors,
     };
+  }
+
+  /**
+   * Validate infrastructure configuration (optional tier).
+   * Currently enforces rules on NFS entries only; externalServices are free-form.
+   */
+  validateInfrastructure(config: InfrastructureConfig): ValidationResult {
+    const errors: ValidationError[] = [];
+    const seenNames = new Set<string>();
+
+    for (const nfs of config.nfs ?? []) {
+      // name is required and must be a safe identifier
+      if (!nfs.name || nfs.name.trim() === '') {
+        errors.push({ field: 'nfs[].name', message: 'NFS entry name is required' });
+      } else if (!/^[a-z0-9-]+$/.test(nfs.name)) {
+        errors.push({
+          field: 'nfs[].name',
+          message: 'NFS name must contain only lowercase letters, numbers, and hyphens',
+          value: nfs.name,
+        });
+      } else if (seenNames.has(nfs.name)) {
+        errors.push({
+          field: 'nfs[].name',
+          message: `Duplicate NFS entry name '${nfs.name}'`,
+          value: nfs.name,
+        });
+      } else {
+        seenNames.add(nfs.name);
+      }
+
+      // server is required
+      if (!nfs.server || nfs.server.trim() === '') {
+        errors.push({ field: `nfs[${nfs.name}].server`, message: 'NFS server address is required' });
+      }
+
+      // export path must be absolute
+      if (!nfs.path || !nfs.path.startsWith('/')) {
+        errors.push({
+          field: `nfs[${nfs.name}].path`,
+          message: 'NFS export path must be an absolute path (start with /)',
+          value: nfs.path,
+        });
+      }
+    }
+
+    return { valid: errors.length === 0, errors };
   }
 
   /**

@@ -23,12 +23,24 @@ environment:
 volumes:
   - host: ./data/plex/config
     container: /config
-  - host: ${MEDIA_PATH}/tv
+
+  # NFS-backed media libraries. Add the 'media' share with:
+  #   tuition infra nfs add --name media --server <host> --path /export/media
+  - type: nfs
+    nfsName: media
+    subPath: tv
     container: /data/tv
-  - host: ${MEDIA_PATH}/movies
+
+  - type: nfs
+    nfsName: media
+    subPath: movies
     container: /data/movies
-  - host: ${MEDIA_PATH}/music
+
+  - type: nfs
+    nfsName: media
+    subPath: music
     container: /data/music
+
   - host: /tmp
     container: /transcode
 

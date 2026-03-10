@@ -190,6 +190,8 @@ export class LifecycleManager {
 
     // Load global config for env vars
     const globalConfig = await this.configManager.loadGlobal();
+    const infraConfig = await this.configManager.loadInfrastructure();
+    const nfsConfigs = infraConfig?.nfs ?? [];
 
     // Build environment variables
     const envVars: Record<string, string> = {
@@ -218,8 +220,8 @@ export class LifecycleManager {
     // Create data directories for service
     await this.createServiceDirectories(name, definition);
 
-    // Generate compose file
-    const composePath = await this.composeManager.generateCompose(name, definition, envVars);
+    // Generate compose file (pass NFS configs for Docker-managed volume resolution)
+    const composePath = await this.composeManager.generateCompose(name, definition, envVars, nfsConfigs);
 
     // Save service config
     const serviceConfig: ServiceConfig = {
@@ -530,14 +532,20 @@ export class LifecycleManager {
   }
 
   /**
-   * Create necessary directories for a service
+   * Create necessary directories for a service.
+   * Only creates local directories for bind-mount volumes.
+   * NFS-backed volumes (type: 'nfs') are managed by Docker at container
+   * start time and require no local directory creation.
    */
   private async createServiceDirectories(name: string, definition: ServiceDefinition): Promise<void> {
     const tuitionDir = this.configManager.getTuitionDir();
 
     if (definition.volumes) {
       for (const volume of definition.volumes) {
-        // Parse host path
+        // Skip NFS volumes — Docker manages them
+        if (volume.type === "nfs") continue;
+
+        // Parse host path for bind volumes
         let hostPath = volume.host;
 
         // Replace variables

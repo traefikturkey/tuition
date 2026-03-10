@@ -97,11 +97,35 @@ export interface PortMapping {
   protocol?: 'tcp' | 'udp';
 }
 
-export interface VolumeMapping {
+/**
+ * Standard bind-mount volume (host path → container path).
+ * `type` field is optional for backward compatibility with catalog YAMLs
+ * that predate the discriminated union.
+ */
+export interface BindVolumeMapping {
+  type?: 'bind';
   host: string;
   container: string;
   readOnly?: boolean;
 }
+
+/**
+ * Docker-managed NFS volume.
+ * `nfsName` references an entry in InfrastructureConfig.nfs[].name.
+ * At service-enable time the matching NfsConfig is looked up and a
+ * Docker named volume with driver_opts is generated in the compose file.
+ */
+export interface NfsVolumeMapping {
+  type: 'nfs';
+  nfsName: string;
+  subPath?: string;
+  container: string;
+  readOnly?: boolean;
+  options?: string;
+}
+
+/** Union of all supported volume mapping shapes. */
+export type VolumeMapping = BindVolumeMapping | NfsVolumeMapping;
 
 export interface DatabaseRequirement {
   type: 'postgresql' | 'mysql' | 'mongodb' | 'redis' | 'sqlite';

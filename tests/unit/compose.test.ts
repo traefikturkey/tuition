@@ -447,12 +447,12 @@ describe("ComposeManager", () => {
     });
 
     it("formats read-only, absolute, and home-directory volumes correctly", () => {
-      const result = (
+      const { serviceVolumes } = (
         composeManager as unknown as {
           resolveVolumes: (
             volumes: Array<{ host: string; container: string; readOnly?: boolean }>,
             vars: Record<string, string>
-          ) => string[];
+          ) => { serviceVolumes: string[]; topLevelVolumes: Record<string, unknown> };
         }
       ).resolveVolumes(
         [
@@ -463,7 +463,127 @@ describe("ComposeManager", () => {
         { ROOT: "storage" }
       );
 
-      expect(result).toEqual(["/var/lib/data:/data:ro", "~/config:/config", "./storage/cache:/cache"]);
+      expect(serviceVolumes).toEqual(["/var/lib/data:/data:ro", "~/config:/config", "./storage/cache:/cache"]);
+    });
+  });
+
+  describe("NFS volume generation", () => {
+    it("generates a Docker named volume with driver_opts for a type:nfs volume", async () => {
+      const definition: ServiceDefinition = {
+        name: "plex",
+        category: "media",
+        description: "Media server",
+        image: "plexinc/pms-docker:latest",
+        volumes: [
+          { host: "./data/plex/config", container: "/config" },
+          { type: "nfs", nfsName: "media", subPath: "tv", container: "/data/tv" },
+        ],
+      };
+
+      const nfsConfigs = [{ name: "media", server: "192.168.1.10", path: "/export/media", mountPoint: "" }];
+      const path = await composeManager.generateCompose("plex", definition, {}, nfsConfigs);
+      const content = await readFile(path, "utf-8");
+      const compose = parseYaml(content) as {
+        services: Record<string, { volumes: string[] }>;
+        volumes?: Record<string, { driver: string; driver_opts: Record<string, string> }>;
+      };
+
+      // Service entry should reference named volume and bind mount
+      expect(compose.services["plex"]?.volumes).toContain("nfs_media_tv:/data/tv");
+      expect(compose.services["plex"]?.volumes).toContain("././data/plex/config:/config");
+
+      // Top-level named volume should carry NFS driver_opts
+      const vol = compose.volumes?.["nfs_media_tv"];
+      expect(vol?.driver).toBe("local");
+      expect(vol?.driver_opts["type"]).toBe("nfs");
+      expect(vol?.driver_opts["o"]).toContain("addr=192.168.1.10");
+      expect(vol?.driver_opts["device"]).toBe(":/export/media/tv");
+    });
+
+    it("uses root device path when no subPath is provided", async () => {
+      const definition: ServiceDefinition = {
+        name: "test",
+        category: "storage",
+        description: "Test",
+        image: "test:latest",
+        volumes: [{ type: "nfs", nfsName: "media", container: "/data" }],
+      };
+
+      const nfsConfigs = [{ name: "media", server: "10.0.0.1", path: "/share", mountPoint: "" }];
+      const path = await composeManager.generateCompose("test", definition, {}, nfsConfigs);
+      const content = await readFile(path, "utf-8");
+      const compose = parseYaml(content) as {
+        volumes?: Record<string, { driver_opts: Record<string, string> }>;
+      };
+
+      expect(compose.volumes?.["nfs_media_root"]?.driver_opts["device"]).toBe(":/share");
+    });
+
+    it("applies readOnly flag to NFS named volume service entry", async () => {
+      const definition: ServiceDefinition = {
+        name: "test",
+        category: "storage",
+        description: "Test",
+        image: "test:latest",
+        volumes: [{ type: "nfs", nfsName: "media", subPath: "music", container: "/music", readOnly: true }],
+      };
+
+      const nfsConfigs = [{ name: "media", server: "10.0.0.1", path: "/export", mountPoint: "" }];
+      const path = await composeManager.generateCompose("test", definition, {}, nfsConfigs);
+      const content = await readFile(path, "utf-8");
+      const compose = parseYaml(content) as { services: Record<string, { volumes: string[] }> };
+
+      expect(compose.services["test"]?.volumes[0]).toBe("nfs_media_music:/music:ro");
+    });
+
+    it("uses NfsConfig.options as mount options when no per-volume override is given", async () => {
+      const definition: ServiceDefinition = {
+        name: "test",
+        category: "storage",
+        description: "Test",
+        image: "test:latest",
+        volumes: [{ type: "nfs", nfsName: "data", subPath: "files", container: "/files" }],
+      };
+
+      const nfsConfigs = [{ name: "data", server: "10.0.0.1", path: "/data", mountPoint: "", options: "ro,noatime" }];
+      const path = await composeManager.generateCompose("test", definition, {}, nfsConfigs);
+      const content = await readFile(path, "utf-8");
+      const compose = parseYaml(content) as {
+        volumes?: Record<string, { driver_opts: Record<string, string> }>;
+      };
+
+      expect(compose.volumes?.["nfs_data_files"]?.driver_opts["o"]).toBe("addr=10.0.0.1,ro,noatime");
+    });
+
+    it("omits top-level volumes section when only bind mounts are present", async () => {
+      const definition: ServiceDefinition = {
+        name: "test",
+        category: "dns",
+        description: "Test",
+        image: "test:latest",
+        volumes: [{ host: "./data", container: "/data" }],
+      };
+
+      const path = await composeManager.generateCompose("test", definition, {}, []);
+      const content = await readFile(path, "utf-8");
+      const compose = parseYaml(content) as { volumes?: unknown };
+
+      expect(compose.volumes).toBeUndefined();
+    });
+
+    it("inserts a placeholder comment for an unresolvable NFS reference", async () => {
+      const definition: ServiceDefinition = {
+        name: "test",
+        category: "storage",
+        description: "Test",
+        image: "test:latest",
+        volumes: [{ type: "nfs", nfsName: "missing", subPath: "tv", container: "/data" }],
+      };
+
+      const path = await composeManager.generateCompose("test", definition, {}, []);
+      const content = await readFile(path, "utf-8");
+      // The placeholder comment is emitted in the raw YAML, not as a parsed entry
+      expect(content).toContain("UNRESOLVED NFS");
     });
   });
 });

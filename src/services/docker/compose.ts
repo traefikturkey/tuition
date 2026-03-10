@@ -8,7 +8,7 @@ import { writeFile, mkdir, access } from "fs/promises";
 import { constants } from "fs";
 import { join, dirname } from "path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import type { ServiceDefinition, PortMapping, VolumeMapping } from "../../types/index.js";
+import type { ServiceDefinition, PortMapping, VolumeMapping, BindVolumeMapping, NfsVolumeMapping, NfsConfig } from "../../types/index.js";
 
 export interface ComposeService {
   image: string;
@@ -35,11 +35,17 @@ export interface ComposeService {
   };
 }
 
+export interface ComposeVolumeConfig {
+  driver: string;
+  driver_opts?: Record<string, string>;
+  external?: boolean;
+}
+
 export interface ComposeFile {
   version?: string;
   services: Record<string, ComposeService>;
   networks?: Record<string, { driver: string; external?: boolean }>;
-  volumes?: Record<string, { driver: string }>;
+  volumes?: Record<string, ComposeVolumeConfig>;
 }
 
 export class ComposeManager {
@@ -51,21 +57,34 @@ export class ComposeManager {
   }
 
   /**
-   * Generate docker-compose.yaml from service definition
+   * Generate docker-compose.yaml from service definition.
+   * Pass nfsConfigs (from InfrastructureConfig.nfs) so that NFS volumes
+   * defined in the service catalog are resolved to Docker named volumes.
    */
-  async generateCompose(name: string, definition: ServiceDefinition, envVars: Record<string, string>): Promise<string> {
+  async generateCompose(
+    name: string,
+    definition: ServiceDefinition,
+    envVars: Record<string, string>,
+    nfsConfigs: NfsConfig[] = []
+  ): Promise<string> {
     const composePath = join(this.projectPath, `${name}.docker-compose.yaml`);
 
     // Resolve environment variables
     const resolvedEnv = this.resolveEnvironment(definition.environment || {}, envVars);
-    const resolvedVolumes = this.resolveVolumes(definition.volumes || [], envVars);
+
+    // Split bind vs NFS volumes
+    const { serviceVolumes, topLevelVolumes } = this.resolveVolumes(
+      definition.volumes || [],
+      envVars,
+      nfsConfigs
+    );
 
     const service: ComposeService = {
       image: definition.image,
       container_name: name,
       environment: resolvedEnv,
       ports: this.formatPorts(definition.ports || []),
-      volumes: resolvedVolumes,
+      volumes: serviceVolumes,
       labels: this.buildLabels(definition.labels, envVars),
       networks: ["tuition"],
       restart: "unless-stopped",
@@ -103,6 +122,11 @@ export class ComposeManager {
         },
       },
     };
+
+    // Only include top-level volumes section when NFS volumes are present
+    if (Object.keys(topLevelVolumes).length > 0) {
+      compose.volumes = topLevelVolumes;
+    }
 
     const yaml = stringifyYaml(compose);
     await writeFile(composePath, yaml, "utf-8");
@@ -344,24 +368,80 @@ export class ComposeManager {
   }
 
   /**
-   * Resolve volume paths with substitutions
+   * Resolve all volume mappings.
+   *
+   * Returns:
+   * - `serviceVolumes`: string entries for the service's `volumes:` list
+   * - `topLevelVolumes`: named volume definitions for compose top-level `volumes:`
+   *
+   * Bind volumes use the existing `host:container[:ro]` string format.
+   * NFS volumes become Docker named volumes backed by the `local` driver
+   * with NFS driver_opts so Docker manages the mount lifecycle.
    */
-  private resolveVolumes(volumes: VolumeMapping[], vars: Record<string, string>): string[] {
-    return volumes.map((v) => {
-      let hostPath = v.host;
+  private resolveVolumes(
+    volumes: VolumeMapping[],
+    vars: Record<string, string>,
+    nfsConfigs: NfsConfig[] = []
+  ): { serviceVolumes: string[]; topLevelVolumes: Record<string, ComposeVolumeConfig> } {
+    const serviceVolumes: string[] = [];
+    const topLevelVolumes: Record<string, ComposeVolumeConfig> = {};
 
-      // Replace ${VAR} with actual values
-      hostPath = hostPath.replace(/\$\{(\w+)\}/g, (match, varName) => {
-        return vars[varName] || match;
-      });
+    for (const v of volumes) {
+      if (v.type === "nfs") {
+        // NFS volume: resolve against infrastructure NFS config
+        const nfsCfg = nfsConfigs.find((n) => n.name === v.nfsName);
+        if (!nfsCfg) {
+          // Preserve unresolvable reference as a comment-style placeholder
+          // rather than silently dropping — will fail validation upstream
+          serviceVolumes.push(`# UNRESOLVED NFS: ${v.nfsName}`);
+          continue;
+        }
 
-      // Ensure relative paths are from project directory
-      if (!hostPath.startsWith("/") && !hostPath.startsWith("~")) {
-        hostPath = `./${hostPath}`;
+        const volName = this.nfsVolumeName(v.nfsName, v.subPath);
+        const device = v.subPath ? `${nfsCfg.path}/${v.subPath}` : nfsCfg.path;
+        const baseOptions = nfsCfg.options ?? "rw,soft,noatime";
+        const mountOptions = v.options ?? baseOptions;
+
+        topLevelVolumes[volName] = {
+          driver: "local",
+          driver_opts: {
+            type: "nfs",
+            o: `addr=${nfsCfg.server},${mountOptions}`,
+            device: `:${device}`,
+          },
+        };
+
+        const readOnly = v.readOnly ? ":ro" : "";
+        serviceVolumes.push(`${volName}:${v.container}${readOnly}`);
+      } else {
+        // Bind volume (BindVolumeMapping, with or without explicit type: 'bind')
+        const bv = v as BindVolumeMapping;
+        let hostPath = bv.host;
+
+        // Replace ${VAR} with actual values
+        hostPath = hostPath.replace(/\$\{(\w+)\}/g, (_match, varName: string) => {
+          return vars[varName] ?? _match;
+        });
+
+        // Ensure relative paths are anchored to the project directory
+        if (!hostPath.startsWith("/") && !hostPath.startsWith("~")) {
+          hostPath = `./${hostPath}`;
+        }
+
+        const readOnly = bv.readOnly ? ":ro" : "";
+        serviceVolumes.push(`${hostPath}:${bv.container}${readOnly}`);
       }
+    }
 
-      const readOnly = v.readOnly ? ":ro" : "";
-      return `${hostPath}:${v.container}${readOnly}`;
-    });
+    return { serviceVolumes, topLevelVolumes };
+  }
+
+  /**
+   * Build a deterministic Docker named-volume identifier for an NFS share.
+   * Format: nfs_{nfsName}_{subPath|root} with path separators replaced by '_'.
+   */
+  private nfsVolumeName(nfsName: string, subPath?: string): string {
+    const safeSub = subPath ? subPath.replace(/[\/\\\s]+/g, "_").replace(/^_|_$/g, "") : "root";
+    return `nfs_${nfsName}_${safeSub}`;
   }
 }

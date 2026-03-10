@@ -45,7 +45,16 @@ export class ValidateCommand {
     try {
       const infraConfig = await manager.loadInfrastructure();
       if (infraConfig) {
-        console.log(chalk.green('✓ Infrastructure configuration is valid'));
+        const infraResult = validator.validateInfrastructure(infraConfig);
+        if (infraResult.valid) {
+          console.log(chalk.green('✓ Infrastructure configuration is valid'));
+        } else {
+          hasErrors = true;
+          console.log(chalk.red('✗ Infrastructure configuration has errors:'));
+          for (const error of infraResult.errors) {
+            console.log(chalk.red(`  - ${error.field}: ${error.message}`));
+          }
+        }
       }
     } catch (error) {
       hasErrors = true;

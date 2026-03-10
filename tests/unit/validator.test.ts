@@ -365,4 +365,61 @@ describe("ConfigValidator", () => {
       expect(internals.isValidIp("not-an-ip")).toBe(false);
     });
   });
+
+  describe("validateInfrastructure", () => {
+    it("accepts an empty infrastructure config", () => {
+      const result = validator.validateInfrastructure({});
+      expect(result.valid).toBe(true);
+    });
+
+    it("accepts a valid NFS entry", () => {
+      const result = validator.validateInfrastructure({
+        nfs: [{ name: "media", server: "192.168.1.10", path: "/export/media", mountPoint: "" }],
+      });
+      expect(result.valid).toBe(true);
+    });
+
+    it("rejects an NFS entry with an invalid name", () => {
+      const result = validator.validateInfrastructure({
+        nfs: [{ name: "My_Media", server: "10.0.0.1", path: "/share", mountPoint: "" }],
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.field).toBe("nfs[].name");
+    });
+
+    it("rejects duplicate NFS entry names", () => {
+      const result = validator.validateInfrastructure({
+        nfs: [
+          { name: "media", server: "10.0.0.1", path: "/share1", mountPoint: "" },
+          { name: "media", server: "10.0.0.2", path: "/share2", mountPoint: "" },
+        ],
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.message.includes("Duplicate"))).toBe(true);
+    });
+
+    it("rejects an NFS entry with a missing server", () => {
+      const result = validator.validateInfrastructure({
+        nfs: [{ name: "data", server: "", path: "/export", mountPoint: "" }],
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.field).toContain("server");
+    });
+
+    it("rejects an NFS entry with a relative export path", () => {
+      const result = validator.validateInfrastructure({
+        nfs: [{ name: "data", server: "10.0.0.1", path: "relative/path", mountPoint: "" }],
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.field).toContain("path");
+    });
+
+    it("can report multiple errors at once", () => {
+      const result = validator.validateInfrastructure({
+        nfs: [{ name: "", server: "", path: "bad", mountPoint: "" }],
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors.length).toBeGreaterThanOrEqual(2);
+    });
+  });
 });

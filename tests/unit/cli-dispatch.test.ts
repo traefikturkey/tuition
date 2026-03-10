@@ -11,6 +11,7 @@ import { BackupCommand } from "../../src/cli/commands/backup.js";
 import { ServiceCommand } from "../../src/cli/commands/service.js";
 import { CaddyCommand } from "../../src/cli/commands/caddy.js";
 import { DnsCommand } from "../../src/cli/commands/dns.js";
+import { InfraCommand } from "../../src/cli/commands/infra.js";
 import { TuiApp } from "../../src/tui/app.js";
 import { createPatchSet, stubProcessExit } from "../helpers/test-utils.js";
 
@@ -366,5 +367,55 @@ describe("CLI command dispatch", () => {
       "backup:delete",
       "tui:run",
     ]);
+  });
+
+  it("dispatches infra nfs sub-commands with correct arguments", async () => {
+    const calls: Array<{ method: string; name?: string; path?: string; opts?: Record<string, unknown> }> = [];
+
+    patchSet.patch(InfraCommand.prototype, "nfsList", async (options: { path?: string }) => {
+      calls.push({ method: "nfs:list", path: options.path });
+    });
+    patchSet.patch(InfraCommand.prototype, "nfsShow", async (name: string, options: { path?: string }) => {
+      calls.push({ method: "nfs:show", name, path: options.path });
+    });
+    patchSet.patch(
+      InfraCommand.prototype,
+      "nfsAdd",
+      async (options: { name: string; server: string; path: string; options?: string; path_config?: string }) => {
+        calls.push({ method: "nfs:add", opts: { name: options.name, server: options.server, path: options.path } });
+      }
+    );
+    patchSet.patch(InfraCommand.prototype, "nfsRemove", async (name: string, options: { path?: string }) => {
+      calls.push({ method: "nfs:remove", name, path: options.path });
+    });
+
+    const invocations: string[][] = [
+      ["node", "tuition", "infra", "nfs", "list", "--path", "/tmp/infra-config"],
+      ["node", "tuition", "infra", "nfs", "show", "media", "--path", "/tmp/infra-config"],
+      [
+        "node",
+        "tuition",
+        "infra",
+        "nfs",
+        "add",
+        "--name",
+        "media",
+        "--server",
+        "192.168.1.10",
+        "--path",
+        "/export/media",
+      ],
+      ["node", "tuition", "infra", "nfs", "remove", "media", "--path", "/tmp/infra-config"],
+    ];
+
+    for (const args of invocations) {
+      const cli = createCli();
+      await cli.parseAsync(args);
+    }
+
+    expect(calls[0]).toEqual({ method: "nfs:list", path: "/tmp/infra-config" });
+    expect(calls[1]).toEqual({ method: "nfs:show", name: "media", path: "/tmp/infra-config" });
+    expect(calls[2]).toEqual({ method: "nfs:add", opts: { name: "media", server: "192.168.1.10", path: "/export/media" } });
+    expect(calls[3]).toEqual({ method: "nfs:remove", name: "media", path: "/tmp/infra-config" });
   });
 });

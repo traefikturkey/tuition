@@ -486,5 +486,40 @@ describe("LifecycleManager", () => {
       expect(mediaDirExists).toBe(true);
       expect(absoluteDirCreated).toBe(false);
     });
+
+    it("should skip directory creation for NFS volumes", async () => {
+      await (
+        manager as unknown as {
+          createServiceDirectories: (
+            name: string,
+            definition: {
+              volumes: Array<{ type?: string; host?: string; nfsName?: string; subPath?: string; container: string }>;
+            }
+          ) => Promise<void>;
+        }
+      ).createServiceDirectories("plex", {
+        volumes: [
+          { host: "./data/plex/config", container: "/config" },
+          { type: "nfs", nfsName: "media", subPath: "tv", container: "/data/tv" },
+          { type: "nfs", nfsName: "media", subPath: "movies", container: "/data/movies" },
+        ],
+      });
+
+      const tuitionDir = (
+        manager as unknown as { configManager: { getTuitionDir: () => string } }
+      ).configManager.getTuitionDir();
+
+      // Bind volume directory should be created
+      const bindDirExists = await access(join(tuitionDir, "data", "plex", "config"))
+        .then(() => true)
+        .catch(() => false);
+      // NFS sub-directories must NOT be created locally
+      const nfsTvDirCreated = await access(join(tuitionDir, "media", "tv"))
+        .then(() => true)
+        .catch(() => false);
+
+      expect(bindDirExists).toBe(true);
+      expect(nfsTvDirCreated).toBe(false);
+    });
   });
 });

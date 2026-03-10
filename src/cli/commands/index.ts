@@ -13,6 +13,7 @@ import { ServiceCommand } from "./service.js";
 import { CaddyCommand } from "./caddy.js";
 import { DnsCommand } from "./dns.js";
 import { BackupCommand } from "./backup.js";
+import { InfraCommand } from "./infra.js";
 import { TuiApp } from "../../tui/app.js";
 
 export function createCli(): Command {
@@ -351,6 +352,57 @@ export function createCli(): Command {
     .action(async (identifier, options) => {
       const cmd = new BackupCommand(options.path);
       await cmd.delete(identifier, options);
+    });
+
+  // Infra command group
+  const infraCmd = program.command("infra").description("Manage host infrastructure (NFS shares, external services)");
+
+  const infraNfsCmd = infraCmd.command("nfs").description("Manage NFS share definitions");
+
+  infraNfsCmd
+    .command("list")
+    .description("List configured NFS shares")
+    .option("-p, --path <path>", "Custom configuration path")
+    .action(async (options) => {
+      const cmd = new InfraCommand(options.path);
+      await cmd.nfsList(options);
+    });
+
+  infraNfsCmd
+    .command("show <name>")
+    .description("Show details for a specific NFS share")
+    .option("-p, --path <path>", "Custom configuration path")
+    .action(async (name, options) => {
+      const cmd = new InfraCommand(options.path);
+      await cmd.nfsShow(name, options);
+    });
+
+  infraNfsCmd
+    .command("add")
+    .description("Add an NFS share definition")
+    .requiredOption("-n, --name <name>", "Reference name (e.g. media)")
+    .requiredOption("-s, --server <server>", "NFS server hostname or IP")
+    .requiredOption("-e, --path <path>", "Export path on NFS server (e.g. /export/media)")
+    .option("-o, --options <options>", "Mount options (default: rw,soft,noatime)")
+    .option("-p, --config-path <path>", "Custom configuration path")
+    .action(async (options) => {
+      const cmd = new InfraCommand(options.configPath);
+      await cmd.nfsAdd({
+        name: options.name,
+        server: options.server,
+        path: options.path,
+        options: options.options,
+        path_config: options.configPath,
+      });
+    });
+
+  infraNfsCmd
+    .command("remove <name>")
+    .description("Remove an NFS share definition")
+    .option("-p, --path <path>", "Custom configuration path")
+    .action(async (name, options) => {
+      const cmd = new InfraCommand(options.path);
+      await cmd.nfsRemove(name, options);
     });
 
   // TUI command
