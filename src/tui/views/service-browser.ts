@@ -21,7 +21,9 @@ export class ServiceBrowser {
    * Render the service browser
    */
   async render(): Promise<void> {
-    const services = await this.lifecycleManager.listAll();
+    // Mutable snapshot — always reflects the latest listAll() result so that
+    // button actions and selection never operate on stale data.
+    let currentServices = await this.lifecycleManager.listAll();
 
     // Create main container
     const container = blessed.box({
@@ -68,7 +70,7 @@ export class ServiceBrowser {
           fg: 'white',
         },
       },
-      items: services.map(s => this.formatServiceListItem(s)),
+      items: currentServices.map(s => this.formatServiceListItem(s)),
     });
 
     // Create details panel
@@ -218,60 +220,64 @@ export class ServiceBrowser {
       keys: true,
     });
 
-    // Update details when selection changes
+    // Update details and track selection — always read from currentServices so
+    // the action buttons never operate on stale data after a refresh.
+    let selectedIndex = 0;
     list.on('select', (item, index) => {
-      const service = services[index];
+      selectedIndex = index;
+      const service = currentServices[index];
       if (service) {
         details.setContent(this.formatServiceDetails(service));
         this.screen.render();
       }
     });
 
-    // Track selected index
-    let selectedIndex = 0;
-    list.on('select', (item, index) => {
-      selectedIndex = index;
-    });
+    // Refresh the list from the live service state and keep currentServices in sync.
+    const doRefresh = async () => {
+      currentServices = await this.lifecycleManager.listAll();
+      list.setItems(currentServices.map(s => this.formatServiceListItem(s)));
+      this.screen.render();
+    };
 
     // Button actions
     btnEnable.on('press', async () => {
-      const service = services[selectedIndex];
+      const service = currentServices[selectedIndex];
       if (service) {
         const result = await this.lifecycleManager.enable(service.name);
         this.showMessage(result.message, result.success ? 'green' : 'red');
-        await this.refresh(list, services);
+        await doRefresh();
       }
     });
 
     btnDisable.on('press', async () => {
-      const service = services[selectedIndex];
+      const service = currentServices[selectedIndex];
       if (service) {
         const result = await this.lifecycleManager.disable(service.name);
         this.showMessage(result.message, result.success ? 'green' : 'red');
-        await this.refresh(list, services);
+        await doRefresh();
       }
     });
 
     btnStart.on('press', async () => {
-      const service = services[selectedIndex];
+      const service = currentServices[selectedIndex];
       if (service) {
         const result = await this.lifecycleManager.start(service.name);
         this.showMessage(result.message, result.success ? 'green' : 'red');
-        await this.refresh(list, services);
+        await doRefresh();
       }
     });
 
     btnStop.on('press', async () => {
-      const service = services[selectedIndex];
+      const service = currentServices[selectedIndex];
       if (service) {
         const result = await this.lifecycleManager.stop(service.name);
         this.showMessage(result.message, result.success ? 'green' : 'red');
-        await this.refresh(list, services);
+        await doRefresh();
       }
     });
 
     btnRemove.on('press', async () => {
-      const service = services[selectedIndex];
+      const service = currentServices[selectedIndex];
       if (service) {
         this.showConfirm(
           `Remove service '${service.name}'?\nThis will delete configuration and all data.`,
@@ -279,7 +285,7 @@ export class ServiceBrowser {
             if (confirmed) {
               const result = await this.lifecycleManager.remove(service.name);
               this.showMessage(result.message, result.success ? 'green' : 'red');
-              await this.refresh(list, services);
+              await doRefresh();
             }
           }
         );
@@ -406,14 +412,5 @@ export class ServiceBrowser {
       this.screen.render();
       callback(!err && value === 'yes');
     });
-  }
-
-  /**
-   * Refresh the service list
-   */
-  private async refresh(list: Widgets.ListElement, oldServices: ServiceInfo[]): Promise<void> {
-    const services = await this.lifecycleManager.listAll();
-    list.setItems(services.map(s => this.formatServiceListItem(s)));
-    this.screen.render();
   }
 }
