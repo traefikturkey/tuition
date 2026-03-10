@@ -189,9 +189,6 @@ export class TuiApp {
     this.persistentElements.add(header);
     this.persistentElements.add(menuBox);
     this.persistentElements.add(statusBar);
-
-    // Initial view - show dashboard
-    this.showDashboard();
   }
 
   /**
@@ -259,9 +256,10 @@ export class TuiApp {
    */
   async run(): Promise<void> {
     await this.initialize();
-    
+
     if (!(await this.configManager.exists())) {
-      // Show setup dialog
+      // Show setup dialog — render screen so the question widget is visible,
+      // then return; the callback handles exit.
       const setup = blessed.question({
         parent: this.screen,
         border: 'line',
@@ -285,8 +283,13 @@ export class TuiApp {
           process.exit(1);
         }
       });
+
+      this.screen.render();
+      return;
     }
 
+    // Config exists — render the initial dashboard after full initialization.
+    await this.showDashboard();
     this.screen.render();
   }
 }

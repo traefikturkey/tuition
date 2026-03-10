@@ -78,7 +78,6 @@ describe("TuiApp", () => {
 
     await (app as unknown as { showServiceBrowser: () => Promise<void> }).showServiceBrowser();
 
-    expect(dashboardRenderCalls).toBeGreaterThanOrEqual(1);
     expect(browserRenderCalls).toBe(1);
     expect(extraOne.destroyed || extraTwo.destroyed || extraThree.destroyed).toBe(true);
 
@@ -110,7 +109,7 @@ describe("TuiApp", () => {
     await quitButton?.emitAsync("press");
 
     expect(browserRenderCalls).toBe(1);
-    expect(dashboardRenderCalls).toBeGreaterThanOrEqual(2);
+    expect(dashboardRenderCalls).toBeGreaterThanOrEqual(1);
     expect(screenRef.focused).toBe(true);
     expect(screenRef.destroyed).toBe(true);
     expect(exitStub.lastCode()).toBe(0);
