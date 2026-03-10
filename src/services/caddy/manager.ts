@@ -10,7 +10,7 @@ import { spawn } from "child_process";
 import { caddyfileGenerator, type CaddyConfig, type CaddyRoute } from "./caddyfile.js";
 import { docker } from "../docker/client.js";
 import { ComposeManager } from "../docker/compose.js";
-import type { ServiceDefinition } from "../../types/index.js";
+import type { ServiceDefinition, ExternalService } from "../../types/index.js";
 
 export class CaddyManager {
   private projectPath: string;
@@ -48,10 +48,14 @@ export class CaddyManager {
       cloudflareToken?: string;
       adminPasswordHash?: string;
     },
-    enabledServices: ServiceDefinition[]
+    enabledServices: ServiceDefinition[],
+    externalServices: ExternalService[] = []
   ): Promise<string> {
     // Extract routes from service definitions
     const routes = caddyfileGenerator.extractRoutes(enabledServices);
+
+    // Build external service routes
+    const externalRoutes = caddyfileGenerator.buildExternalRoutes(externalServices);
 
     // Build Caddy configuration
     const caddyConfig: CaddyConfig = {
@@ -61,6 +65,7 @@ export class CaddyManager {
       dnsCredentials: globalConfig.cloudflareToken ? { api_token: globalConfig.cloudflareToken } : {},
       routes,
       adminPasswordHash: globalConfig.adminPasswordHash,
+      externalRoutes,
     };
 
     // Generate Caddyfile

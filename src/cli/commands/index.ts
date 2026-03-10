@@ -405,6 +405,56 @@ export function createCli(): Command {
       await cmd.nfsRemove(name, options);
     });
 
+  const infraExternalCmd = infraCmd.command("external").description("Manage external (non-Docker) service routes");
+
+  infraExternalCmd
+    .command("list")
+    .description("List configured external services")
+    .option("-p, --path <path>", "Custom configuration path")
+    .action(async (options) => {
+      const cmd = new InfraCommand(options.path);
+      await cmd.externalList(options);
+    });
+
+  infraExternalCmd
+    .command("show <name>")
+    .description("Show details for a specific external service")
+    .option("-p, --path <path>", "Custom configuration path")
+    .action(async (name, options) => {
+      const cmd = new InfraCommand(options.path);
+      await cmd.externalShow(name, options);
+    });
+
+  infraExternalCmd
+    .command("add")
+    .description("Add an external service (generates a Caddy reverse-proxy route)")
+    .requiredOption("-n, --name <name>", "Reference name, e.g. nas")
+    .requiredOption("-u, --url <url>", "Upstream URL, e.g. http://192.168.1.20:5000")
+    .option("-s, --subdomain <subdomain>", "Caddy subdomain override (defaults to name)")
+    .option("-d, --dns", "Register hostname in CoreDNS hosts file")
+    .option("--description <text>", "Human-readable label")
+    .option("-p, --config-path <path>", "Custom configuration path")
+    .action(async (options) => {
+      const cmd = new InfraCommand(options.configPath);
+      await cmd.externalAdd({
+        name: options.name,
+        url: options.url,
+        subdomain: options.subdomain,
+        dns: options.dns,
+        description: options.description,
+        path_config: options.configPath,
+      });
+    });
+
+  infraExternalCmd
+    .command("remove <name>")
+    .description("Remove an external service")
+    .option("-p, --path <path>", "Custom configuration path")
+    .action(async (name, options) => {
+      const cmd = new InfraCommand(options.path);
+      await cmd.externalRemove(name, options);
+    });
+
   // TUI command
   program
     .command("tui")

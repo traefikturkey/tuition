@@ -218,4 +218,148 @@ describe("InfraCommand", () => {
 
     expect(capture.lines.join(" ")).toContain("not found");
   });
+
+  // ── externalList ───────────────────────────────────────────────────────────
+
+  it("externalList reports empty state when no external services are configured", async () => {
+    const capture = captureConsole();
+    const cmd = new InfraCommand(configPath);
+    await cmd.externalList();
+    capture.restore();
+
+    expect(capture.lines.join(" ")).toContain("No external services configured");
+  });
+
+  it("externalList lists all configured external services", async () => {
+    const manager = new ConfigManager(configPath);
+    await manager.saveInfrastructure({
+      externalServices: [
+        { name: "nas", url: "http://192.168.1.10:5000" },
+        { name: "router", url: "http://192.168.1.1" },
+      ],
+    });
+
+    const capture = captureConsole();
+    const cmd = new InfraCommand(configPath);
+    await cmd.externalList();
+    capture.restore();
+
+    const output = capture.lines.join("\n");
+    expect(output).toContain("nas");
+    expect(output).toContain("router");
+    expect(output).toContain("192.168.1.1");
+  });
+
+  // ── externalShow ───────────────────────────────────────────────────────────
+
+  it("externalShow displays details for an existing external service", async () => {
+    const manager = new ConfigManager(configPath);
+    await manager.saveInfrastructure({
+      externalServices: [{ name: "nas", url: "http://10.0.0.10:5000", subdomain: "synology", description: "My NAS" }],
+    });
+
+    const capture = captureConsole();
+    const cmd = new InfraCommand(configPath);
+    await cmd.externalShow("nas");
+    capture.restore();
+
+    const output = capture.lines.join("\n");
+    expect(output).toContain("http://10.0.0.10:5000");
+    expect(output).toContain("synology");
+    expect(output).toContain("My NAS");
+  });
+
+  it("externalShow reports not found for an unknown name", async () => {
+    const capture = captureConsole();
+    const cmd = new InfraCommand(configPath);
+    await cmd.externalShow("ghost");
+    capture.restore();
+
+    expect(capture.lines.join(" ")).toContain("not found");
+  });
+
+  // ── externalAdd ────────────────────────────────────────────────────────────
+
+  it("externalAdd persists a valid external service to infrastructure config", async () => {
+    const cmd = new InfraCommand(configPath);
+    await cmd.externalAdd({ name: "nas", url: "http://192.168.1.10:5000" });
+
+    const manager = new ConfigManager(configPath);
+    const infra = await manager.loadInfrastructure();
+    const entry = infra?.externalServices?.find((s) => s.name === "nas");
+
+    expect(entry).toBeDefined();
+    expect(entry?.url).toBe("http://192.168.1.10:5000");
+  });
+
+  it("externalAdd rejects a duplicate name", async () => {
+    const manager = new ConfigManager(configPath);
+    await manager.saveInfrastructure({
+      externalServices: [{ name: "nas", url: "http://old-url" }],
+    });
+
+    const capture = captureConsole();
+    const cmd = new InfraCommand(configPath);
+    await cmd.externalAdd({ name: "nas", url: "http://new-url" });
+    capture.restore();
+
+    expect(capture.lines.join(" ")).toContain("already exists");
+
+    const infra = await manager.loadInfrastructure();
+    expect(infra?.externalServices?.length).toBe(1);
+    expect(infra?.externalServices?.[0]?.url).toBe("http://old-url");
+  });
+
+  it("externalAdd rejects an entry with an invalid name before saving", async () => {
+    const capture = captureConsole();
+    const cmd = new InfraCommand(configPath);
+    await cmd.externalAdd({ name: "My_NAS!", url: "http://10.0.0.1" });
+    capture.restore();
+
+    expect(capture.lines.join(" ")).toContain("Invalid external service configuration");
+
+    const manager = new ConfigManager(configPath);
+    const infra = await manager.loadInfrastructure();
+    expect(infra?.externalServices ?? []).toHaveLength(0);
+  });
+
+  it("externalAdd rejects an entry with a non-http(s) URL", async () => {
+    const capture = captureConsole();
+    const cmd = new InfraCommand(configPath);
+    await cmd.externalAdd({ name: "nas", url: "ftp://10.0.0.1" });
+    capture.restore();
+
+    expect(capture.lines.join(" ")).toContain("Invalid external service configuration");
+  });
+
+  // ── externalRemove ─────────────────────────────────────────────────────────
+
+  it("externalRemove deletes an existing external service", async () => {
+    const manager = new ConfigManager(configPath);
+    await manager.saveInfrastructure({
+      externalServices: [
+        { name: "nas", url: "http://10.0.0.1" },
+        { name: "router", url: "http://10.0.0.2" },
+      ],
+    });
+
+    const capture = captureConsole();
+    const cmd = new InfraCommand(configPath);
+    await cmd.externalRemove("nas");
+    capture.restore();
+
+    expect(capture.lines.join(" ")).toContain("removed");
+
+    const infra = await manager.loadInfrastructure();
+    expect(infra?.externalServices?.map((s) => s.name)).toEqual(["router"]);
+  });
+
+  it("externalRemove reports not found for an unknown name", async () => {
+    const capture = captureConsole();
+    const cmd = new InfraCommand(configPath);
+    await cmd.externalRemove("ghost");
+    capture.restore();
+
+    expect(capture.lines.join(" ")).toContain("not found");
+  });
 });

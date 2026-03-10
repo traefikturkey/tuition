@@ -107,6 +107,7 @@ describe("CaddyCommand", () => {
         cloudflareToken: "token-123",
       }),
       loadServices: async () => ({}),
+      loadInfrastructure: async () => ({}),
     };
     commandMock.caddy = {
       generateConfig: async () => undefined,
@@ -164,6 +165,7 @@ describe("CaddyCommand", () => {
         redis: { enabled: false },
         missing: { enabled: true },
       }),
+      loadInfrastructure: async () => ({}),
     };
     commandMock.caddy = {
       generateConfig: async (_config, services) => {
@@ -259,6 +261,7 @@ describe("CaddyCommand", () => {
         cloudflareToken: "token-xyz",
       }),
       loadServices: async () => ({}),
+      loadInfrastructure: async () => ({}),
     };
     commandMock.caddy = {
       generateConfig: async () => undefined,
@@ -308,6 +311,7 @@ describe("CaddyCommand", () => {
         whoami: { enabled: true },
         redis: { enabled: false },
       }),
+      loadInfrastructure: async () => ({}),
     };
     commandMock.caddy = {
       generateConfig: async (_config, services) => {
@@ -368,6 +372,7 @@ describe("CaddyCommand", () => {
         whoami: { enabled: true },
         redis: { enabled: false },
       }),
+      loadInfrastructure: async () => ({}),
     };
     commandMock.caddy = {
       generateConfig: async (_config, services) => {
@@ -423,6 +428,7 @@ describe("CaddyCommand", () => {
         pgid: 1000,
       }),
       loadServices: async () => ({}),
+      loadInfrastructure: async () => ({}),
     };
     commandMock.caddy = {
       generateConfig: async () => undefined,
@@ -523,6 +529,7 @@ describe("CaddyCommand", () => {
     commandMock.config = {
       loadGlobal: async () => ({ domain: "example.com" }),
       loadServices: async () => ({ whoami: { enabled: true } }),
+      loadInfrastructure: async () => ({}),
     };
     commandMock.caddy = {
       generateConfig: async (_config, services) => {
@@ -560,6 +567,7 @@ describe("CaddyCommand", () => {
     commandMock.config = {
       loadGlobal: async () => ({ domain: "example.com" }),
       loadServices: async () => ({}),
+      loadInfrastructure: async () => ({}),
     };
     commandMock.caddy = {
       generateConfig: async () => undefined,
@@ -654,6 +662,7 @@ describe("CaddyCommand", () => {
         savedConfig = config;
       },
       loadServices: async () => ({ whoami: { enabled: true } }),
+      loadInfrastructure: async () => ({}),
     };
     commandMock.caddy = {
       generateConfig: async (_config, services) => {
@@ -701,6 +710,7 @@ describe("CaddyCommand", () => {
       loadGlobal: async () => ({ domain: "example.com" }),
       saveGlobal: async () => undefined,
       loadServices: async () => ({}),
+      loadInfrastructure: async () => ({}),
     };
     commandMock.caddy = {
       generateConfig: async () => undefined,
@@ -714,6 +724,44 @@ describe("CaddyCommand", () => {
 
     expect(consoleCapture.output.join("\n")).toContain("Password saved but Caddy could not reload");
     expect(consoleCapture.output.join("\n")).toContain("tuition caddy restart");
+  });
+
+  it("passes external services from infrastructure config to generateConfig", async () => {
+    let capturedExternal: unknown[] | undefined;
+
+    const commandMock = command as unknown as {
+      initialize: () => Promise<void>;
+      config: {
+        loadGlobal: () => Promise<Record<string, unknown>>;
+        loadServices: () => Promise<Record<string, { enabled: boolean }>>;
+        loadInfrastructure: () => Promise<Record<string, unknown>>;
+      };
+      caddy: {
+        generateConfig: (config: unknown, services: unknown[], external: unknown[]) => Promise<void>;
+        reload: () => Promise<{ success: boolean; message: string }>;
+      };
+    };
+
+    commandMock.initialize = async () => undefined;
+    commandMock.config = {
+      loadGlobal: async () => ({ domain: "example.com" }),
+      loadServices: async () => ({ whoami: { enabled: true } }),
+      loadInfrastructure: async () => ({
+        externalServices: [{ name: "nas", url: "http://192.168.1.10:5000" }],
+      }),
+    };
+    commandMock.caddy = {
+      generateConfig: async (_config, _services, external) => {
+        capturedExternal = external as unknown[];
+      },
+      reload: async () => ({ success: true, message: "ok" }),
+    };
+
+    await command.regenerate({});
+
+    expect(capturedExternal).toBeDefined();
+    expect(capturedExternal).toHaveLength(1);
+    expect((capturedExternal?.[0] as { name: string })?.name).toBe("nas");
   });
 
   it("routes the legacy hash-password command to set-password", async () => {

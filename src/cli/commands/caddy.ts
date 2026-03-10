@@ -55,8 +55,11 @@ export class CaddyCommand {
 
     // Generate Caddyfile
     console.log(chalk.blue('Generating Caddyfile...'));
-    await this.caddy.generateConfig(globalConfig, enabledServices);
-    console.log(chalk.green(`✓ Generated Caddyfile with ${enabledServices.length} routes`));
+    const infraConfig = await this.config.loadInfrastructure();
+    const externalServices = infraConfig?.externalServices ?? [];
+    await this.caddy.generateConfig(globalConfig, enabledServices, externalServices);
+    const totalRoutes = enabledServices.length + externalServices.length;
+    console.log(chalk.green(`✓ Generated Caddyfile with ${totalRoutes} routes`));
 
     // Prepare environment variables for Caddy
     const envVars: Record<string, string> = {
@@ -122,8 +125,11 @@ export class CaddyCommand {
     }
 
     console.log(chalk.blue('Regenerating Caddyfile...'));
-    await this.caddy.generateConfig(globalConfig, enabledServices);
-    console.log(chalk.green(`✓ Regenerated Caddyfile with ${enabledServices.length} routes`));
+    const infraConfigRestart = await this.config.loadInfrastructure();
+    const externalServicesRestart = infraConfigRestart?.externalServices ?? [];
+    await this.caddy.generateConfig(globalConfig, enabledServices, externalServicesRestart);
+    const totalRoutesRestart = enabledServices.length + externalServicesRestart.length;
+    console.log(chalk.green(`✓ Regenerated Caddyfile with ${totalRoutesRestart} routes`));
 
     // Prepare environment variables for Caddy
     const envVars: Record<string, string> = {
@@ -171,8 +177,11 @@ export class CaddyCommand {
     }
 
     console.log(chalk.blue('Regenerating Caddyfile...'));
-    await this.caddy.generateConfig(globalConfig, enabledServices);
-    console.log(chalk.green(`✓ Regenerated Caddyfile with ${enabledServices.length} routes`));
+    const infraConfigReload = await this.config.loadInfrastructure();
+    const externalServicesReload = infraConfigReload?.externalServices ?? [];
+    await this.caddy.generateConfig(globalConfig, enabledServices, externalServicesReload);
+    const totalRoutesReload = enabledServices.length + externalServicesReload.length;
+    console.log(chalk.green(`✓ Regenerated Caddyfile with ${totalRoutesReload} routes`));
 
     console.log(chalk.blue('Reloading Caddy configuration...'));
     const result = await this.caddy.reload();
@@ -232,7 +241,9 @@ export class CaddyCommand {
     }
 
     console.log(chalk.blue(`Regenerating Caddyfile for ${enabledServices.length} enabled services...`));
-    await this.caddy.generateConfig(globalConfig, enabledServices);
+    const infraConfigRegen = await this.config.loadInfrastructure();
+    const externalServicesRegen = infraConfigRegen?.externalServices ?? [];
+    await this.caddy.generateConfig(globalConfig, enabledServices, externalServicesRegen);
     
     // Reload to apply changes
     const result = await this.caddy.reload();
@@ -295,7 +306,9 @@ export class CaddyCommand {
     }
     
     console.log(chalk.blue('Updating Caddyfile...'));
-    await this.caddy.generateConfig(globalConfig, enabledServices);
+    const infraConfigPwd = await this.config.loadInfrastructure();
+    const externalServicesPwd = infraConfigPwd?.externalServices ?? [];
+    await this.caddy.generateConfig(globalConfig, enabledServices, externalServicesPwd);
     
     // Reload Caddy
     console.log(chalk.blue('Reloading Caddy...'));

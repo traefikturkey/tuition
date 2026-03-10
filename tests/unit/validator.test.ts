@@ -421,5 +421,57 @@ describe("ConfigValidator", () => {
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThanOrEqual(2);
     });
+
+    // ── External service rules ───────────────────────────────────────────────
+
+    it("accepts a valid external service entry", () => {
+      const result = validator.validateInfrastructure({
+        externalServices: [{ name: "nas", url: "http://192.168.1.10:8080" }],
+      });
+      expect(result.valid).toBe(true);
+    });
+
+    it("rejects an external service with an invalid name", () => {
+      const result = validator.validateInfrastructure({
+        externalServices: [{ name: "My_NAS", url: "http://10.0.0.1" }],
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.field).toBe("externalServices[].name");
+    });
+
+    it("rejects an external service with a missing URL", () => {
+      const result = validator.validateInfrastructure({
+        externalServices: [{ name: "nas", url: "" }],
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.field).toContain("url");
+    });
+
+    it("rejects an external service with a non-http(s) URL", () => {
+      const result = validator.validateInfrastructure({
+        externalServices: [{ name: "nas", url: "ftp://10.0.0.1" }],
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]?.field).toContain("url");
+    });
+
+    it("rejects duplicate external service names", () => {
+      const result = validator.validateInfrastructure({
+        externalServices: [
+          { name: "nas", url: "http://10.0.0.1" },
+          { name: "nas", url: "http://10.0.0.2" },
+        ],
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.message.includes("Duplicate"))).toBe(true);
+    });
+
+    it("reports multiple external service errors at once", () => {
+      const result = validator.validateInfrastructure({
+        externalServices: [{ name: "BAD NAME!", url: "not-a-url" }],
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors.length).toBeGreaterThanOrEqual(2);
+    });
   });
 });

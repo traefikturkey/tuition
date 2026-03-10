@@ -101,7 +101,7 @@ export class ConfigValidator {
 
   /**
    * Validate infrastructure configuration (optional tier).
-   * Currently enforces rules on NFS entries only; externalServices are free-form.
+   * Enforces rules on NFS entries and external service entries.
    */
   validateInfrastructure(config: InfrastructureConfig): ValidationResult {
     const errors: ValidationError[] = [];
@@ -138,6 +138,39 @@ export class ConfigValidator {
           field: `nfs[${nfs.name}].path`,
           message: "NFS export path must be an absolute path (start with /)",
           value: nfs.path,
+        });
+      }
+    }
+
+    const seenExternalNames = new Set<string>();
+    for (const svc of config.externalServices ?? []) {
+      // name is required and must be a safe identifier
+      if (!svc.name || svc.name.trim() === "") {
+        errors.push({ field: "externalServices[].name", message: "External service name is required" });
+      } else if (!/^[a-z0-9-]+$/.test(svc.name)) {
+        errors.push({
+          field: "externalServices[].name",
+          message: "External service name must contain only lowercase letters, numbers, and hyphens",
+          value: svc.name,
+        });
+      } else if (seenExternalNames.has(svc.name)) {
+        errors.push({
+          field: "externalServices[].name",
+          message: `Duplicate external service name '${svc.name}'`,
+          value: svc.name,
+        });
+      } else {
+        seenExternalNames.add(svc.name);
+      }
+
+      // url is required and must be http(s)
+      if (!svc.url || svc.url.trim() === "") {
+        errors.push({ field: `externalServices[${svc.name}].url`, message: "External service URL is required" });
+      } else if (!/^https?:\/\/.+/.test(svc.url)) {
+        errors.push({
+          field: `externalServices[${svc.name}].url`,
+          message: "External service URL must start with http:// or https://",
+          value: svc.url,
         });
       }
     }

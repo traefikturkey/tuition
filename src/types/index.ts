@@ -46,6 +46,8 @@ export interface ExternalService {
   name: string;
   url: string;
   description?: string;
+  subdomain?: string; // Caddy subdomain override (defaults to name)
+  dns?: boolean; // Register hostname in CoreDNS hosts file
 }
 
 export interface ServiceConfig {

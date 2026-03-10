@@ -282,4 +282,55 @@ describe('CaddyfileGenerator', () => {
       expect(routes).toHaveLength(0);
     });
   });
+
+  // ── External route generation ──────────────────────────────────────────────
+
+  describe('external route generation', () => {
+    it('generates a site block with reverse_proxy for an external service', () => {
+      const config = {
+        email: 'admin@example.com',
+        domain: 'example.com',
+        dnsProvider: 'cloudflare',
+        dnsCredentials: { api_token: 'tok' },
+        routes: [],
+        externalRoutes: [{ subdomain: 'nas', url: 'http://192.168.1.10:8080' }],
+      };
+      const output = generator.generate(config);
+      expect(output).toContain('nas.example.com {');
+      expect(output).toContain('reverse_proxy http://192.168.1.10:8080');
+    });
+
+    it('uses the subdomain field as hostname when provided', () => {
+      const routes = generator.buildExternalRoutes([
+        { name: 'synology', url: 'http://10.0.0.1', subdomain: 'nas' },
+      ]);
+      expect(routes).toHaveLength(1);
+      expect(routes[0]?.subdomain).toBe('nas');
+      expect(routes[0]?.url).toBe('http://10.0.0.1');
+    });
+
+    it('uses the name as subdomain when no subdomain field is set', () => {
+      const routes = generator.buildExternalRoutes([
+        { name: 'router', url: 'http://192.168.1.1' },
+      ]);
+      expect(routes[0]?.subdomain).toBe('router');
+    });
+
+    it('includes multiple external routes in the Caddyfile', () => {
+      const config = {
+        email: 'admin@example.com',
+        domain: 'home.test',
+        dnsProvider: 'cloudflare',
+        dnsCredentials: { api_token: 'tok' },
+        routes: [],
+        externalRoutes: [
+          { subdomain: 'nas', url: 'http://10.0.0.2' },
+          { subdomain: 'router', url: 'http://10.0.0.1' },
+        ],
+      };
+      const output = generator.generate(config);
+      expect(output).toContain('nas.home.test {');
+      expect(output).toContain('router.home.test {');
+    });
+  });
 });

@@ -3,7 +3,12 @@
  * Creates Caddy configuration from service definitions
  */
 
-import type { ServiceDefinition, PortMapping } from "../../types/index.js";
+import type { ServiceDefinition, PortMapping, ExternalService } from "../../types/index.js";
+
+export interface ExternalServiceRoute {
+  subdomain: string;
+  url: string;
+}
 
 export interface CaddyRoute {
   domain: string;
@@ -20,6 +25,7 @@ export interface CaddyConfig {
   dnsCredentials: Record<string, string>;
   routes: CaddyRoute[];
   adminPasswordHash?: string;
+  externalRoutes?: ExternalServiceRoute[];
 }
 
 export class CaddyfileGenerator {
@@ -74,6 +80,12 @@ export class CaddyfileGenerator {
       lines.push("");
     }
 
+    // External service routes
+    for (const ext of config.externalRoutes ?? []) {
+      lines.push(this.generateExternalRoute(ext, config.domain));
+      lines.push("");
+    }
+
     return lines.join("\n");
   }
 
@@ -96,6 +108,34 @@ export class CaddyfileGenerator {
     lines.push(`}`);
 
     return lines.join("\n");
+  }
+
+  /**
+   * Generate route block for an external (non-Docker) service
+   */
+  private generateExternalRoute(ext: ExternalServiceRoute, domain: string): string {
+    const lines: string[] = [];
+
+    lines.push(`${ext.subdomain}.${domain} {`);
+    lines.push(`    reverse_proxy ${ext.url}`);
+    lines.push(`    header {`);
+    lines.push(`        X-Forwarded-For {remote_host}`);
+    lines.push(`        X-Real-IP {remote_host}`);
+    lines.push(`        X-Forwarded-Proto {scheme}`);
+    lines.push(`    }`);
+    lines.push(`}`);
+
+    return lines.join("\n");
+  }
+
+  /**
+   * Convert ExternalService entries to ExternalServiceRoute objects
+   */
+  buildExternalRoutes(services: ExternalService[]): ExternalServiceRoute[] {
+    return services.map((svc) => ({
+      subdomain: svc.subdomain ?? svc.name,
+      url: svc.url,
+    }));
   }
 
   /**
