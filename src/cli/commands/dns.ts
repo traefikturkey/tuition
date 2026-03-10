@@ -369,7 +369,7 @@ export class DnsCommand {
       console.log(chalk.green(`✓ CoreDNS reloaded with new upstream DNS`));
     } else {
       console.log(chalk.red(`✗ Failed to reload CoreDNS: ${result.message}`));
-      console.log(chalk.gray('You may need to restart CoreDNS manually: tuition dns restart'));
+      console.log(chalk.gray('You may need to restart CoreDNS manually: tuition dns stop && tuition dns start'));
     }
   }
 }
