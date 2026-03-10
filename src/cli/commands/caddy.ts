@@ -2,10 +2,10 @@
  * Caddy management CLI commands
  */
 
-import { CaddyManager } from '../../services/caddy/manager.js';
-import { ConfigManager } from '../../core/config/manager.js';
-import { catalog } from '../../core/catalog/loader.js';
-import chalk from 'chalk';
+import { CaddyManager } from "../../services/caddy/manager.js";
+import { ConfigManager } from "../../core/config/manager.js";
+import { catalog } from "../../core/catalog/loader.js";
+import chalk from "chalk";
 
 export class CaddyCommand {
   private caddy: CaddyManager;
@@ -31,14 +31,14 @@ export class CaddyCommand {
 
     // Check if tuition is initialized
     if (!(await this.config.exists())) {
-      console.log(chalk.red('Tuition is not initialized. Run: tuition init'));
+      console.log(chalk.red("Tuition is not initialized. Run: tuition init"));
       return;
     }
 
     // Generate Caddyfile for all enabled services
     const globalConfig = await this.config.loadGlobal();
     const services = await this.config.loadServices();
-    
+
     // Get enabled services
     const enabledServiceNames = Object.entries(services)
       .filter(([, config]) => config.enabled)
@@ -54,7 +54,7 @@ export class CaddyCommand {
     }
 
     // Generate Caddyfile
-    console.log(chalk.blue('Generating Caddyfile...'));
+    console.log(chalk.blue("Generating Caddyfile..."));
     const infraConfig = await this.config.loadInfrastructure();
     const externalServices = infraConfig?.externalServices ?? [];
     await this.caddy.generateConfig(globalConfig, enabledServices, externalServices);
@@ -69,13 +69,13 @@ export class CaddyCommand {
       PUID: String(globalConfig.puid),
       PGID: String(globalConfig.pgid),
     };
-    
+
     if (globalConfig.cloudflareToken) {
-      envVars['CF_API_TOKEN'] = globalConfig.cloudflareToken;
+      envVars["CF_API_TOKEN"] = globalConfig.cloudflareToken;
     }
 
     // Start Caddy
-    console.log(chalk.blue('Starting Caddy...'));
+    console.log(chalk.blue("Starting Caddy..."));
     const result = await this.caddy.start(envVars);
 
     if (result.success) {
@@ -92,7 +92,7 @@ export class CaddyCommand {
   async stop(options: { path?: string }): Promise<void> {
     await this.initialize();
 
-    console.log(chalk.blue('Stopping Caddy...'));
+    console.log(chalk.blue("Stopping Caddy..."));
     const result = await this.caddy.stop();
 
     if (result.success) {
@@ -124,7 +124,7 @@ export class CaddyCommand {
       }
     }
 
-    console.log(chalk.blue('Regenerating Caddyfile...'));
+    console.log(chalk.blue("Regenerating Caddyfile..."));
     const infraConfigRestart = await this.config.loadInfrastructure();
     const externalServicesRestart = infraConfigRestart?.externalServices ?? [];
     await this.caddy.generateConfig(globalConfig, enabledServices, externalServicesRestart);
@@ -141,10 +141,10 @@ export class CaddyCommand {
     };
 
     if (globalConfig.cloudflareToken) {
-      envVars['CF_API_TOKEN'] = globalConfig.cloudflareToken;
+      envVars["CF_API_TOKEN"] = globalConfig.cloudflareToken;
     }
 
-    console.log(chalk.blue('Restarting Caddy...'));
+    console.log(chalk.blue("Restarting Caddy..."));
     const result = await this.caddy.restart(envVars);
 
     if (result.success) {
@@ -176,14 +176,14 @@ export class CaddyCommand {
       }
     }
 
-    console.log(chalk.blue('Regenerating Caddyfile...'));
+    console.log(chalk.blue("Regenerating Caddyfile..."));
     const infraConfigReload = await this.config.loadInfrastructure();
     const externalServicesReload = infraConfigReload?.externalServices ?? [];
     await this.caddy.generateConfig(globalConfig, enabledServices, externalServicesReload);
     const totalRoutesReload = enabledServices.length + externalServicesReload.length;
     console.log(chalk.green(`✓ Regenerated Caddyfile with ${totalRoutesReload} routes`));
 
-    console.log(chalk.blue('Reloading Caddy configuration...'));
+    console.log(chalk.blue("Reloading Caddy configuration..."));
     const result = await this.caddy.reload();
 
     if (result.success) {
@@ -202,11 +202,11 @@ export class CaddyCommand {
     const status = await this.caddy.status();
     const globalConfig = await this.config.loadGlobal();
 
-    console.log(chalk.blue('\nCaddy Status:\n'));
-    console.log(`  Running: ${status.running ? chalk.green('Yes') : chalk.red('No')}`);
+    console.log(chalk.blue("\nCaddy Status:\n"));
+    console.log(`  Running: ${status.running ? chalk.green("Yes") : chalk.red("No")}`);
     console.log(`  Domain: ${globalConfig.domain}`);
     console.log(`  Routes: ${status.routes}`);
-    
+
     console.log(chalk.gray(`\n  Admin UI:`));
     console.log(chalk.gray(`    https://tuition.${globalConfig.domain}`));
     if (globalConfig.adminPasswordHash) {
@@ -215,7 +215,7 @@ export class CaddyCommand {
       console.log(chalk.yellow(`    ⚠ No password configured`));
       console.log(chalk.gray(`      Run: tuition caddy set-password`));
     }
-    
+
     console.log();
   }
 
@@ -227,7 +227,7 @@ export class CaddyCommand {
 
     const globalConfig = await this.config.loadGlobal();
     const services = await this.config.loadServices();
-    
+
     const enabledServiceNames = Object.entries(services)
       .filter(([, config]) => config.enabled)
       .map(([name]) => name);
@@ -244,10 +244,10 @@ export class CaddyCommand {
     const infraConfigRegen = await this.config.loadInfrastructure();
     const externalServicesRegen = infraConfigRegen?.externalServices ?? [];
     await this.caddy.generateConfig(globalConfig, enabledServices, externalServicesRegen);
-    
+
     // Reload to apply changes
     const result = await this.caddy.reload();
-    
+
     if (result.success) {
       console.log(chalk.green(`✓ Caddyfile regenerated and applied`));
     } else {
@@ -260,43 +260,43 @@ export class CaddyCommand {
    */
   async setPassword(options: { path?: string }): Promise<void> {
     await this.initialize();
-    
-    const { promptPassword, hashPassword } = await import('../../utils/password.js');
-    
-    console.log(chalk.blue('Setting Caddy admin UI password...\n'));
-    
+
+    const { promptPassword, hashPassword } = await import("../../utils/password.js");
+
+    console.log(chalk.blue("Setting Caddy admin UI password...\n"));
+
     // Load current config
     const globalConfig = await this.config.loadGlobal();
-    
+
     // Prompt for password
-    const password = await promptPassword('Enter new admin password: ');
-    const confirm = await promptPassword('Confirm password: ');
-    
+    const password = await promptPassword("Enter new admin password: ");
+    const confirm = await promptPassword("Confirm password: ");
+
     if (password !== confirm) {
-      console.log(chalk.red('\n✗ Passwords do not match'));
-      console.log(chalk.gray('  Password was not changed'));
+      console.log(chalk.red("\n✗ Passwords do not match"));
+      console.log(chalk.gray("  Password was not changed"));
       return;
     }
-    
+
     if (password.length === 0) {
-      console.log(chalk.red('\n✗ Password cannot be empty'));
+      console.log(chalk.red("\n✗ Password cannot be empty"));
       return;
     }
-    
+
     // Hash the password
-    console.log(chalk.gray('\nHashing password...'));
+    console.log(chalk.gray("\nHashing password..."));
     const hash = await hashPassword(password);
-    
+
     // Save to global config
     globalConfig.adminPasswordHash = hash;
     await this.config.saveGlobal(globalConfig);
-    
+
     // Regenerate Caddyfile
     const services = await this.config.loadServices();
     const enabledServiceNames = Object.entries(services)
       .filter(([, config]) => config.enabled)
       .map(([name]) => name);
-    
+
     const enabledServices = [];
     for (const name of enabledServiceNames) {
       const def = await catalog.get(name);
@@ -304,24 +304,24 @@ export class CaddyCommand {
         enabledServices.push(def);
       }
     }
-    
-    console.log(chalk.blue('Updating Caddyfile...'));
+
+    console.log(chalk.blue("Updating Caddyfile..."));
     const infraConfigPwd = await this.config.loadInfrastructure();
     const externalServicesPwd = infraConfigPwd?.externalServices ?? [];
     await this.caddy.generateConfig(globalConfig, enabledServices, externalServicesPwd);
-    
+
     // Reload Caddy
-    console.log(chalk.blue('Reloading Caddy...'));
+    console.log(chalk.blue("Reloading Caddy..."));
     const result = await this.caddy.reload();
-    
+
     if (result.success) {
-      console.log(chalk.green('\n✓ Admin password updated successfully'));
-      console.log(chalk.gray('  The admin UI is now password protected'));
-      console.log(chalk.gray('  Access at:'));
+      console.log(chalk.green("\n✓ Admin password updated successfully"));
+      console.log(chalk.gray("  The admin UI is now password protected"));
+      console.log(chalk.gray("  Access at:"));
       console.log(chalk.cyan(`  https://tuition.${globalConfig.domain}`));
     } else {
-      console.log(chalk.yellow('\n⚠ Password saved but Caddy could not reload'));
-      console.log(chalk.gray('  Run: tuition caddy restart to apply changes'));
+      console.log(chalk.yellow("\n⚠ Password saved but Caddy could not reload"));
+      console.log(chalk.gray("  Run: tuition caddy restart to apply changes"));
     }
   }
 
@@ -331,9 +331,9 @@ export class CaddyCommand {
    */
   async hashPassword(options: { path?: string }): Promise<void> {
     console.log(chalk.blue('Use "tuition caddy set-password" instead\n'));
-    console.log(chalk.gray('This command interactively sets the admin password'));
-    console.log(chalk.gray('and automatically updates the Caddy configuration.'));
-    console.log('');
+    console.log(chalk.gray("This command interactively sets the admin password"));
+    console.log(chalk.gray("and automatically updates the Caddy configuration."));
+    console.log("");
     await this.setPassword(options);
   }
 }

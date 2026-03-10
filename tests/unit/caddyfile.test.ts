@@ -2,137 +2,137 @@
  * Caddyfile generator tests
  */
 
-import { describe, it, expect } from 'bun:test';
-import { CaddyfileGenerator } from '../../src/services/caddy/caddyfile.js';
-import type { ServiceDefinition, PortMapping } from '../../src/types/index.js';
+import { describe, it, expect } from "bun:test";
+import { CaddyfileGenerator } from "../../src/services/caddy/caddyfile.js";
+import type { ServiceDefinition, PortMapping } from "../../src/types/index.js";
 
-describe('CaddyfileGenerator', () => {
+describe("CaddyfileGenerator", () => {
   const generator = new CaddyfileGenerator();
 
-  describe('generate', () => {
-    it('should generate valid Caddyfile', () => {
+  describe("generate", () => {
+    it("should generate valid Caddyfile", () => {
       const config = {
-        email: 'admin@example.com',
-        domain: 'example.com',
-        dnsProvider: 'cloudflare',
-        dnsCredentials: { api_token: 'test-token' },
+        email: "admin@example.com",
+        domain: "example.com",
+        dnsProvider: "cloudflare",
+        dnsCredentials: { api_token: "test-token" },
         routes: [
           {
-            domain: 'pihole',
-            service: 'pihole',
+            domain: "pihole",
+            service: "pihole",
             port: 80,
             tls: true,
-            upstream: 'pihole',
+            upstream: "pihole",
           },
         ],
       };
 
       const caddyfile = generator.generate(config);
 
-      expect(caddyfile).toContain('admin@example.com');
-      expect(caddyfile).toContain('*.example.com');
-      expect(caddyfile).toContain('dns cloudflare');
-      expect(caddyfile).toContain('api_token {env.CF_API_TOKEN}');
-      expect(caddyfile).toContain('pihole.example.com');
-      expect(caddyfile).toContain('reverse_proxy pihole:80');
+      expect(caddyfile).toContain("admin@example.com");
+      expect(caddyfile).toContain("*.example.com");
+      expect(caddyfile).toContain("dns cloudflare");
+      expect(caddyfile).toContain("api_token {env.CF_API_TOKEN}");
+      expect(caddyfile).toContain("pihole.example.com");
+      expect(caddyfile).toContain("reverse_proxy pihole:80");
     });
 
-    it('should include all routes', () => {
+    it("should include all routes", () => {
       const config = {
-        email: 'admin@example.com',
-        domain: 'example.com',
-        dnsProvider: 'cloudflare',
+        email: "admin@example.com",
+        domain: "example.com",
+        dnsProvider: "cloudflare",
         dnsCredentials: {},
         routes: [
-          { domain: 'service1', service: 'svc1', port: 80, tls: true, upstream: 'svc1' },
-          { domain: 'service2', service: 'svc2', port: 8080, tls: true, upstream: 'svc2' },
+          { domain: "service1", service: "svc1", port: 80, tls: true, upstream: "svc1" },
+          { domain: "service2", service: "svc2", port: 8080, tls: true, upstream: "svc2" },
         ],
       };
 
       const caddyfile = generator.generate(config);
 
-      expect(caddyfile).toContain('service1.example.com');
-      expect(caddyfile).toContain('service2.example.com');
-      expect(caddyfile).toContain('svc1:80');
-      expect(caddyfile).toContain('svc2:8080');
+      expect(caddyfile).toContain("service1.example.com");
+      expect(caddyfile).toContain("service2.example.com");
+      expect(caddyfile).toContain("svc1:80");
+      expect(caddyfile).toContain("svc2:8080");
     });
 
-    it('should include admin password hash when configured', () => {
+    it("should include admin password hash when configured", () => {
       const config = {
-        email: 'admin@example.com',
-        domain: 'example.com',
-        dnsProvider: 'cloudflare',
+        email: "admin@example.com",
+        domain: "example.com",
+        dnsProvider: "cloudflare",
         dnsCredentials: {},
-        adminPasswordHash: 'hashed-password',
+        adminPasswordHash: "hashed-password",
         routes: [],
       };
 
       const caddyfile = generator.generate(config);
 
-      expect(caddyfile).toContain('admin hashed-password');
-      expect(caddyfile).not.toContain('Admin UI password not configured');
-      expect(caddyfile).not.toContain('tuition caddy set-password');
+      expect(caddyfile).toContain("admin hashed-password");
+      expect(caddyfile).not.toContain("Admin UI password not configured");
+      expect(caddyfile).not.toContain("tuition caddy set-password");
     });
 
-    it('should include the admin password placeholder when no hash is configured', () => {
+    it("should include the admin password placeholder when no hash is configured", () => {
       const config = {
-        email: 'admin@example.com',
-        domain: 'example.com',
-        dnsProvider: 'cloudflare',
+        email: "admin@example.com",
+        domain: "example.com",
+        dnsProvider: "cloudflare",
         dnsCredentials: {},
         routes: [],
       };
 
       const caddyfile = generator.generate(config);
 
-      expect(caddyfile).toContain('# Admin UI password not configured');
-      expect(caddyfile).toContain('# Run: tuition caddy set-password');
+      expect(caddyfile).toContain("# Admin UI password not configured");
+      expect(caddyfile).toContain("# Run: tuition caddy set-password");
     });
   });
 
-  describe('parseServiceLabels', () => {
-    it('should extract route from caddy label', () => {
+  describe("parseServiceLabels", () => {
+    it("should extract route from caddy label", () => {
       const service: ServiceDefinition = {
-        name: 'pihole',
-        category: 'dns',
-        description: 'DNS server',
-        image: 'pihole/pihole',
-        ports: [{ host: 80, container: 80, protocol: 'tcp' }],
+        name: "pihole",
+        category: "dns",
+        description: "DNS server",
+        image: "pihole/pihole",
+        ports: [{ host: 80, container: 80, protocol: "tcp" }],
         labels: {
-          caddy: 'pihole.${DOMAIN}',
-          'caddy.reverse_proxy': '{{upstreams 80}}',
+          caddy: "pihole.${DOMAIN}",
+          "caddy.reverse_proxy": "{{upstreams 80}}",
         },
       };
 
       const route = generator.parseServiceLabels(service);
 
       expect(route).not.toBeNull();
-      expect(route?.domain).toBe('pihole');
-      expect(route?.service).toBe('pihole');
+      expect(route?.domain).toBe("pihole");
+      expect(route?.service).toBe("pihole");
       expect(route?.port).toBe(80);
-      expect(route?.upstream).toBe('pihole');
+      expect(route?.upstream).toBe("pihole");
     });
 
-    it('should return null when no caddy label exists', () => {
+    it("should return null when no caddy label exists", () => {
       const service: ServiceDefinition = {
-        name: 'test',
-        category: 'dns',
-        description: 'Test service',
-        image: 'test:latest',
+        name: "test",
+        category: "dns",
+        description: "Test service",
+        image: "test:latest",
       };
 
       const route = generator.parseServiceLabels(service);
       expect(route).toBeNull();
     });
 
-    it('should return null when labels exist but the caddy label is missing', () => {
+    it("should return null when labels exist but the caddy label is missing", () => {
       const service: ServiceDefinition = {
-        name: 'test',
-        category: 'dns',
-        description: 'Test service',
-        image: 'test:latest',
+        name: "test",
+        category: "dns",
+        description: "Test service",
+        image: "test:latest",
         labels: {
-          'caddy.reverse_proxy': '{{upstreams 8080}}',
+          "caddy.reverse_proxy": "{{upstreams 8080}}",
         },
       };
 
@@ -140,16 +140,16 @@ describe('CaddyfileGenerator', () => {
       expect(route).toBeNull();
     });
 
-    it('should extract port from upstream label', () => {
+    it("should extract port from upstream label", () => {
       const service: ServiceDefinition = {
-        name: 'plex',
-        category: 'media',
-        description: 'Media server',
-        image: 'plex',
-        ports: [{ host: 32400, container: 32400, protocol: 'tcp' }],
+        name: "plex",
+        category: "media",
+        description: "Media server",
+        image: "plex",
+        ports: [{ host: 32400, container: 32400, protocol: "tcp" }],
         labels: {
-          caddy: 'plex.${DOMAIN}',
-          'caddy.reverse_proxy': '{{upstreams 32400}}',
+          caddy: "plex.${DOMAIN}",
+          "caddy.reverse_proxy": "{{upstreams 32400}}",
         },
       };
 
@@ -157,124 +157,124 @@ describe('CaddyfileGenerator', () => {
       expect(route?.port).toBe(32400);
     });
 
-    it('should fall back to the first container port when ports are defined', () => {
+    it("should fall back to the first container port when ports are defined", () => {
       const service: ServiceDefinition = {
-        name: 'jellyfin',
-        category: 'media',
-        description: 'Media server',
-        image: 'jellyfin',
-        ports: [{ host: 8096, container: 8096, protocol: 'tcp' }],
+        name: "jellyfin",
+        category: "media",
+        description: "Media server",
+        image: "jellyfin",
+        ports: [{ host: 8096, container: 8096, protocol: "tcp" }],
         labels: {
-          caddy: 'jellyfin.${DOMAIN}',
+          caddy: "jellyfin.${DOMAIN}",
         },
       };
 
       const route = generator.parseServiceLabels(service);
 
       expect(route?.port).toBe(8096);
-      expect(route?.upstream).toBe('jellyfin');
+      expect(route?.upstream).toBe("jellyfin");
     });
 
-    it('should keep the default port when the upstream label does not match the expected template', () => {
+    it("should keep the default port when the upstream label does not match the expected template", () => {
       const service: ServiceDefinition = {
-        name: 'grafana',
-        category: 'monitoring',
-        description: 'Dashboards',
-        image: 'grafana/grafana',
+        name: "grafana",
+        category: "monitoring",
+        description: "Dashboards",
+        image: "grafana/grafana",
         labels: {
-          caddy: 'grafana.${DOMAIN}',
-          'caddy.reverse_proxy': 'grafana:3000',
+          caddy: "grafana.${DOMAIN}",
+          "caddy.reverse_proxy": "grafana:3000",
         },
       };
 
       const route = generator.parseServiceLabels(service);
 
       expect(route?.port).toBe(80);
-      expect(route?.domain).toBe('grafana');
+      expect(route?.domain).toBe("grafana");
     });
 
-    it('should generate a route without double dots when the caddy label uses ${DOMAIN}', () => {
+    it("should generate a route without double dots when the caddy label uses ${DOMAIN}", () => {
       const config = {
-        email: 'admin@example.com',
-        domain: 'nexus-central.tech',
-        dnsProvider: 'cloudflare',
+        email: "admin@example.com",
+        domain: "nexus-central.tech",
+        dnsProvider: "cloudflare",
         dnsCredentials: {},
         routes: [
           {
-            domain: 'webtop',
-            service: 'webtop',
+            domain: "webtop",
+            service: "webtop",
             port: 3000,
             tls: true,
-            upstream: 'webtop',
+            upstream: "webtop",
           },
         ],
       };
 
       const caddyfile = generator.generate(config);
 
-      expect(caddyfile).toContain('webtop.nexus-central.tech {');
-      expect(caddyfile).not.toContain('webtop..nexus-central.tech {');
+      expect(caddyfile).toContain("webtop.nexus-central.tech {");
+      expect(caddyfile).not.toContain("webtop..nexus-central.tech {");
     });
 
-    it('should ignore sparse port entries and keep the parsed upstream port', () => {
+    it("should ignore sparse port entries and keep the parsed upstream port", () => {
       const service: ServiceDefinition = {
-        name: 'prometheus',
-        category: 'monitoring',
-        description: 'Metrics',
-        image: 'prom/prometheus',
+        name: "prometheus",
+        category: "monitoring",
+        description: "Metrics",
+        image: "prom/prometheus",
         ports: [undefined as unknown as PortMapping],
         labels: {
-          caddy: 'prometheus.${DOMAIN}',
-          'caddy.reverse_proxy': '{{upstreams 9090}}',
+          caddy: "prometheus.${DOMAIN}",
+          "caddy.reverse_proxy": "{{upstreams 9090}}",
         },
       };
 
       const route = generator.parseServiceLabels(service);
 
       expect(route?.port).toBe(9090);
-      expect(route?.upstream).toBe('prometheus');
+      expect(route?.upstream).toBe("prometheus");
     });
   });
 
-  describe('extractRoutes', () => {
-    it('should extract routes from multiple services', () => {
+  describe("extractRoutes", () => {
+    it("should extract routes from multiple services", () => {
       const services: ServiceDefinition[] = [
         {
-          name: 'pihole',
-          category: 'dns',
-          description: 'DNS',
-          image: 'pihole',
-          labels: { caddy: 'pihole.${DOMAIN}', 'caddy.reverse_proxy': '{{upstreams 80}}' },
+          name: "pihole",
+          category: "dns",
+          description: "DNS",
+          image: "pihole",
+          labels: { caddy: "pihole.${DOMAIN}", "caddy.reverse_proxy": "{{upstreams 80}}" },
         },
         {
-          name: 'plex',
-          category: 'media',
-          description: 'Media',
-          image: 'plex',
-          labels: { caddy: 'plex.${DOMAIN}', 'caddy.reverse_proxy': '{{upstreams 32400}}' },
+          name: "plex",
+          category: "media",
+          description: "Media",
+          image: "plex",
+          labels: { caddy: "plex.${DOMAIN}", "caddy.reverse_proxy": "{{upstreams 32400}}" },
         },
         {
-          name: 'nodns',
-          category: 'dns',
-          description: 'No DNS',
-          image: 'other',
+          name: "nodns",
+          category: "dns",
+          description: "No DNS",
+          image: "other",
         },
       ];
 
       const routes = generator.extractRoutes(services);
 
       expect(routes).toHaveLength(2);
-      expect(routes[0]?.service).toBe('pihole');
-      expect(routes[1]?.service).toBe('plex');
+      expect(routes[0]?.service).toBe("pihole");
+      expect(routes[1]?.service).toBe("plex");
     });
 
-    it('should return empty array for no services with labels', () => {
+    it("should return empty array for no services with labels", () => {
       const services: ServiceDefinition[] = [
         {
-          name: 'test1',
-          category: 'dns',
-          description: 'Test',
-          image: 'test',
+          name: "test1",
+          category: "dns",
+          description: "Test",
+          image: "test",
         },
       ];
 
@@ -285,52 +285,48 @@ describe('CaddyfileGenerator', () => {
 
   // ── External route generation ──────────────────────────────────────────────
 
-  describe('external route generation', () => {
-    it('generates a site block with reverse_proxy for an external service', () => {
+  describe("external route generation", () => {
+    it("generates a site block with reverse_proxy for an external service", () => {
       const config = {
-        email: 'admin@example.com',
-        domain: 'example.com',
-        dnsProvider: 'cloudflare',
-        dnsCredentials: { api_token: 'tok' },
+        email: "admin@example.com",
+        domain: "example.com",
+        dnsProvider: "cloudflare",
+        dnsCredentials: { api_token: "tok" },
         routes: [],
-        externalRoutes: [{ subdomain: 'nas', url: 'http://192.168.1.10:8080' }],
+        externalRoutes: [{ subdomain: "nas", url: "http://192.168.1.10:8080" }],
       };
       const output = generator.generate(config);
-      expect(output).toContain('nas.example.com {');
-      expect(output).toContain('reverse_proxy http://192.168.1.10:8080');
+      expect(output).toContain("nas.example.com {");
+      expect(output).toContain("reverse_proxy http://192.168.1.10:8080");
     });
 
-    it('uses the subdomain field as hostname when provided', () => {
-      const routes = generator.buildExternalRoutes([
-        { name: 'synology', url: 'http://10.0.0.1', subdomain: 'nas' },
-      ]);
+    it("uses the subdomain field as hostname when provided", () => {
+      const routes = generator.buildExternalRoutes([{ name: "synology", url: "http://10.0.0.1", subdomain: "nas" }]);
       expect(routes).toHaveLength(1);
-      expect(routes[0]?.subdomain).toBe('nas');
-      expect(routes[0]?.url).toBe('http://10.0.0.1');
+      expect(routes[0]?.subdomain).toBe("nas");
+      expect(routes[0]?.url).toBe("http://10.0.0.1");
     });
 
-    it('uses the name as subdomain when no subdomain field is set', () => {
-      const routes = generator.buildExternalRoutes([
-        { name: 'router', url: 'http://192.168.1.1' },
-      ]);
-      expect(routes[0]?.subdomain).toBe('router');
+    it("uses the name as subdomain when no subdomain field is set", () => {
+      const routes = generator.buildExternalRoutes([{ name: "router", url: "http://192.168.1.1" }]);
+      expect(routes[0]?.subdomain).toBe("router");
     });
 
-    it('includes multiple external routes in the Caddyfile', () => {
+    it("includes multiple external routes in the Caddyfile", () => {
       const config = {
-        email: 'admin@example.com',
-        domain: 'home.test',
-        dnsProvider: 'cloudflare',
-        dnsCredentials: { api_token: 'tok' },
+        email: "admin@example.com",
+        domain: "home.test",
+        dnsProvider: "cloudflare",
+        dnsCredentials: { api_token: "tok" },
         routes: [],
         externalRoutes: [
-          { subdomain: 'nas', url: 'http://10.0.0.2' },
-          { subdomain: 'router', url: 'http://10.0.0.1' },
+          { subdomain: "nas", url: "http://10.0.0.2" },
+          { subdomain: "router", url: "http://10.0.0.1" },
         ],
       };
       const output = generator.generate(config);
-      expect(output).toContain('nas.home.test {');
-      expect(output).toContain('router.home.test {');
+      expect(output).toContain("nas.home.test {");
+      expect(output).toContain("router.home.test {");
     });
   });
 });

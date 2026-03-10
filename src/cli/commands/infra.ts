@@ -184,7 +184,9 @@ export class InfraCommand {
     for (const svc of entries) {
       const subdomain = svc.subdomain ?? svc.name;
       const dns = svc.dns ? chalk.green(" [dns]") : "";
-      console.log(`  ${chalk.white(svc.name.padEnd(15))}  ${chalk.cyan(svc.url)}  ${chalk.gray(subdomain + ".<domain>")}${dns}`);
+      console.log(
+        `  ${chalk.white(svc.name.padEnd(15))}  ${chalk.cyan(svc.url)}  ${chalk.gray(subdomain + ".<domain>")}${dns}`
+      );
       if (svc.description) {
         console.log(`  ${"".padEnd(15)}  ${chalk.gray(svc.description)}`);
       }
@@ -273,7 +275,9 @@ export class InfraCommand {
     await manager.saveInfrastructure(infra);
     console.log(chalk.green(`✓ External service '${options.name}' added (${options.url})`));
     if (options.dns) {
-      console.log(chalk.gray(`  Run 'tuition dns regenerate' to register ${options.subdomain ?? options.name}.<domain> in DNS`));
+      console.log(
+        chalk.gray(`  Run 'tuition dns regenerate' to register ${options.subdomain ?? options.name}.<domain> in DNS`)
+      );
     }
     console.log(chalk.gray(`  Run 'tuition caddy regenerate' to add the Caddy route`));
   }
