@@ -31,6 +31,23 @@ export class ServiceBrowser {
       return;
     }
 
+    // Filter and sort state
+    let filterQuery = '';
+    let sortMode: 'name' | 'state' = 'name';
+
+    const STATE_ORDER: Record<string, number> = { running: 0, enabled: 1, stopped: 2, disabled: 3 };
+
+    const getDisplayServices = () => {
+      const filtered = !filterQuery
+        ? currentServices.slice()
+        : currentServices.filter(s => s.name.toLowerCase().includes(filterQuery.toLowerCase()));
+      return filtered.sort((a, b) =>
+        sortMode === 'state'
+          ? ((STATE_ORDER[a.state] ?? 4) - (STATE_ORDER[b.state] ?? 4)) || a.name.localeCompare(b.name)
+          : a.name.localeCompare(b.name)
+      );
+    };
+
     // Create main container
     const container = blessed.box({
       parent: this.screen,
@@ -76,7 +93,7 @@ export class ServiceBrowser {
           fg: 'white',
         },
       },
-      items: currentServices.map(s => this.formatServiceListItem(s)),
+      items: getDisplayServices().map(s => this.formatServiceListItem(s)),
     });
 
     // Create details panel
@@ -226,12 +243,12 @@ export class ServiceBrowser {
       keys: true,
     });
 
-    // Update details and track selection — always read from currentServices so
-    // the action buttons never operate on stale data after a refresh.
-    let selectedIndex = 0;
+    // Update details and track selection by service name so filter/sort changes
+    // don't cause button actions to operate on the wrong service.
+    let selectedServiceName: string | undefined = getDisplayServices()[0]?.name;
     list.on('select', (item, index) => {
-      selectedIndex = index;
-      const service = currentServices[index];
+      const service = getDisplayServices()[index];
+      selectedServiceName = service?.name;
       if (service) {
         details.setContent(this.formatServiceDetails(service));
         this.screen.render();
@@ -241,13 +258,13 @@ export class ServiceBrowser {
     // Refresh the list from the live service state and keep currentServices in sync.
     const doRefresh = async () => {
       currentServices = await this.lifecycleManager.listAll();
-      list.setItems(currentServices.map(s => this.formatServiceListItem(s)));
+      list.setItems(getDisplayServices().map(s => this.formatServiceListItem(s)));
       this.screen.render();
     };
 
     // Button actions
     btnEnable.on('press', async () => {
-      const service = currentServices[selectedIndex];
+      const service = currentServices.find(s => s.name === selectedServiceName);
       if (service) {
         const result = await this.lifecycleManager.enable(service.name);
         this.showMessage(result.message, result.success ? 'green' : 'red');
@@ -256,7 +273,7 @@ export class ServiceBrowser {
     });
 
     btnDisable.on('press', async () => {
-      const service = currentServices[selectedIndex];
+      const service = currentServices.find(s => s.name === selectedServiceName);
       if (service) {
         const result = await this.lifecycleManager.disable(service.name);
         this.showMessage(result.message, result.success ? 'green' : 'red');
@@ -265,7 +282,7 @@ export class ServiceBrowser {
     });
 
     btnStart.on('press', async () => {
-      const service = currentServices[selectedIndex];
+      const service = currentServices.find(s => s.name === selectedServiceName);
       if (service) {
         const result = await this.lifecycleManager.start(service.name);
         this.showMessage(result.message, result.success ? 'green' : 'red');
@@ -274,7 +291,7 @@ export class ServiceBrowser {
     });
 
     btnStop.on('press', async () => {
-      const service = currentServices[selectedIndex];
+      const service = currentServices.find(s => s.name === selectedServiceName);
       if (service) {
         const result = await this.lifecycleManager.stop(service.name);
         this.showMessage(result.message, result.success ? 'green' : 'red');
@@ -283,7 +300,7 @@ export class ServiceBrowser {
     });
 
     btnRemove.on('press', async () => {
-      const service = currentServices[selectedIndex];
+      const service = currentServices.find(s => s.name === selectedServiceName);
       if (service) {
         this.showConfirm(
           `Remove service '${service.name}'?\nThis will delete configuration and all data.\n\nType 'yes' or 'y' to confirm:`,
@@ -296,6 +313,27 @@ export class ServiceBrowser {
           }
         );
       }
+    });
+
+    // [T] Toggle sort mode between name-ascending and state-grouped
+    list.key(['t'], () => {
+      sortMode = sortMode === 'name' ? 'state' : 'name';
+      const label = sortMode === 'state' ? ' Available [sort: state] ' : ' Available ';
+      (list as unknown as { setLabel: (s: string) => void }).setLabel?.(label);
+      list.setItems(getDisplayServices().map(s => this.formatServiceListItem(s)));
+      this.screen.render();
+    });
+
+    // [/] Open filter dialog — accepts a query string to narrow the visible list
+    list.key(['/'], () => {
+      this.showFilter(filterQuery, (query) => {
+        filterQuery = query;
+        const label = filterQuery ? ` Available [filter: ${filterQuery}] ` : ' Available ';
+        (list as unknown as { setLabel: (s: string) => void }).setLabel?.(label);
+        list.setItems(getDisplayServices().map(s => this.formatServiceListItem(s)));
+        list.focus();
+        this.screen.render();
+      });
     });
 
     list.focus();
@@ -438,5 +476,37 @@ export class ServiceBrowser {
       this.screen.render();
       callback(!err && (value === 'yes' || value === 'y'));
     });
+  }
+
+  /**
+   * Show a filter input dialog; calls back with the entered query (empty string to clear)
+   */
+  private showFilter(current: string, callback: (query: string) => void): void {
+    const dialog = blessed.question({
+      parent: this.screen,
+      border: 'line',
+      height: 'shrink',
+      width: 'half',
+      top: 'center',
+      left: 'center',
+      label: ' Filter Services ',
+      tags: true,
+      keys: true,
+      vi: true,
+      style: {
+        border: {
+          fg: 'cyan',
+        },
+      },
+    });
+
+    dialog.ask(
+      `Filter by name (current: "${current || 'none'}")\nEnter text to filter, or leave empty to clear:`,
+      (err, value) => {
+        dialog.destroy();
+        this.screen.render();
+        if (!err) callback(value.trim());
+      }
+    );
   }
 }

@@ -250,4 +250,78 @@ describe("ServiceBrowser", () => {
 
     patchSet.restore();
   });
+
+  it("sorts services alphabetically by name by default", async () => {
+    lifecycleManager.listAll = async () => [
+      { name: "redis", state: "running", definition: { category: "storage" } },
+      { name: "nextcloud", state: "enabled", definition: { category: "storage" } },
+      { name: "pihole", state: "stopped", definition: { category: "dns" } },
+    ] as Array<Record<string, unknown>>;
+
+    const browser = new ServiceBrowser(screen as never, lifecycleManager as never);
+    await browser.render();
+
+    const container = findChildByLabel(screen, " Services ");
+    const list = container ? findChildByLabel(container, " Available ") : undefined;
+
+    // Name-ascending is default: nextcloud < pihole < redis
+    expect(list?.items[0]).toContain("nextcloud");
+    expect(list?.items[1]).toContain("pihole");
+    expect(list?.items[2]).toContain("redis");
+
+    patchSet.restore();
+  });
+
+  it("toggles sort to state-grouped when T is pressed on the list", async () => {
+    lifecycleManager.listAll = async () => [
+      { name: "redis", state: "running", definition: { category: "storage" } },
+      { name: "nextcloud", state: "enabled", definition: { category: "storage" } },
+      { name: "pihole", state: "stopped", definition: { category: "dns" } },
+    ] as Array<Record<string, unknown>>;
+
+    const browser = new ServiceBrowser(screen as never, lifecycleManager as never);
+    await browser.render();
+
+    const container = findChildByLabel(screen, " Services ");
+    const list = container ? findChildByLabel(container, " Available ") : undefined;
+
+    // Press T to toggle sort to state-grouped
+    await list?.emitAsync("key:t");
+
+    // State order: running (redis=0), enabled (nextcloud=1), stopped (pihole=2)
+    expect(list?.items[0]).toContain("redis");
+    expect(list?.items[1]).toContain("nextcloud");
+    expect(list?.items[2]).toContain("pihole");
+
+    patchSet.restore();
+  });
+
+  it("filters the service list when a query is submitted", async () => {
+    lifecycleManager.listAll = async () => [
+      { name: "redis", state: "running", definition: { category: "storage" } },
+      { name: "nextcloud", state: "enabled", definition: { category: "storage" } },
+      { name: "pihole", state: "stopped", definition: { category: "dns" } },
+    ] as Array<Record<string, unknown>>;
+
+    const browser = new ServiceBrowser(screen as never, lifecycleManager as never);
+    await browser.render();
+
+    const container = findChildByLabel(screen, " Services ");
+    const list = container ? findChildByLabel(container, " Available ") : undefined;
+
+    // Press / to open filter dialog
+    await list?.emitAsync("key:/");
+
+    // Find the filter dialog and submit "pi" as query
+    const filterDialog = findChildByLabel(screen, " Filter Services ");
+    expect(filterDialog).toBeDefined();
+    filterDialog?.askHandler?.(null, "pi");
+
+    // Only pihole should match
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(list?.items).toHaveLength(1);
+    expect(list?.items[0]).toContain("pihole");
+
+    patchSet.restore();
+  });
 });
