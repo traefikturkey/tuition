@@ -160,6 +160,31 @@ describe("TuiApp", () => {
     patchSet.restore();
   });
 
+  it("escape in diagnostics view navigates back instead of exiting", async () => {
+    const exitStub = stubProcessExit();
+    let dashboardRenderCalls = 0;
+
+    patchSet.patch(StatusDashboard.prototype, "render", async () => {
+      dashboardRenderCalls += 1;
+    });
+
+    const app = new TuiApp();
+    const screenRef = (app as unknown as { screen: FakeBlessedScreen }).screen;
+
+    // Simulate being inside diagnostics view
+    (app as unknown as { currentView: string }).currentView = "diagnostics";
+
+    await screenRef.emitAsync("key:escape");
+
+    // Should have gone back to dashboard, not exited
+    expect(screenRef.destroyed).toBe(false);
+    expect(exitStub.lastCode()).toBeUndefined();
+    expect(dashboardRenderCalls).toBeGreaterThan(0);
+
+    exitStub.restore();
+    patchSet.restore();
+  });
+
   it("prompts for setup when configuration does not exist and exits on yes", async () => {
     const exitStub = stubProcessExit();
     const consoleCapture = captureConsoleLog();

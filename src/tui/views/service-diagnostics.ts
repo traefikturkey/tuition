@@ -32,6 +32,8 @@ export class ServiceDiagnostics {
   private logProcess?: ChildProcess;
   private logElement?: Widgets.BoxElement;
   private infoBar?: Widgets.BoxElement;
+  /** Screen-level key handlers registered during this view's lifetime, removed on cleanup. */
+  private screenKeyHandlers: Array<{ keys: string[]; handler: (...args: unknown[]) => void }> = [];
 
   constructor(
     screen: Widgets.Screen,
@@ -215,13 +217,12 @@ export class ServiceDiagnostics {
       await this.refreshInfoBar();
     });
 
-    // Key bindings for tabs and navigation
-    this.screen.key(['o'], () => this.switchTab('overview', service));
-    this.screen.key(['l'], () => this.switchTab('logs', service));
-    this.screen.key(['n'], () => this.switchTab('network', service));
-    this.screen.key(['b'], () => this.cleanup(() => this.onBack()));
-    this.screen.key(['escape'], () => this.cleanup(() => this.onBack()));
-    this.screen.key(['r'], async () => {
+    // Key bindings for tabs and navigation (escape is handled by TuiApp based on currentView)
+    this.addScreenKey(['o'], () => this.switchTab('overview', service));
+    this.addScreenKey(['l'], () => this.switchTab('logs', service));
+    this.addScreenKey(['n'], () => this.switchTab('network', service));
+    this.addScreenKey(['b'], () => this.cleanup(() => this.onBack()));
+    this.addScreenKey(['r'], async () => {
       const result = await this.lifecycleManager.restart(this.serviceName);
       this.showMessage(result.message, result.success ? 'green' : 'red');
       await this.refreshInfoBar();
@@ -616,10 +617,23 @@ export class ServiceDiagnostics {
   }
 
   /**
+   * Register a screen-level key handler and track it for cleanup.
+   */
+  private addScreenKey(keys: string[], handler: (...args: unknown[]) => void): void {
+    this.screen.key(keys, handler);
+    this.screenKeyHandlers.push({ keys, handler });
+  }
+
+  /**
    * Clean up resources before leaving the view
    */
   private cleanup(callback: () => void): void {
     this.stopLogStream();
+    // Remove all screen-level key listeners registered by this view instance
+    for (const { keys, handler } of this.screenKeyHandlers) {
+      (this.screen as unknown as { unkey: (keys: string[], handler: (...args: unknown[]) => void) => void }).unkey(keys, handler);
+    }
+    this.screenKeyHandlers = [];
     callback();
   }
 

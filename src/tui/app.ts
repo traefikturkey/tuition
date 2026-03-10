@@ -20,6 +20,7 @@ export class TuiApp {
   private caddyManager: CaddyManager;
   private dnsManager: CoreDnsManager;
   private persistentElements = new Set<Widgets.BlessedElement>();
+  private currentView: 'dashboard' | 'browser' | 'diagnostics' = 'dashboard';
 
   constructor(configPath?: string) {
     this.configManager = new ConfigManager(configPath);
@@ -53,7 +54,17 @@ export class TuiApp {
    */
   private setupScreen(): void {
     // Enable keys
-    this.screen.key(['escape', 'q', 'C-c'], () => {
+    this.screen.key(['escape'], () => {
+      // In diagnostics, escape goes back to the previous view.
+      if (this.currentView === 'diagnostics') {
+        this.showDashboard();
+        return;
+      }
+      this.screen.destroy();
+      process.exit(0);
+    });
+
+    this.screen.key(['q', 'C-c'], () => {
       this.screen.destroy();
       process.exit(0);
     });
@@ -195,7 +206,7 @@ export class TuiApp {
    * Show service browser view
    */
   private async showServiceBrowser(): Promise<void> {
-    // Clear previous content
+    this.currentView = 'browser';
     this.clearContent();
 
     const browser = new ServiceBrowser(this.screen, this.lifecycleManager);
@@ -206,7 +217,7 @@ export class TuiApp {
    * Show status dashboard view
    */
   private async showDashboard(): Promise<void> {
-    // Clear previous content
+    this.currentView = 'dashboard';
     this.clearContent();
 
     const dashboard = new StatusDashboard(
@@ -224,6 +235,7 @@ export class TuiApp {
    * Show service diagnostics view for a specific service
    */
   private async showDiagnostics(serviceName: string): Promise<void> {
+    this.currentView = 'diagnostics';
     this.clearContent();
 
     const diagnostics = new ServiceDiagnostics(

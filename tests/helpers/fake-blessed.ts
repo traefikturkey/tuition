@@ -38,6 +38,15 @@ export class FakeBlessedElement {
     }
   }
 
+  unkey(keys: string[] | string, handler: EventHandler): void {
+    const keyList = Array.isArray(keys) ? keys : [keys];
+    for (const key of keyList) {
+      const event = `key:${key}`;
+      const existing = this.handlers.get(event) || [];
+      this.handlers.set(event, existing.filter(h => h !== handler));
+    }
+  }
+
   async emitAsync(event: string, ...args: unknown[]): Promise<void> {
     const handlers = this.handlers.get(event) || [];
     for (const handler of handlers) {
