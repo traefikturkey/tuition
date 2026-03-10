@@ -21,7 +21,7 @@ Delivered now:
 
 - CLI for initialization, validation, config, service lifecycle, Caddy, DNS,
   backup, and TUI workflows
-- NFS volume infrastructure management via `tuition infra`
+- NFS and external service infrastructure management via `tuition infra`
 - 24 curated service definitions across 10 categories
 - dependency-aware service enable flow
 - Caddy configuration generation and admin password setup
@@ -59,18 +59,29 @@ Still in backlog:
 - data-preserving disable by default
 - destructive disable path available with `--remove-data`
 
-### NFS Infrastructure
+### Infrastructure
 
+**NFS:**
 - NFS share registration stored in `~/.tuition/config/infrastructure.yaml`
 - Services declare `type: nfs` volumes referencing a share name
 - Compose generation produces Docker named volumes using the `local` driver
   with `driver_opts` — no OS-level pre-mount required
-- `tuition infra nfs add/remove/list/show` commands with name, uniqueness, server,
-  and absolute-path validation
-- `tuition validate` checks infrastructure config alongside global and service
-  configs
+- `tuition infra nfs add/remove/list/show` with name, uniqueness, server, and
+  absolute-path validation
 - Unresolvable NFS references produce a commented placeholder in generated
   compose output rather than failing silently
+
+**External services:**
+- Non-Docker services registered with name + URL (and optional `subdomain`, `dns`)
+- `CaddyfileGenerator.buildExternalRoutes()` converts entries to Caddy site blocks
+  using `reverse_proxy <url>` under `<subdomain>.<domain>`
+- Optional `dns: true` flag records intent for CoreDNS registration
+- `tuition infra external add/remove/list/show` with name-pattern and
+  http/https URL validation
+
+**Shared:**
+- `tuition validate` checks NFS and external service config alongside global and
+  service configs
 
 ### HTTPS and Reverse Proxy
 
@@ -138,6 +149,10 @@ Still in backlog:
 - `tuition infra nfs show <name>`
 - `tuition infra nfs add --name <name> --server <host> --path <export-path> [--options <opts>]`
 - `tuition infra nfs remove <name>`
+- `tuition infra external list`
+- `tuition infra external show <name>`
+- `tuition infra external add --name <name> --url <url> [--subdomain <sub>] [--dns] [--description <text>]`
+- `tuition infra external remove <name>`
 
 ### Backup and Recovery
 

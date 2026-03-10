@@ -14,7 +14,7 @@ Implemented now:
 
 - CLI for init, validation, config, service lifecycle, Caddy, DNS, backup,
   and TUI flows
-- NFS volume infrastructure management via `tuition infra`
+- NFS and external service infrastructure management via `tuition infra`
 - Curated service catalog with **24 services across 10 categories**
 - Service dependency auto-enable during `service enable`
 - Caddy-based HTTPS with Cloudflare DNS challenge support
@@ -171,8 +171,10 @@ tuition dns cluster            # configure DNS clustering interactively
 
 ### Infrastructure
 
-Manage infrastructure dependencies such as NFS shares that services can
-reference by name in their volume definitions.
+Manage NFS shares and external (non-Docker) services that should receive
+Caddy reverse-proxy routes.
+
+**NFS shares** — referenced by name in service volume definitions:
 
 ```bash
 tuition infra nfs list
@@ -186,10 +188,27 @@ Once an NFS share is registered, services that declare `type: nfs` volumes
 referencing that share name will generate Docker named volumes using the
 `local` driver with `driver_opts` — no host-level mount is required.
 
+**External services** — non-Docker endpoints (NAS UIs, routers, VMs) that
+should be reachable through Caddy under your domain:
+
 ```bash
-# Example: register a media NFS share then enable Plex
+tuition infra external list
+tuition infra external show <name>
+tuition infra external add --name <name> --url <url>
+tuition infra external add --name <name> --url <url> --subdomain <sub> --dns
+tuition infra external remove <name>
+```
+
+After adding or removing an external service run `tuition caddy regenerate`
+to update the Caddyfile. If `--dns` is set, also run `tuition dns regenerate`
+to register the hostname in CoreDNS.
+
+```bash
+# Example: register a media NFS share then enable Plex, and add the NAS UI
 tuition infra nfs add --name media --server 192.168.1.10 --path /export/media
 tuition service enable plex
+tuition infra external add --name nas --url http://192.168.1.10:5000 --dns
+tuition caddy regenerate
 ```
 
 ### Backup
@@ -230,16 +249,26 @@ tuition --help
 - automatic dependency enablement during service activation
 - optional data removal on disable with `--remove-data`
 
-### NFS Infrastructure
+### Infrastructure
 
+**NFS shares:**
 - NFS share registration stored in `~/.tuition/config/infrastructure.yaml`
 - Services declare `type: nfs` volume mappings referencing a named share
 - Compose generation produces Docker named volumes (`driver: local` + `driver_opts`)
   so no OS-level pre-mount is required
 - Unresolvable NFS references produce a commented placeholder in the generated
   compose file rather than silently failing
-- `tuition validate` checks infrastructure config alongside global and service
-  configs
+
+**External services:**
+- Non-Docker services (NAS UIs, routers, VMs, cloud endpoints) registered with a
+  name, URL, and optional subdomain override
+- `CaddyfileGenerator` emits a `reverse_proxy` site block for each registered entry
+- Optional `--dns` flag records intent to register the hostname in CoreDNS
+- `dns?: boolean` and `subdomain?: string` stored in `infrastructure.yaml`
+
+**Shared:**
+- `tuition validate` checks NFS and external service config alongside global and
+  service configs
 
 ### Reverse Proxy and HTTPS
 
