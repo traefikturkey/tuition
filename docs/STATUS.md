@@ -21,6 +21,7 @@ Delivered now:
 
 - CLI for initialization, validation, config, service lifecycle, Caddy, DNS,
   backup, and TUI workflows
+- NFS volume infrastructure management via `tuition infra`
 - 24 curated service definitions across 10 categories
 - dependency-aware service enable flow
 - Caddy configuration generation and admin password setup
@@ -57,6 +58,19 @@ Still in backlog:
 - dependency auto-enable during service activation
 - data-preserving disable by default
 - destructive disable path available with `--remove-data`
+
+### NFS Infrastructure
+
+- NFS share registration stored in `~/.tuition/config/infrastructure.yaml`
+- Services declare `type: nfs` volumes referencing a share name
+- Compose generation produces Docker named volumes using the `local` driver
+  with `driver_opts` — no OS-level pre-mount required
+- `tuition infra nfs add/remove/list/show` commands with name, uniqueness, server,
+  and absolute-path validation
+- `tuition validate` checks infrastructure config alongside global and service
+  configs
+- Unresolvable NFS references produce a commented placeholder in generated
+  compose output rather than failing silently
 
 ### HTTPS and Reverse Proxy
 
@@ -120,6 +134,10 @@ Still in backlog:
 - `tuition caddy set-password`
 - `tuition caddy hash-password` (legacy helper)
 - `tuition dns start|stop|status|regenerate|configure|cluster`
+- `tuition infra nfs list`
+- `tuition infra nfs show <name>`
+- `tuition infra nfs add --name <name> --server <host> --path <export-path> [--options <opts>]`
+- `tuition infra nfs remove <name>`
 
 ### Backup and Recovery
 

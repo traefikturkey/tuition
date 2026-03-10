@@ -14,6 +14,7 @@ Implemented now:
 
 - CLI for init, validation, config, service lifecycle, Caddy, DNS, backup,
   and TUI flows
+- NFS volume infrastructure management via `tuition infra`
 - Curated service catalog with **24 services across 10 categories**
 - Service dependency auto-enable during `service enable`
 - Caddy-based HTTPS with Cloudflare DNS challenge support
@@ -168,6 +169,29 @@ tuition dns configure          # set upstream DNS servers interactively
 tuition dns cluster            # configure DNS clustering interactively
 ```
 
+### Infrastructure
+
+Manage infrastructure dependencies such as NFS shares that services can
+reference by name in their volume definitions.
+
+```bash
+tuition infra nfs list
+tuition infra nfs show <name>
+tuition infra nfs add --name <name> --server <host> --path <export-path>
+tuition infra nfs add --name <name> --server <host> --path <export-path> --options <mount-opts>
+tuition infra nfs remove <name>
+```
+
+Once an NFS share is registered, services that declare `type: nfs` volumes
+referencing that share name will generate Docker named volumes using the
+`local` driver with `driver_opts` — no host-level mount is required.
+
+```bash
+# Example: register a media NFS share then enable Plex
+tuition infra nfs add --name media --server 192.168.1.10 --path /export/media
+tuition service enable plex
+```
+
 ### Backup
 
 ```bash
@@ -205,6 +229,17 @@ tuition --help
 - enable, disable, start, stop, restart, update, and logs commands
 - automatic dependency enablement during service activation
 - optional data removal on disable with `--remove-data`
+
+### NFS Infrastructure
+
+- NFS share registration stored in `~/.tuition/config/infrastructure.yaml`
+- Services declare `type: nfs` volume mappings referencing a named share
+- Compose generation produces Docker named volumes (`driver: local` + `driver_opts`)
+  so no OS-level pre-mount is required
+- Unresolvable NFS references produce a commented placeholder in the generated
+  compose file rather than silently failing
+- `tuition validate` checks infrastructure config alongside global and service
+  configs
 
 ### Reverse Proxy and HTTPS
 
