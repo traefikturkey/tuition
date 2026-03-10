@@ -248,6 +248,29 @@ describe("ServiceDiagnostics", () => {
     patchSet.restore();
   });
 
+  it("Stop button label updates to Start after stopping the service", async () => {
+    // service.state starts as 'running' (set in beforeEach)
+    lifecycleManager.stop = async () => {
+      // Mutate the shared service object so subsequent getService() calls see stopped state
+      service.state = "stopped";
+      return { success: true, message: "stopped whoami" };
+    };
+
+    const diag = createDiagnostics();
+    await diag.render();
+
+    const stopBtn = findChildByContent(screen, "Stop");
+    expect(stopBtn?.content).toBe("Stop");
+
+    await stopBtn?.emitAsync("press");
+
+    // Button label and bg should reflect the new stopped state
+    expect(stopBtn?.content).toBe("Start");
+    expect((stopBtn?.style as { bg?: string })?.bg).toBe("green");
+
+    patchSet.restore();
+  });
+
   it("calls start when Start button is pressed for a stopped service", async () => {
     service.state = "stopped";
     service.containerStatus = null;

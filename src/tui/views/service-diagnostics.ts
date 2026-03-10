@@ -209,12 +209,22 @@ export class ServiceDiagnostics {
     });
 
     btnStartStop.on('press', async () => {
-      const action = service.state === 'running'
+      // Always re-read state immediately before acting so the button is never
+      // driven off the stale service object captured at render time.
+      const current = await this.lifecycleManager.getService(this.serviceName);
+      const isRunning = current?.state === 'running';
+      const action = isRunning
         ? this.lifecycleManager.stop(this.serviceName)
         : this.lifecycleManager.start(this.serviceName);
       const result = await action;
       this.showMessage(result.message, result.success ? 'green' : 'red');
-      await this.refreshInfoBar();
+      const updated = await this.refreshInfoBar();
+      if (updated) {
+        const nowRunning = updated.state === 'running';
+        btnStartStop.setContent(nowRunning ? 'Stop' : 'Start');
+        (btnStartStop.style as { bg: string }).bg = nowRunning ? 'yellow' : 'green';
+        this.screen.render();
+      }
     });
 
     // Key bindings for tabs and navigation (escape is handled by TuiApp based on currentView)
@@ -254,12 +264,13 @@ export class ServiceDiagnostics {
   /**
    * Refresh just the info bar with latest service state
    */
-  private async refreshInfoBar(): Promise<void> {
+  private async refreshInfoBar(): Promise<ServiceInfo | undefined> {
     const service = await this.lifecycleManager.getService(this.serviceName);
     if (service && this.infoBar) {
       this.infoBar.setContent(this.formatInfoBar(service));
       this.screen.render();
     }
+    return service ?? undefined;
   }
 
   /**
