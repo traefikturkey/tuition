@@ -286,7 +286,7 @@ export class ServiceBrowser {
       const service = currentServices[selectedIndex];
       if (service) {
         this.showConfirm(
-          `Remove service '${service.name}'?\nThis will delete configuration and all data.`,
+          `Remove service '${service.name}'?\nThis will delete configuration and all data.\n\nType 'yes' or 'y' to confirm:`,
           async (confirmed) => {
             if (confirmed) {
               const result = await this.lifecycleManager.remove(service.name);
@@ -436,7 +436,7 @@ export class ServiceBrowser {
     dialog.ask(message, (err, value) => {
       dialog.destroy();
       this.screen.render();
-      callback(!err && value === 'yes');
+      callback(!err && (value === 'yes' || value === 'y'));
     });
   }
 }

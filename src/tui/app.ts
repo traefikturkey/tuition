@@ -21,6 +21,7 @@ export class TuiApp {
   private dnsManager: CoreDnsManager;
   private persistentElements = new Set<Widgets.BlessedElement>();
   private currentView: 'dashboard' | 'browser' | 'diagnostics' = 'dashboard';
+  private statusBar?: Widgets.BoxElement;
 
   constructor(configPath?: string) {
     this.configManager = new ConfigManager(configPath);
@@ -195,6 +196,7 @@ export class TuiApp {
         bg: 'blue',
       },
     });
+    this.statusBar = statusBar;
 
     // Track persistent elements so clearContent() preserves them
     this.persistentElements.add(header);
@@ -208,6 +210,7 @@ export class TuiApp {
   private async showServiceBrowser(): Promise<void> {
     this.currentView = 'browser';
     this.clearContent();
+    this.statusBar?.setContent(' [Tab/↑↓] Navigate | [Enter] Select | [Enable/Disable/Start/Stop/Remove] Actions | [Q] Quit ');
 
     const browser = new ServiceBrowser(this.screen, this.lifecycleManager);
     await browser.render();
@@ -219,6 +222,7 @@ export class TuiApp {
   private async showDashboard(): Promise<void> {
     this.currentView = 'dashboard';
     this.clearContent();
+    this.statusBar?.setContent(' [D] Dashboard | [S] Services | [Enter] Diagnostics | [Q] Quit ');
 
     const dashboard = new StatusDashboard(
       this.screen,
@@ -237,6 +241,7 @@ export class TuiApp {
   private async showDiagnostics(serviceName: string): Promise<void> {
     this.currentView = 'diagnostics';
     this.clearContent();
+    this.statusBar?.setContent(' [O] Overview | [L] Logs | [N] Network | [R] Restart | [B/Esc] Back | [Q] Quit ');
 
     const diagnostics = new ServiceDiagnostics(
       this.screen,

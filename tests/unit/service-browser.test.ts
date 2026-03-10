@@ -172,6 +172,36 @@ describe("ServiceBrowser", () => {
     patchSet.restore();
   });
 
+  it("accepts 'y' as a shorthand confirmation for remove", async () => {
+    const actions: string[] = [];
+    lifecycleManager.remove = async (name: string) => {
+      actions.push(`remove:${name}`);
+      return { success: true, message: "removed whoami" };
+    };
+
+    const browser = new ServiceBrowser(screen as never, lifecycleManager as never);
+    await browser.render();
+
+    const container = findChildByLabel(screen, " Services ");
+    const list = container ? findChildByLabel(container, " Available ") : undefined;
+    const removeButton = container ? findChildByContent(container, "Remove") : undefined;
+
+    await list?.emitAsync("select", {}, 0);
+    await removeButton?.emitAsync("press");
+
+    const confirmDialog = findChildByLabel(screen, " Confirm ");
+    expect(confirmDialog).toBeDefined();
+
+    // 'y' should be accepted as equivalent to 'yes'
+    confirmDialog?.askHandler?.(null, "y");
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(actions).toEqual(["remove:whoami"]);
+
+    patchSet.restore();
+  });
+
   it("does not call remove when confirmation is declined", async () => {
     const actions: string[] = [];
     lifecycleManager.remove = async (name: string) => {
