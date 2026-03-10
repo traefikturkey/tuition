@@ -129,7 +129,7 @@ These items are the largest remaining gap against the stated project philosophy.
 2. Reconcile the contributor runtime story:
     - installer and wrapper use Node plus `npx tsx`
     - repo entrypoint shebang uses Bun
-    - `make test` uses Bun while `package.json` uses `tsx --test`
+    - both `make test` and the `package.json` `test` script run `bun test`
 3. Add release packaging and versioned handoff documentation.
 
 ---

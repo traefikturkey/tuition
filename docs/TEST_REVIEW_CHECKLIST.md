@@ -10,14 +10,17 @@ available if the session closes.
 - Reduce happy-path bias across unit, integration, and future e2e tests
 - Standardize on a single Bun-based test and coverage workflow
 
-## Current Baseline (2026-03-07)
+## Current Baseline
+
+Run `bun test` and `bun test --coverage` to get current results. The figures
+below are point-in-time snapshots recorded during development; the live suite
+is the authoritative source of truth.
 
 - `bun test` passes
 - `bun test --coverage` passes
 - `make lint` passes
-- Current overall line coverage: **99.65%**
-- Current overall function coverage: **96.93%**
-- 358 tests passing across 30 files
+- Snapshot: overall line coverage above 99%; function coverage above 96%
+- Snapshot: 358+ tests across 30+ files at last recording
 - Thin `tests/e2e/` smoke coverage now exists for CLI and TUI entry flows
 
 ### Lowest-Coverage Source Files

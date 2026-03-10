@@ -83,6 +83,7 @@ Still in backlog:
 
 - dashboard view
 - service browser view
+- service diagnostics view
 - keyboard-driven navigation using Blessed
 
 ---
@@ -99,28 +100,32 @@ Still in backlog:
 ### Services
 
 - `tuition service list`
+- `tuition service list --category <category>`
+- `tuition service list --all`
 - `tuition service show <name>`
 - `tuition service search <query>`
 - `tuition service enable <name>`
+- `tuition service enable <name> --no-start`
 - `tuition service disable <name> [--remove-data]`
+- `tuition service remove <name> [--keep-data] [--force]`
 - `tuition service start <name>`
 - `tuition service stop <name>`
 - `tuition service restart <name>`
 - `tuition service update <name>`
-- `tuition service logs <name>`
+- `tuition service logs <name> [--tail <lines>] [--follow]`
 
 ### Infrastructure
 
 - `tuition caddy start|stop|restart|reload|status|regenerate`
 - `tuition caddy set-password`
 - `tuition caddy hash-password` (legacy helper)
-- `tuition dns start|stop|status|regenerate|configure`
+- `tuition dns start|stop|status|regenerate|configure|cluster`
 
 ### Backup and Recovery
 
-- `tuition backup create`
+- `tuition backup create [--include-volumes] [--no-compression]`
 - `tuition backup list`
-- `tuition backup restore <identifier>`
+- `tuition backup restore <identifier> [--dry-run] [--force]`
 - `tuition backup delete <identifier>`
 
 ### Interactive UI
@@ -151,11 +156,12 @@ Categories represented:
 
 ---
 
-## Verification Snapshot (2026-03-07)
+## Verification Snapshot
 
 - `make lint` passes
 - `make test` passes
-- test runner result: **185 passing tests across 24 files**
+- Run `make test` for current test counts; do not rely on snapshot numbers
+  in this file as they do not stay in sync with the live suite
 
 ---
 
@@ -183,7 +189,7 @@ changes.
 | PRD Target                      | Current Position                                                                    |
 | ------------------------------- | ----------------------------------------------------------------------------------- |
 | **30+ curated services**        | At risk for v1 on this branch; current catalog is 24 services.                      |
-| **All commands documented**     | Addressed by this documentation sync.                                               |
+| **All commands documented**     | Addressed by this documentation sync; see README command reference.            |
 | **>80% test coverage**          | Test suites are broad, but formal coverage reporting is not published in repo docs. |
 | **Fast first-service workflow** | On track via `init`, infrastructure commands, and `service enable`.                 |
 

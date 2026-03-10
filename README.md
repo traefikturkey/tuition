@@ -19,7 +19,7 @@ Implemented now:
 - Caddy-based HTTPS with Cloudflare DNS challenge support
 - CoreDNS generation and reload flow for internal DNS on **port 54**
 - Backup create, list, restore, and delete flows
-- Blessed-based TUI with dashboard and service browser views
+- Blessed-based TUI with dashboard, service browser, and service diagnostics views
 
 Still tracked as backlog against the PRD:
 
@@ -93,6 +93,9 @@ tuition backup list
 
 ## Requirements
 
+> **Platform note**: Tuition targets Linux only (Debian/Ubuntu primary). Windows
+> and macOS are not supported and the installer will not run on those platforms.
+
 - **OS**: Linux, with Debian or Ubuntu as the primary target
 - **Docker**: Engine 20.10+ and Compose 2+
 - **Node.js**: 18+ for the installer and generated `tuition` wrapper
@@ -103,8 +106,8 @@ Contributor notes:
 
 - the repository entrypoint is [index.ts](index.ts)
 - the shebang uses Bun, but the installer wrapper runs `npx tsx index.ts`
-- `npm test` is available from [package.json](package.json)
-- `make test` currently runs `bun test` from [Makefile](Makefile)
+- both `package.json` `test` script and `make test` run `bun test`
+- `make lint` and `npm run lint` both run `tsc --noEmit`
 
 ## Command Reference
 
@@ -121,17 +124,24 @@ tuition config set <key> <value>
 
 ```bash
 tuition service list
-tuition service list --category media
-tuition service search plex
+tuition service list --category <category>
+tuition service list --all
+tuition service search <query>
 tuition service show <name>
 tuition service enable <name>
+tuition service enable <name> --no-start      # enable without starting
 tuition service disable <name>
-tuition service disable <name> --remove-data
+tuition service disable <name> --remove-data  # remove config files
+tuition service remove <name>                 # remove config + data
+tuition service remove <name> --keep-data     # preserve data directory
+tuition service remove <name> --force         # skip confirmation
 tuition service start <name>
 tuition service stop <name>
 tuition service restart <name>
 tuition service update <name>
 tuition service logs <name>
+tuition service logs <name> --tail <lines>    # default 100
+tuition service logs <name> --follow
 ```
 
 ### Caddy
@@ -154,16 +164,20 @@ tuition dns start
 tuition dns stop
 tuition dns status
 tuition dns regenerate
-tuition dns configure
+tuition dns configure          # set upstream DNS servers interactively
+tuition dns cluster            # configure DNS clustering interactively
 ```
 
 ### Backup
 
 ```bash
 tuition backup create
-tuition backup create --include-volumes
+tuition backup create --include-volumes   # include Docker volume data
+tuition backup create --no-compression   # skip gzip compression
 tuition backup list
 tuition backup restore <number-or-filename>
+tuition backup restore <number-or-filename> --dry-run   # preview only
+tuition backup restore <number-or-filename> --force     # skip confirmation
 tuition backup delete <number-or-filename>
 ```
 
@@ -221,9 +235,10 @@ Current backup limitations:
 
 ### Terminal UI
 
-- dashboard view
-- service browser view
-- keyboard navigation for common workflows
+- dashboard view with infrastructure status overview
+- service browser for browsing and managing catalog entries
+- service diagnostics view for inspecting individual service state
+- keyboard navigation across all views (Tab, Shift-Tab, q / Ctrl-C to exit)
 
 ## Catalog Coverage
 
