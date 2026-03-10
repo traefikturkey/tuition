@@ -43,7 +43,10 @@ export class FakeBlessedElement {
     for (const key of keyList) {
       const event = `key:${key}`;
       const existing = this.handlers.get(event) || [];
-      this.handlers.set(event, existing.filter(h => h !== handler));
+      this.handlers.set(
+        event,
+        existing.filter((h) => h !== handler)
+      );
     }
   }
 

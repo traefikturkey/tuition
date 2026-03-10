@@ -22,10 +22,10 @@ export interface GlobalConfig {
   adminEmail: string;
   puid: number;
   pgid: number;
-  dnsProvider: 'cloudflare';
+  dnsProvider: "cloudflare";
   cloudflareToken?: string;
   upstreamDns: UpstreamDnsConfig;
-  adminPasswordHash?: string;  // bcrypt hash for Caddy admin UI
+  adminPasswordHash?: string; // bcrypt hash for Caddy admin UI
   dnsCluster?: DnsClusterConfig;
 }
 
@@ -80,21 +80,21 @@ export interface ServiceDefinition {
 }
 
 export type ServiceCategory =
-  | 'dns'
-  | 'media'
-  | 'monitoring'
-  | 'downloads'
-  | 'auth'
-  | 'storage'
-  | 'development'
-  | 'games'
-  | 'home-automation'
-  | 'ai';
+  | "dns"
+  | "media"
+  | "monitoring"
+  | "downloads"
+  | "auth"
+  | "storage"
+  | "development"
+  | "games"
+  | "home-automation"
+  | "ai";
 
 export interface PortMapping {
   host: number;
   container: number;
-  protocol?: 'tcp' | 'udp';
+  protocol?: "tcp" | "udp";
 }
 
 /**
@@ -103,7 +103,7 @@ export interface PortMapping {
  * that predate the discriminated union.
  */
 export interface BindVolumeMapping {
-  type?: 'bind';
+  type?: "bind";
   host: string;
   container: string;
   readOnly?: boolean;
@@ -116,7 +116,7 @@ export interface BindVolumeMapping {
  * Docker named volume with driver_opts is generated in the compose file.
  */
 export interface NfsVolumeMapping {
-  type: 'nfs';
+  type: "nfs";
   nfsName: string;
   subPath?: string;
   container: string;
@@ -128,7 +128,7 @@ export interface NfsVolumeMapping {
 export type VolumeMapping = BindVolumeMapping | NfsVolumeMapping;
 
 export interface DatabaseRequirement {
-  type: 'postgresql' | 'mysql' | 'mongodb' | 'redis' | 'sqlite';
+  type: "postgresql" | "mysql" | "mongodb" | "redis" | "sqlite";
   required: boolean;
 }
 
@@ -139,19 +139,13 @@ export interface ResourceLimits {
 }
 
 // Service lifecycle states
-export type ServiceState =
-  | 'available'
-  | 'enabled'
-  | 'running'
-  | 'stopped'
-  | 'disabled'
-  | 'error';
+export type ServiceState = "available" | "enabled" | "running" | "stopped" | "disabled" | "error";
 
 export interface ServiceStatus {
   name: string;
   state: ServiceState;
   containerId?: string;
-  health?: 'healthy' | 'unhealthy' | 'starting' | 'unknown';
+  health?: "healthy" | "unhealthy" | "starting" | "unknown";
   uptime?: number;
   ports?: number[];
   lastError?: string;
@@ -177,8 +171,8 @@ export interface BackupOptions {
 export interface DnsRecord {
   hostname: string;
   ip: string;
-  type: 'A' | 'AAAA' | 'CNAME';
-  source: 'container' | 'static';
+  type: "A" | "AAAA" | "CNAME";
+  source: "container" | "static";
   containerId?: string;
 }
 

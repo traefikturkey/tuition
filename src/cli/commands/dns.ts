@@ -2,12 +2,12 @@
  * CoreDNS management CLI commands
  */
 
-import { CoreDnsManager } from '../../services/dns/coredns.js';
-import { ConfigManager } from '../../core/config/manager.js';
-import { ConfigValidator } from '../../core/config/validator.js';
-import { catalog } from '../../core/catalog/loader.js';
-import chalk from 'chalk';
-import readline from 'readline';
+import { CoreDnsManager } from "../../services/dns/coredns.js";
+import { ConfigManager } from "../../core/config/manager.js";
+import { ConfigValidator } from "../../core/config/validator.js";
+import { catalog } from "../../core/catalog/loader.js";
+import chalk from "chalk";
+import readline from "readline";
 
 export class DnsCommand {
   private dns: CoreDnsManager;
@@ -32,7 +32,7 @@ export class DnsCommand {
     await this.initialize();
 
     if (!(await this.config.exists())) {
-      console.log(chalk.red('Tuition is not initialized. Run: tuition init'));
+      console.log(chalk.red("Tuition is not initialized. Run: tuition init"));
       return;
     }
 
@@ -50,7 +50,7 @@ export class DnsCommand {
       }
     }
 
-    console.log(chalk.blue('Generating CoreDNS configuration...'));
+    console.log(chalk.blue("Generating CoreDNS configuration..."));
     await this.dns.generateConfig(enabledServices);
     console.log(chalk.green(`✓ Generated CoreDNS config for ${enabledServices.length} services`));
 
@@ -58,14 +58,14 @@ export class DnsCommand {
     const globalConfig = await this.config.loadGlobal();
     const dnsCluster = globalConfig.dnsCluster;
 
-    console.log(chalk.blue('Starting CoreDNS...'));
+    console.log(chalk.blue("Starting CoreDNS..."));
     const result = await this.dns.start(dnsCluster);
 
     if (result.success) {
       console.log(chalk.green(`✓ ${result.message}`));
-      console.log(chalk.gray('Internal DNS server running on port 54'));
+      console.log(chalk.gray("Internal DNS server running on port 54"));
       if (dnsCluster?.enabled) {
-        console.log(chalk.green(`✓ Clustering enabled (node: ${dnsCluster.nodeName ?? 'default'})`));
+        console.log(chalk.green(`✓ Clustering enabled (node: ${dnsCluster.nodeName ?? "default"})`));
       }
     } else {
       console.log(chalk.red(`✗ ${result.message}`));
@@ -78,7 +78,7 @@ export class DnsCommand {
   async stop(options: { path?: string }): Promise<void> {
     await this.initialize();
 
-    console.log(chalk.blue('Stopping CoreDNS...'));
+    console.log(chalk.blue("Stopping CoreDNS..."));
     const result = await this.dns.stop();
 
     if (result.success) {
@@ -96,13 +96,13 @@ export class DnsCommand {
 
     const status = await this.dns.status();
 
-    console.log(chalk.blue('\nCoreDNS Status:\n'));
-    console.log(`  Running: ${status.running ? chalk.green('Yes') : chalk.red('No')}`);
+    console.log(chalk.blue("\nCoreDNS Status:\n"));
+    console.log(`  Running: ${status.running ? chalk.green("Yes") : chalk.red("No")}`);
     console.log(`  Host entries: ${status.hosts}`);
-    
+
     if (status.running) {
-      console.log(chalk.gray('\n  Internal DNS available on port 54'));
-      console.log(chalk.gray('  Configure your system to use 127.0.0.1 as DNS server'));
+      console.log(chalk.gray("\n  Internal DNS available on port 54"));
+      console.log(chalk.gray("  Configure your system to use 127.0.0.1 as DNS server"));
     }
 
     // Show cluster info if configured
@@ -110,13 +110,13 @@ export class DnsCommand {
       const globalConfig = await this.config.loadGlobal();
       if (globalConfig.dnsCluster?.enabled) {
         console.log(`\n  Cluster: enabled`);
-        console.log(`  Node: ${globalConfig.dnsCluster.nodeName ?? 'default'}`);
+        console.log(`  Node: ${globalConfig.dnsCluster.nodeName ?? "default"}`);
         if (globalConfig.dnsCluster.clusterSeeds?.length) {
-          console.log(`  Seeds: ${globalConfig.dnsCluster.clusterSeeds.map(ip => `${ip}:7946`).join(', ')}`);
+          console.log(`  Seeds: ${globalConfig.dnsCluster.clusterSeeds.map((ip) => `${ip}:7946`).join(", ")}`);
         }
       }
     }
-    
+
     console.log();
   }
 
@@ -141,9 +141,9 @@ export class DnsCommand {
 
     console.log(chalk.blue(`Regenerating CoreDNS config for ${enabledServices.length} services...`));
     await this.dns.generateConfig(enabledServices);
-    
+
     const result = await this.dns.reload();
-    
+
     if (result.success) {
       console.log(chalk.green(`✓ CoreDNS config regenerated and reloaded`));
     } else {
@@ -156,7 +156,7 @@ export class DnsCommand {
    */
   async cluster(): Promise<void> {
     if (!(await this.config.exists())) {
-      console.log(chalk.red('Tuition is not initialized. Run: tuition init'));
+      console.log(chalk.red("Tuition is not initialized. Run: tuition init"));
       return;
     }
 
@@ -174,16 +174,16 @@ export class DnsCommand {
       });
     };
 
-    console.log(chalk.blue('\nConfigure DNS Clustering\n'));
+    console.log(chalk.blue("\nConfigure DNS Clustering\n"));
 
     // Show current configuration
     const current = globalConfig.dnsCluster;
     if (current?.enabled) {
-      console.log(chalk.gray(`Current: enabled (node: ${current.nodeName ?? 'default'})\n`));
+      console.log(chalk.gray(`Current: enabled (node: ${current.nodeName ?? "default"})\n`));
     }
 
-    const enableAnswer = await ask('Enable DNS clustering? (y/n): ');
-    const enabled = enableAnswer.trim().toLowerCase() === 'y';
+    const enableAnswer = await ask("Enable DNS clustering? (y/n): ");
+    const enabled = enableAnswer.trim().toLowerCase() === "y";
 
     if (!enabled) {
       globalConfig.dnsCluster = {
@@ -192,21 +192,21 @@ export class DnsCommand {
       };
       await this.config.saveGlobal(globalConfig);
       rl.close();
-      console.log(chalk.green('\n✓ DNS cluster configuration saved'));
+      console.log(chalk.green("\n✓ DNS cluster configuration saved"));
       return;
     }
 
-    const defaultNodeName = globalConfig.hostname ?? '';
+    const defaultNodeName = globalConfig.hostname ?? "";
     const nodeNameInput = await ask(`Node name [${defaultNodeName}]: `);
     const nodeName = nodeNameInput.trim() || defaultNodeName;
 
-    const secretInput = await ask('Cluster secret (optional): ');
+    const secretInput = await ask("Cluster secret (optional): ");
     const clusterSecret = secretInput.trim() || undefined;
 
     // Seed IPs with validation loop
     let clusterSeeds: string[] = [];
     while (true) {
-      const seedsInput = await ask('Cluster seeds (comma-separated IPs, port 7946 added automatically, optional): ');
+      const seedsInput = await ask("Cluster seeds (comma-separated IPs, port 7946 added automatically, optional): ");
       const seedsRaw = seedsInput.trim();
 
       if (!seedsRaw) {
@@ -214,18 +214,21 @@ export class DnsCommand {
         break;
       }
 
-      const seeds = seedsRaw.split(',').map(s => s.trim()).filter(Boolean);
-      const invalidSeeds = seeds.filter(s => {
+      const seeds = seedsRaw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const invalidSeeds = seeds.filter((s) => {
         const testConfig = {
           ...globalConfig,
           dnsCluster: { enabled: true, clusterSeeds: [s] },
         };
         const result = validator.validateGlobal(testConfig);
-        return result.errors.some(e => e.field === 'dnsCluster.clusterSeeds');
+        return result.errors.some((e) => e.field === "dnsCluster.clusterSeeds");
       });
 
       if (invalidSeeds.length > 0) {
-        console.log(chalk.red(`Invalid IP address(es): ${invalidSeeds.join(', ')}. Please try again.`));
+        console.log(chalk.red(`Invalid IP address(es): ${invalidSeeds.join(", ")}. Please try again.`));
         continue;
       }
 
@@ -242,8 +245,8 @@ export class DnsCommand {
 
     await this.config.saveGlobal(globalConfig);
     rl.close();
-    console.log(chalk.green('\n✓ DNS cluster configuration saved'));
-    console.log(chalk.gray('Restart CoreDNS to apply: tuition dns start'));
+    console.log(chalk.green("\n✓ DNS cluster configuration saved"));
+    console.log(chalk.gray("Restart CoreDNS to apply: tuition dns start"));
   }
 
   /**
@@ -251,7 +254,7 @@ export class DnsCommand {
    */
   async configure(): Promise<void> {
     if (!(await this.config.exists())) {
-      console.log(chalk.red('Tuition is not initialized. Run: tuition init'));
+      console.log(chalk.red("Tuition is not initialized. Run: tuition init"));
       return;
     }
 
@@ -269,65 +272,67 @@ export class DnsCommand {
       });
     };
 
-    console.log(chalk.blue('\nConfigure Upstream DNS Servers\n'));
+    console.log(chalk.blue("\nConfigure Upstream DNS Servers\n"));
 
     // Show current configuration
     const current = globalConfig.upstreamDns;
     if (current?.primary) {
-      console.log(chalk.gray(`Current upstream DNS: ${current.primary}${current.backup ? `, ${current.backup}` : ''}\n`));
+      console.log(
+        chalk.gray(`Current upstream DNS: ${current.primary}${current.backup ? `, ${current.backup}` : ""}\n`)
+      );
     }
 
-    console.log(chalk.blue('Upstream DNS Configuration:'));
-    console.log(chalk.gray('  1) Google (8.8.8.8, 8.8.4.4)'));
-    console.log(chalk.gray('  2) Cloudflare (1.1.1.1, 1.0.0.1)'));
-    console.log(chalk.gray('  3) OpenDNS (208.67.222.222, 208.67.220.220)'));
-    console.log(chalk.gray('  4) Custom (default)'));
-    
-    const dnsChoice = await ask('\nSelect option [4]: ') || '4';
-    
+    console.log(chalk.blue("Upstream DNS Configuration:"));
+    console.log(chalk.gray("  1) Google (8.8.8.8, 8.8.4.4)"));
+    console.log(chalk.gray("  2) Cloudflare (1.1.1.1, 1.0.0.1)"));
+    console.log(chalk.gray("  3) OpenDNS (208.67.222.222, 208.67.220.220)"));
+    console.log(chalk.gray("  4) Custom (default)"));
+
+    const dnsChoice = (await ask("\nSelect option [4]: ")) || "4";
+
     let primaryDns: string;
     let backupDns: string | undefined;
-    
+
     switch (dnsChoice.trim()) {
-      case '1':
-        primaryDns = '8.8.8.8';
-        backupDns = '8.8.4.4';
+      case "1":
+        primaryDns = "8.8.8.8";
+        backupDns = "8.8.4.4";
         break;
-      case '2':
-        primaryDns = '1.1.1.1';
-        backupDns = '1.0.0.1';
+      case "2":
+        primaryDns = "1.1.1.1";
+        backupDns = "1.0.0.1";
         break;
-      case '3':
-        primaryDns = '208.67.222.222';
-        backupDns = '208.67.220.220';
+      case "3":
+        primaryDns = "208.67.222.222";
+        backupDns = "208.67.220.220";
         break;
       default:
         // Custom - loop until valid IP entered
         while (true) {
-          primaryDns = await ask('Primary DNS server: ');
+          primaryDns = await ask("Primary DNS server: ");
           const validation = validator.validateGlobal({
             ...globalConfig,
             upstreamDns: { primary: primaryDns.trim() },
           });
-          if (validation.valid || !validation.errors.some(e => e.field === 'upstreamDns.primary')) {
+          if (validation.valid || !validation.errors.some((e) => e.field === "upstreamDns.primary")) {
             break;
           }
-          console.log(chalk.red('Invalid IP address. Please try again.'));
+          console.log(chalk.red("Invalid IP address. Please try again."));
         }
-        
-        const backupInput = await ask('Backup DNS server (optional): ');
+
+        const backupInput = await ask("Backup DNS server (optional): ");
         if (backupInput.trim()) {
           while (true) {
             const validation = validator.validateGlobal({
               ...globalConfig,
               upstreamDns: { primary: primaryDns.trim(), backup: backupInput.trim() },
             });
-            if (validation.valid || !validation.errors.some(e => e.field === 'upstreamDns.backup')) {
+            if (validation.valid || !validation.errors.some((e) => e.field === "upstreamDns.backup")) {
               backupDns = backupInput.trim();
               break;
             }
-            console.log(chalk.red('Invalid IP address. Please try again.'));
-            const retry = await ask('Backup DNS server (optional): ');
+            console.log(chalk.red("Invalid IP address. Please try again."));
+            const retry = await ask("Backup DNS server (optional): ");
             if (!retry.trim()) break;
           }
         }
@@ -343,11 +348,11 @@ export class DnsCommand {
     };
 
     await this.config.saveGlobal(globalConfig);
-    console.log(chalk.green('\n✓ Upstream DNS configuration saved'));
+    console.log(chalk.green("\n✓ Upstream DNS configuration saved"));
 
     // Regenerate CoreDNS config and reload
-    console.log(chalk.blue('\nRegenerating CoreDNS configuration...'));
-    
+    console.log(chalk.blue("\nRegenerating CoreDNS configuration..."));
+
     const services = await this.config.loadServices();
     const enabledServiceNames = Object.entries(services)
       .filter(([, config]) => config.enabled)
@@ -362,14 +367,14 @@ export class DnsCommand {
     }
 
     await this.dns.generateConfig(enabledServices);
-    
+
     const result = await this.dns.reload();
-    
+
     if (result.success) {
       console.log(chalk.green(`✓ CoreDNS reloaded with new upstream DNS`));
     } else {
       console.log(chalk.red(`✗ Failed to reload CoreDNS: ${result.message}`));
-      console.log(chalk.gray('You may need to restart CoreDNS manually: tuition dns stop && tuition dns start'));
+      console.log(chalk.gray("You may need to restart CoreDNS manually: tuition dns stop && tuition dns start"));
     }
   }
 }

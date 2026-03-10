@@ -8,7 +8,14 @@ import { writeFile, mkdir, access } from "fs/promises";
 import { constants } from "fs";
 import { join, dirname } from "path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import type { ServiceDefinition, PortMapping, VolumeMapping, BindVolumeMapping, NfsVolumeMapping, NfsConfig } from "../../types/index.js";
+import type {
+  ServiceDefinition,
+  PortMapping,
+  VolumeMapping,
+  BindVolumeMapping,
+  NfsVolumeMapping,
+  NfsConfig,
+} from "../../types/index.js";
 
 export interface ComposeService {
   image: string;
@@ -73,11 +80,7 @@ export class ComposeManager {
     const resolvedEnv = this.resolveEnvironment(definition.environment || {}, envVars);
 
     // Split bind vs NFS volumes
-    const { serviceVolumes, topLevelVolumes } = this.resolveVolumes(
-      definition.volumes || [],
-      envVars,
-      nfsConfigs
-    );
+    const { serviceVolumes, topLevelVolumes } = this.resolveVolumes(definition.volumes || [], envVars, nfsConfigs);
 
     const service: ComposeService = {
       image: definition.image,

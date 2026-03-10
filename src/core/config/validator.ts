@@ -2,7 +2,7 @@
  * Configuration validation
  */
 
-import type { GlobalConfig, ServiceConfig, InfrastructureConfig } from '../../types/index.js';
+import type { GlobalConfig, ServiceConfig, InfrastructureConfig } from "../../types/index.js";
 
 export interface ValidationError {
   field: string;
@@ -23,59 +23,59 @@ export class ConfigValidator {
     const errors: ValidationError[] = [];
 
     // Required fields
-    if (!config.hostname || config.hostname.trim() === '') {
+    if (!config.hostname || config.hostname.trim() === "") {
       errors.push({
-        field: 'hostname',
-        message: 'Hostname is required',
+        field: "hostname",
+        message: "Hostname is required",
       });
     }
 
-    if (!config.domain || config.domain.trim() === '') {
+    if (!config.domain || config.domain.trim() === "") {
       errors.push({
-        field: 'domain',
-        message: 'Domain is required',
+        field: "domain",
+        message: "Domain is required",
       });
     }
 
-    if (!config.adminEmail || config.adminEmail.trim() === '') {
+    if (!config.adminEmail || config.adminEmail.trim() === "") {
       errors.push({
-        field: 'adminEmail',
-        message: 'Admin email is required',
+        field: "adminEmail",
+        message: "Admin email is required",
       });
     } else if (!this.isValidEmail(config.adminEmail)) {
       errors.push({
-        field: 'adminEmail',
-        message: 'Invalid email format',
+        field: "adminEmail",
+        message: "Invalid email format",
         value: config.adminEmail,
       });
     }
 
     // Validate DNS provider settings
-    if (config.dnsProvider === 'cloudflare' && !config.cloudflareToken) {
+    if (config.dnsProvider === "cloudflare" && !config.cloudflareToken) {
       errors.push({
-        field: 'cloudflareToken',
-        message: 'Cloudflare API token is required when using Cloudflare DNS',
+        field: "cloudflareToken",
+        message: "Cloudflare API token is required when using Cloudflare DNS",
       });
     }
 
     // Validate upstream DNS configuration
     if (!config.upstreamDns || !config.upstreamDns.primary) {
       errors.push({
-        field: 'upstreamDns.primary',
-        message: 'Primary DNS server is required',
+        field: "upstreamDns.primary",
+        message: "Primary DNS server is required",
       });
     } else if (!this.isValidIp(config.upstreamDns.primary)) {
       errors.push({
-        field: 'upstreamDns.primary',
-        message: 'Primary DNS server must be a valid IP address',
+        field: "upstreamDns.primary",
+        message: "Primary DNS server must be a valid IP address",
         value: config.upstreamDns.primary,
       });
     }
 
     if (config.upstreamDns?.backup && !this.isValidIp(config.upstreamDns.backup)) {
       errors.push({
-        field: 'upstreamDns.backup',
-        message: 'Backup DNS server must be a valid IP address',
+        field: "upstreamDns.backup",
+        message: "Backup DNS server must be a valid IP address",
         value: config.upstreamDns.backup,
       });
     }
@@ -85,8 +85,8 @@ export class ConfigValidator {
       for (const seed of config.dnsCluster.clusterSeeds) {
         if (!this.isValidIp(seed)) {
           errors.push({
-            field: 'dnsCluster.clusterSeeds',
-            message: 'Cluster seed must be a valid IP address',
+            field: "dnsCluster.clusterSeeds",
+            message: "Cluster seed must be a valid IP address",
             value: seed,
           });
         }
@@ -109,17 +109,17 @@ export class ConfigValidator {
 
     for (const nfs of config.nfs ?? []) {
       // name is required and must be a safe identifier
-      if (!nfs.name || nfs.name.trim() === '') {
-        errors.push({ field: 'nfs[].name', message: 'NFS entry name is required' });
+      if (!nfs.name || nfs.name.trim() === "") {
+        errors.push({ field: "nfs[].name", message: "NFS entry name is required" });
       } else if (!/^[a-z0-9-]+$/.test(nfs.name)) {
         errors.push({
-          field: 'nfs[].name',
-          message: 'NFS name must contain only lowercase letters, numbers, and hyphens',
+          field: "nfs[].name",
+          message: "NFS name must contain only lowercase letters, numbers, and hyphens",
           value: nfs.name,
         });
       } else if (seenNames.has(nfs.name)) {
         errors.push({
-          field: 'nfs[].name',
+          field: "nfs[].name",
           message: `Duplicate NFS entry name '${nfs.name}'`,
           value: nfs.name,
         });
@@ -128,15 +128,15 @@ export class ConfigValidator {
       }
 
       // server is required
-      if (!nfs.server || nfs.server.trim() === '') {
-        errors.push({ field: `nfs[${nfs.name}].server`, message: 'NFS server address is required' });
+      if (!nfs.server || nfs.server.trim() === "") {
+        errors.push({ field: `nfs[${nfs.name}].server`, message: "NFS server address is required" });
       }
 
       // export path must be absolute
-      if (!nfs.path || !nfs.path.startsWith('/')) {
+      if (!nfs.path || !nfs.path.startsWith("/")) {
         errors.push({
           field: `nfs[${nfs.name}].path`,
-          message: 'NFS export path must be an absolute path (start with /)',
+          message: "NFS export path must be an absolute path (start with /)",
           value: nfs.path,
         });
       }
@@ -152,17 +152,17 @@ export class ConfigValidator {
     const errors: ValidationError[] = [];
 
     // Service name validation
-    if (!name || name.trim() === '') {
+    if (!name || name.trim() === "") {
       errors.push({
-        field: 'name',
-        message: 'Service name is required',
+        field: "name",
+        message: "Service name is required",
       });
     }
 
     if (!/^[a-z0-9-]+$/.test(name)) {
       errors.push({
-        field: 'name',
-        message: 'Service name must contain only lowercase letters, numbers, and hyphens',
+        field: "name",
+        message: "Service name must contain only lowercase letters, numbers, and hyphens",
         value: name,
       });
     }
@@ -189,7 +189,7 @@ export class ConfigValidator {
     const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     // IPv6 regex (simplified)
     const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$/;
-    
+
     return ipv4Regex.test(ip) || ipv6Regex.test(ip);
   }
 }

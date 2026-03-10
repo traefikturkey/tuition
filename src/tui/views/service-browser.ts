@@ -3,10 +3,10 @@
  * Displays all services with their status and allows interaction
  */
 
-import blessed from 'blessed';
-import type { Widgets } from 'blessed';
-import { LifecycleManager } from '../../core/lifecycle/manager.js';
-import type { ServiceInfo } from '../../core/lifecycle/manager.js';
+import blessed from "blessed";
+import type { Widgets } from "blessed";
+import { LifecycleManager } from "../../core/lifecycle/manager.js";
+import type { ServiceInfo } from "../../core/lifecycle/manager.js";
 
 export class ServiceBrowser {
   private screen: Widgets.Screen;
@@ -32,18 +32,18 @@ export class ServiceBrowser {
     }
 
     // Filter and sort state
-    let filterQuery = '';
-    let sortMode: 'name' | 'state' = 'name';
+    let filterQuery = "";
+    let sortMode: "name" | "state" = "name";
 
     const STATE_ORDER: Record<string, number> = { running: 0, enabled: 1, stopped: 2, disabled: 3 };
 
     const getDisplayServices = () => {
       const filtered = !filterQuery
         ? currentServices.slice()
-        : currentServices.filter(s => s.name.toLowerCase().includes(filterQuery.toLowerCase()));
+        : currentServices.filter((s) => s.name.toLowerCase().includes(filterQuery.toLowerCase()));
       return filtered.sort((a, b) =>
-        sortMode === 'state'
-          ? ((STATE_ORDER[a.state] ?? 4) - (STATE_ORDER[b.state] ?? 4)) || a.name.localeCompare(b.name)
+        sortMode === "state"
+          ? (STATE_ORDER[a.state] ?? 4) - (STATE_ORDER[b.state] ?? 4) || a.name.localeCompare(b.name)
           : a.name.localeCompare(b.name)
       );
     };
@@ -54,14 +54,14 @@ export class ServiceBrowser {
       top: 4,
       left: 0,
       right: 0,
-      height: '100%-5',
+      height: "100%-5",
       border: {
-        type: 'line',
+        type: "line",
       },
-      label: ' Services ',
+      label: " Services ",
       style: {
         border: {
-          fg: 'cyan',
+          fg: "cyan",
         },
       },
     });
@@ -71,49 +71,49 @@ export class ServiceBrowser {
       parent: container,
       top: 0,
       left: 0,
-      width: '40%',
-      height: '100%-2',
+      width: "40%",
+      height: "100%-2",
       keys: true,
       mouse: true,
       vi: true,
       tags: true,
       border: {
-        type: 'line',
+        type: "line",
       },
-      label: ' Available ',
+      label: " Available ",
       style: {
         item: {
-          fg: 'white',
+          fg: "white",
         },
         selected: {
-          bg: 'blue',
-          fg: 'white',
+          bg: "blue",
+          fg: "white",
         },
         border: {
-          fg: 'white',
+          fg: "white",
         },
       },
-      items: getDisplayServices().map(s => this.formatServiceListItem(s)),
+      items: getDisplayServices().map((s) => this.formatServiceListItem(s)),
     });
 
     // Create details panel
     const details = blessed.box({
       parent: container,
       top: 0,
-      left: '40%',
+      left: "40%",
       right: 0,
-      height: '100%-2',
+      height: "100%-2",
       tags: true,
       border: {
-        type: 'line',
+        type: "line",
       },
-      label: ' Details ',
+      label: " Details ",
       style: {
         border: {
-          fg: 'white',
+          fg: "white",
         },
       },
-      content: 'Select a service to view details',
+      content: "Select a service to view details",
     });
 
     // Create action buttons
@@ -124,7 +124,7 @@ export class ServiceBrowser {
       right: 0,
       height: 3,
       style: {
-        fg: 'white',
+        fg: "white",
       },
     });
 
@@ -134,17 +134,17 @@ export class ServiceBrowser {
       top: 0,
       width: 12,
       height: 3,
-      content: 'Enable',
-      align: 'center',
-      valign: 'middle',
+      content: "Enable",
+      align: "center",
+      valign: "middle",
       border: {
-        type: 'line',
+        type: "line",
       },
       style: {
-        fg: 'white',
-        bg: 'green',
+        fg: "white",
+        bg: "green",
         focus: {
-          bg: 'blue',
+          bg: "blue",
         },
       },
       mouse: true,
@@ -157,17 +157,17 @@ export class ServiceBrowser {
       top: 0,
       width: 12,
       height: 3,
-      content: 'Disable',
-      align: 'center',
-      valign: 'middle',
+      content: "Disable",
+      align: "center",
+      valign: "middle",
       border: {
-        type: 'line',
+        type: "line",
       },
       style: {
-        fg: 'white',
-        bg: 'red',
+        fg: "white",
+        bg: "red",
         focus: {
-          bg: 'blue',
+          bg: "blue",
         },
       },
       mouse: true,
@@ -180,17 +180,17 @@ export class ServiceBrowser {
       top: 0,
       width: 10,
       height: 3,
-      content: 'Start',
-      align: 'center',
-      valign: 'middle',
+      content: "Start",
+      align: "center",
+      valign: "middle",
       border: {
-        type: 'line',
+        type: "line",
       },
       style: {
-        fg: 'white',
-        bg: 'blue',
+        fg: "white",
+        bg: "blue",
         focus: {
-          bg: 'cyan',
+          bg: "cyan",
         },
       },
       mouse: true,
@@ -203,17 +203,17 @@ export class ServiceBrowser {
       top: 0,
       width: 10,
       height: 3,
-      content: 'Stop',
-      align: 'center',
-      valign: 'middle',
+      content: "Stop",
+      align: "center",
+      valign: "middle",
       border: {
-        type: 'line',
+        type: "line",
       },
       style: {
-        fg: 'white',
-        bg: 'yellow',
+        fg: "white",
+        bg: "yellow",
         focus: {
-          bg: 'cyan',
+          bg: "cyan",
         },
       },
       mouse: true,
@@ -226,17 +226,17 @@ export class ServiceBrowser {
       top: 0,
       width: 12,
       height: 3,
-      content: 'Remove',
-      align: 'center',
-      valign: 'middle',
+      content: "Remove",
+      align: "center",
+      valign: "middle",
       border: {
-        type: 'line',
+        type: "line",
       },
       style: {
-        fg: 'white',
-        bg: 'red',
+        fg: "white",
+        bg: "red",
         focus: {
-          bg: 'cyan',
+          bg: "cyan",
         },
       },
       mouse: true,
@@ -246,7 +246,7 @@ export class ServiceBrowser {
     // Update details and track selection by service name so filter/sort changes
     // don't cause button actions to operate on the wrong service.
     let selectedServiceName: string | undefined = getDisplayServices()[0]?.name;
-    list.on('select', (item, index) => {
+    list.on("select", (item, index) => {
       const service = getDisplayServices()[index];
       selectedServiceName = service?.name;
       if (service) {
@@ -258,56 +258,56 @@ export class ServiceBrowser {
     // Refresh the list from the live service state and keep currentServices in sync.
     const doRefresh = async () => {
       currentServices = await this.lifecycleManager.listAll();
-      list.setItems(getDisplayServices().map(s => this.formatServiceListItem(s)));
+      list.setItems(getDisplayServices().map((s) => this.formatServiceListItem(s)));
       this.screen.render();
     };
 
     // Button actions
-    btnEnable.on('press', async () => {
-      const service = currentServices.find(s => s.name === selectedServiceName);
+    btnEnable.on("press", async () => {
+      const service = currentServices.find((s) => s.name === selectedServiceName);
       if (service) {
         const result = await this.lifecycleManager.enable(service.name);
-        this.showMessage(result.message, result.success ? 'green' : 'red');
+        this.showMessage(result.message, result.success ? "green" : "red");
         await doRefresh();
       }
     });
 
-    btnDisable.on('press', async () => {
-      const service = currentServices.find(s => s.name === selectedServiceName);
+    btnDisable.on("press", async () => {
+      const service = currentServices.find((s) => s.name === selectedServiceName);
       if (service) {
         const result = await this.lifecycleManager.disable(service.name);
-        this.showMessage(result.message, result.success ? 'green' : 'red');
+        this.showMessage(result.message, result.success ? "green" : "red");
         await doRefresh();
       }
     });
 
-    btnStart.on('press', async () => {
-      const service = currentServices.find(s => s.name === selectedServiceName);
+    btnStart.on("press", async () => {
+      const service = currentServices.find((s) => s.name === selectedServiceName);
       if (service) {
         const result = await this.lifecycleManager.start(service.name);
-        this.showMessage(result.message, result.success ? 'green' : 'red');
+        this.showMessage(result.message, result.success ? "green" : "red");
         await doRefresh();
       }
     });
 
-    btnStop.on('press', async () => {
-      const service = currentServices.find(s => s.name === selectedServiceName);
+    btnStop.on("press", async () => {
+      const service = currentServices.find((s) => s.name === selectedServiceName);
       if (service) {
         const result = await this.lifecycleManager.stop(service.name);
-        this.showMessage(result.message, result.success ? 'green' : 'red');
+        this.showMessage(result.message, result.success ? "green" : "red");
         await doRefresh();
       }
     });
 
-    btnRemove.on('press', async () => {
-      const service = currentServices.find(s => s.name === selectedServiceName);
+    btnRemove.on("press", async () => {
+      const service = currentServices.find((s) => s.name === selectedServiceName);
       if (service) {
         this.showConfirm(
           `Remove service '${service.name}'?\nThis will delete configuration and all data.\n\nType 'yes' or 'y' to confirm:`,
           async (confirmed) => {
             if (confirmed) {
               const result = await this.lifecycleManager.remove(service.name);
-              this.showMessage(result.message, result.success ? 'green' : 'red');
+              this.showMessage(result.message, result.success ? "green" : "red");
               await doRefresh();
             }
           }
@@ -316,21 +316,21 @@ export class ServiceBrowser {
     });
 
     // [T] Toggle sort mode between name-ascending and state-grouped
-    list.key(['t'], () => {
-      sortMode = sortMode === 'name' ? 'state' : 'name';
-      const label = sortMode === 'state' ? ' Available [sort: state] ' : ' Available ';
+    list.key(["t"], () => {
+      sortMode = sortMode === "name" ? "state" : "name";
+      const label = sortMode === "state" ? " Available [sort: state] " : " Available ";
       (list as unknown as { setLabel: (s: string) => void }).setLabel?.(label);
-      list.setItems(getDisplayServices().map(s => this.formatServiceListItem(s)));
+      list.setItems(getDisplayServices().map((s) => this.formatServiceListItem(s)));
       this.screen.render();
     });
 
     // [/] Open filter dialog — accepts a query string to narrow the visible list
-    list.key(['/'], () => {
+    list.key(["/"], () => {
       this.showFilter(filterQuery, (query) => {
         filterQuery = query;
-        const label = filterQuery ? ` Available [filter: ${filterQuery}] ` : ' Available ';
+        const label = filterQuery ? ` Available [filter: ${filterQuery}] ` : " Available ";
         (list as unknown as { setLabel: (s: string) => void }).setLabel?.(label);
-        list.setItems(getDisplayServices().map(s => this.formatServiceListItem(s)));
+        list.setItems(getDisplayServices().map((s) => this.formatServiceListItem(s)));
         list.focus();
         this.screen.render();
       });
@@ -353,16 +353,16 @@ export class ServiceBrowser {
    * Format service details
    */
   private formatServiceDetails(service: ServiceInfo): string {
-    let content = '';
-    
+    let content = "";
+
     content += `{bold}Name:{/bold} ${service.name}\n`;
-    content += `{bold}Category:{/bold} ${service.definition?.category || 'N/A'}\n`;
+    content += `{bold}Category:{/bold} ${service.definition?.category || "N/A"}\n`;
     content += `{bold}State:{/bold} ${service.state}\n\n`;
-    
+
     if (service.definition?.description) {
       content += `{bold}Description:{/bold}\n${service.definition.description}\n\n`;
     }
-    
+
     if (service.containerStatus) {
       content += `{bold}Container:{/bold}\n`;
       content += `  ID: ${service.containerStatus.id.substring(0, 12)}\n`;
@@ -371,11 +371,11 @@ export class ServiceBrowser {
         content += `  Health: ${service.containerStatus.health}\n`;
       }
     }
-    
+
     if (service.definition?.upstreamUrl) {
       content += `\n{bold}Documentation:{/bold} ${service.definition.upstreamUrl}`;
     }
-    
+
     return content;
   }
 
@@ -384,11 +384,16 @@ export class ServiceBrowser {
    */
   private getStateColor(state: string): string {
     switch (state) {
-      case 'running': return '{green-fg}';
-      case 'enabled': return '{blue-fg}';
-      case 'stopped': return '{yellow-fg}';
-      case 'disabled': return '{gray-fg}';
-      default: return '{white-fg}';
+      case "running":
+        return "{green-fg}";
+      case "enabled":
+        return "{blue-fg}";
+      case "stopped":
+        return "{yellow-fg}";
+      case "disabled":
+        return "{gray-fg}";
+      default:
+        return "{white-fg}";
     }
   }
 
@@ -397,11 +402,16 @@ export class ServiceBrowser {
    */
   private getStateIcon(state: string): string {
     switch (state) {
-      case 'running': return '▲';
-      case 'enabled': return '●';
-      case 'stopped': return '▼';
-      case 'disabled': return '○';
-      default: return '○';
+      case "running":
+        return "▲";
+      case "enabled":
+        return "●";
+      case "stopped":
+        return "▼";
+      case "disabled":
+        return "○";
+      default:
+        return "○";
     }
   }
 
@@ -412,14 +422,14 @@ export class ServiceBrowser {
     const message = err instanceof Error ? err.message : String(err);
     blessed.box({
       parent: this.screen,
-      top: 'center',
-      left: 'center',
-      width: '60%',
+      top: "center",
+      left: "center",
+      width: "60%",
       height: 10,
       tags: true,
-      border: { type: 'line' },
-      label: ' Service Browser Error ',
-      style: { border: { fg: 'red' } },
+      border: { type: "line" },
+      label: " Service Browser Error ",
+      style: { border: { fg: "red" } },
       content: `{red-fg}Failed to load services:{/red-fg}\n\n${message}\n\n{yellow-fg}Press Q to quit or run: tuition service list{/yellow-fg}`,
     });
     this.screen.render();
@@ -431,12 +441,12 @@ export class ServiceBrowser {
   private showMessage(message: string, color: string): void {
     const msg = blessed.message({
       parent: this.screen,
-      border: 'line',
-      height: 'shrink',
-      width: 'half',
-      top: 'center',
-      left: 'center',
-      label: ' Message ',
+      border: "line",
+      height: "shrink",
+      width: "half",
+      top: "center",
+      left: "center",
+      label: " Message ",
       style: {
         border: {
           fg: color,
@@ -455,18 +465,18 @@ export class ServiceBrowser {
   private showConfirm(message: string, callback: (confirmed: boolean) => void): void {
     const dialog = blessed.question({
       parent: this.screen,
-      border: 'line',
-      height: 'shrink',
-      width: 'half',
-      top: 'center',
-      left: 'center',
-      label: ' Confirm ',
+      border: "line",
+      height: "shrink",
+      width: "half",
+      top: "center",
+      left: "center",
+      label: " Confirm ",
       tags: true,
       keys: true,
       vi: true,
       style: {
         border: {
-          fg: 'red',
+          fg: "red",
         },
       },
     });
@@ -474,7 +484,7 @@ export class ServiceBrowser {
     dialog.ask(message, (err, value) => {
       dialog.destroy();
       this.screen.render();
-      callback(!err && (value === 'yes' || value === 'y'));
+      callback(!err && (value === "yes" || value === "y"));
     });
   }
 
@@ -484,24 +494,24 @@ export class ServiceBrowser {
   private showFilter(current: string, callback: (query: string) => void): void {
     const dialog = blessed.question({
       parent: this.screen,
-      border: 'line',
-      height: 'shrink',
-      width: 'half',
-      top: 'center',
-      left: 'center',
-      label: ' Filter Services ',
+      border: "line",
+      height: "shrink",
+      width: "half",
+      top: "center",
+      left: "center",
+      label: " Filter Services ",
       tags: true,
       keys: true,
       vi: true,
       style: {
         border: {
-          fg: 'cyan',
+          fg: "cyan",
         },
       },
     });
 
     dialog.ask(
-      `Filter by name (current: "${current || 'none'}")\nEnter text to filter, or leave empty to clear:`,
+      `Filter by name (current: "${current || "none"}")\nEnter text to filter, or leave empty to clear:`,
       (err, value) => {
         dialog.destroy();
         this.screen.render();

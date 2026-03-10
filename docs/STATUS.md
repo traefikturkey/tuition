@@ -207,7 +207,7 @@ changes.
 | PRD Target                      | Current Position                                                                    |
 | ------------------------------- | ----------------------------------------------------------------------------------- |
 | **30+ curated services**        | At risk for v1 on this branch; current catalog is 24 services.                      |
-| **All commands documented**     | Addressed by this documentation sync; see README command reference.            |
+| **All commands documented**     | Addressed by this documentation sync; see README command reference.                 |
 | **>80% test coverage**          | Test suites are broad, but formal coverage reporting is not published in repo docs. |
 | **Fast first-service workflow** | On track via `init`, infrastructure commands, and `service enable`.                 |
 

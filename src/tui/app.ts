@@ -3,15 +3,15 @@
  * Interactive terminal interface using Blessed
  */
 
-import blessed from 'blessed';
-import type { Widgets } from 'blessed';
-import { ServiceBrowser } from './views/service-browser.js';
-import { StatusDashboard } from './views/status-dashboard.js';
-import { ServiceDiagnostics } from './views/service-diagnostics.js';
-import { LifecycleManager } from '../core/lifecycle/manager.js';
-import { CaddyManager } from '../services/caddy/manager.js';
-import { CoreDnsManager } from '../services/dns/coredns.js';
-import { ConfigManager } from '../core/config/manager.js';
+import blessed from "blessed";
+import type { Widgets } from "blessed";
+import { ServiceBrowser } from "./views/service-browser.js";
+import { StatusDashboard } from "./views/status-dashboard.js";
+import { ServiceDiagnostics } from "./views/service-diagnostics.js";
+import { LifecycleManager } from "../core/lifecycle/manager.js";
+import { CaddyManager } from "../services/caddy/manager.js";
+import { CoreDnsManager } from "../services/dns/coredns.js";
+import { ConfigManager } from "../core/config/manager.js";
 
 export class TuiApp {
   private screen: Widgets.Screen;
@@ -20,13 +20,13 @@ export class TuiApp {
   private caddyManager: CaddyManager;
   private dnsManager: CoreDnsManager;
   private persistentElements = new Set<Widgets.BlessedElement>();
-  private currentView: 'dashboard' | 'browser' | 'diagnostics' = 'dashboard';
+  private currentView: "dashboard" | "browser" | "diagnostics" = "dashboard";
   private statusBar?: Widgets.BoxElement;
 
   constructor(configPath?: string) {
     this.configManager = new ConfigManager(configPath);
     const tuitionDir = this.configManager.getTuitionDir();
-    
+
     this.lifecycleManager = new LifecycleManager(configPath);
     this.caddyManager = new CaddyManager(tuitionDir);
     this.dnsManager = new CoreDnsManager(tuitionDir);
@@ -34,7 +34,7 @@ export class TuiApp {
     // Create main screen
     this.screen = blessed.screen({
       smartCSR: true,
-      title: 'Tuition - Homelab Manager',
+      title: "Tuition - Homelab Manager",
       dockBorders: true,
     });
 
@@ -55,9 +55,9 @@ export class TuiApp {
    */
   private setupScreen(): void {
     // Enable keys
-    this.screen.key(['escape'], () => {
+    this.screen.key(["escape"], () => {
       // In diagnostics, escape goes back to the previous view.
-      if (this.currentView === 'diagnostics') {
+      if (this.currentView === "diagnostics") {
         this.showDashboard();
         return;
       }
@@ -65,16 +65,16 @@ export class TuiApp {
       process.exit(0);
     });
 
-    this.screen.key(['q', 'C-c'], () => {
+    this.screen.key(["q", "C-c"], () => {
       this.screen.destroy();
       process.exit(0);
     });
 
-    this.screen.key(['tab'], () => {
+    this.screen.key(["tab"], () => {
       this.screen.focusNext();
     });
 
-    this.screen.key(['S-tab'], () => {
+    this.screen.key(["S-tab"], () => {
       this.screen.focusPrevious();
     });
 
@@ -85,18 +85,18 @@ export class TuiApp {
       left: 0,
       right: 0,
       height: 3,
-      content: '{bold}Tuition{/bold} - Homelab Management',
+      content: "{bold}Tuition{/bold} - Homelab Management",
       tags: true,
-      align: 'center',
-      valign: 'middle',
+      align: "center",
+      valign: "middle",
       border: {
-        type: 'line',
+        type: "line",
       },
       style: {
-        fg: 'white',
-        bg: 'blue',
+        fg: "white",
+        bg: "blue",
         border: {
-          fg: 'blue',
+          fg: "blue",
         },
       },
     });
@@ -109,8 +109,8 @@ export class TuiApp {
       right: 0,
       height: 1,
       style: {
-        fg: 'white',
-        bg: 'default',
+        fg: "white",
+        bg: "default",
       },
     });
 
@@ -120,15 +120,15 @@ export class TuiApp {
       top: 0,
       width: 12,
       height: 1,
-      content: '[S]ervices',
-      align: 'center',
+      content: "[S]ervices",
+      align: "center",
       mouse: true,
       keys: true,
       style: {
-        fg: 'white',
-        bg: 'blue',
+        fg: "white",
+        bg: "blue",
         focus: {
-          bg: 'cyan',
+          bg: "cyan",
         },
       },
     });
@@ -139,15 +139,15 @@ export class TuiApp {
       top: 0,
       width: 14,
       height: 1,
-      content: '[D]ashboard',
-      align: 'center',
+      content: "[D]ashboard",
+      align: "center",
       mouse: true,
       keys: true,
       style: {
-        fg: 'white',
-        bg: 'blue',
+        fg: "white",
+        bg: "blue",
         focus: {
-          bg: 'cyan',
+          bg: "cyan",
         },
       },
     });
@@ -158,30 +158,30 @@ export class TuiApp {
       top: 0,
       width: 10,
       height: 1,
-      content: '[Q]uit',
-      align: 'center',
+      content: "[Q]uit",
+      align: "center",
       mouse: true,
       keys: true,
       style: {
-        fg: 'white',
-        bg: 'red',
+        fg: "white",
+        bg: "red",
         focus: {
-          bg: 'cyan',
+          bg: "cyan",
         },
       },
     });
 
     // Button actions
-    servicesBtn.on('press', () => this.showServiceBrowser());
-    dashboardBtn.on('press', () => this.showDashboard());
-    quitBtn.on('press', () => {
+    servicesBtn.on("press", () => this.showServiceBrowser());
+    dashboardBtn.on("press", () => this.showDashboard());
+    quitBtn.on("press", () => {
       this.screen.destroy();
       process.exit(0);
     });
 
     // Keyboard shortcuts matching the button labels
-    this.screen.key(['s'], () => this.showServiceBrowser());
-    this.screen.key(['d'], () => this.showDashboard());
+    this.screen.key(["s"], () => this.showServiceBrowser());
+    this.screen.key(["d"], () => this.showDashboard());
 
     // Create status bar
     const statusBar = blessed.box({
@@ -190,10 +190,10 @@ export class TuiApp {
       left: 0,
       right: 0,
       height: 1,
-      content: ' [Tab] Navigate | [Enter] Select | [Q] Quit ',
+      content: " [Tab] Navigate | [Enter] Select | [Q] Quit ",
       style: {
-        fg: 'white',
-        bg: 'blue',
+        fg: "white",
+        bg: "blue",
       },
     });
     this.statusBar = statusBar;
@@ -208,9 +208,11 @@ export class TuiApp {
    * Show service browser view
    */
   private async showServiceBrowser(): Promise<void> {
-    this.currentView = 'browser';
+    this.currentView = "browser";
     this.clearContent();
-    this.statusBar?.setContent(' [Tab/↑↓] Navigate | [Enter] Select | [Enable/Disable/Start/Stop/Remove] Actions | [Q] Quit ');
+    this.statusBar?.setContent(
+      " [Tab/↑↓] Navigate | [Enter] Select | [Enable/Disable/Start/Stop/Remove] Actions | [Q] Quit "
+    );
 
     const browser = new ServiceBrowser(this.screen, this.lifecycleManager);
     await browser.render();
@@ -220,9 +222,9 @@ export class TuiApp {
    * Show status dashboard view
    */
   private async showDashboard(): Promise<void> {
-    this.currentView = 'dashboard';
+    this.currentView = "dashboard";
     this.clearContent();
-    this.statusBar?.setContent(' [D] Dashboard | [S] Services | [Enter] Diagnostics | [Q] Quit ');
+    this.statusBar?.setContent(" [D] Dashboard | [S] Services | [Enter] Diagnostics | [Q] Quit ");
 
     const dashboard = new StatusDashboard(
       this.screen,
@@ -239,9 +241,9 @@ export class TuiApp {
    * Show service diagnostics view for a specific service
    */
   private async showDiagnostics(serviceName: string): Promise<void> {
-    this.currentView = 'diagnostics';
+    this.currentView = "diagnostics";
     this.clearContent();
-    this.statusBar?.setContent(' [O] Overview | [L] Logs | [N] Network | [R] Restart | [B/Esc] Back | [Q] Quit ');
+    this.statusBar?.setContent(" [O] Overview | [L] Logs | [N] Network | [R] Restart | [B/Esc] Back | [Q] Quit ");
 
     const diagnostics = new ServiceDiagnostics(
       this.screen,
@@ -279,21 +281,21 @@ export class TuiApp {
       // then return; the callback handles exit.
       const setup = blessed.question({
         parent: this.screen,
-        border: 'line',
-        height: 'shrink',
-        width: 'half',
-        top: 'center',
-        left: 'center',
-        label: ' Setup ',
+        border: "line",
+        height: "shrink",
+        width: "half",
+        top: "center",
+        left: "center",
+        label: " Setup ",
         tags: true,
         keys: true,
         vi: true,
       });
 
-      setup.ask('Tuition is not initialized.\nRun setup wizard now? (y/n)', (err, value) => {
-        if (value && value.toLowerCase() === 'y') {
+      setup.ask("Tuition is not initialized.\nRun setup wizard now? (y/n)", (err, value) => {
+        if (value && value.toLowerCase() === "y") {
           this.screen.destroy();
-          console.log('Running: tuition init');
+          console.log("Running: tuition init");
           process.exit(0);
         } else {
           this.screen.destroy();

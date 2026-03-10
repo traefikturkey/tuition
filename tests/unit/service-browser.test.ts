@@ -238,10 +238,7 @@ describe("ServiceBrowser", () => {
       throw new Error("connection refused");
     };
 
-    const browser = new ServiceBrowser(
-      screen as never,
-      lifecycleManager as never
-    );
+    const browser = new ServiceBrowser(screen as never, lifecycleManager as never);
     await browser.render();
 
     const errorBox = findChildByLabel(screen, " Service Browser Error ");
@@ -252,11 +249,12 @@ describe("ServiceBrowser", () => {
   });
 
   it("sorts services alphabetically by name by default", async () => {
-    lifecycleManager.listAll = async () => [
-      { name: "redis", state: "running", definition: { category: "storage" } },
-      { name: "nextcloud", state: "enabled", definition: { category: "storage" } },
-      { name: "pihole", state: "stopped", definition: { category: "dns" } },
-    ] as Array<Record<string, unknown>>;
+    lifecycleManager.listAll = async () =>
+      [
+        { name: "redis", state: "running", definition: { category: "storage" } },
+        { name: "nextcloud", state: "enabled", definition: { category: "storage" } },
+        { name: "pihole", state: "stopped", definition: { category: "dns" } },
+      ] as Array<Record<string, unknown>>;
 
     const browser = new ServiceBrowser(screen as never, lifecycleManager as never);
     await browser.render();
@@ -273,11 +271,12 @@ describe("ServiceBrowser", () => {
   });
 
   it("toggles sort to state-grouped when T is pressed on the list", async () => {
-    lifecycleManager.listAll = async () => [
-      { name: "redis", state: "running", definition: { category: "storage" } },
-      { name: "nextcloud", state: "enabled", definition: { category: "storage" } },
-      { name: "pihole", state: "stopped", definition: { category: "dns" } },
-    ] as Array<Record<string, unknown>>;
+    lifecycleManager.listAll = async () =>
+      [
+        { name: "redis", state: "running", definition: { category: "storage" } },
+        { name: "nextcloud", state: "enabled", definition: { category: "storage" } },
+        { name: "pihole", state: "stopped", definition: { category: "dns" } },
+      ] as Array<Record<string, unknown>>;
 
     const browser = new ServiceBrowser(screen as never, lifecycleManager as never);
     await browser.render();
@@ -297,11 +296,12 @@ describe("ServiceBrowser", () => {
   });
 
   it("filters the service list when a query is submitted", async () => {
-    lifecycleManager.listAll = async () => [
-      { name: "redis", state: "running", definition: { category: "storage" } },
-      { name: "nextcloud", state: "enabled", definition: { category: "storage" } },
-      { name: "pihole", state: "stopped", definition: { category: "dns" } },
-    ] as Array<Record<string, unknown>>;
+    lifecycleManager.listAll = async () =>
+      [
+        { name: "redis", state: "running", definition: { category: "storage" } },
+        { name: "nextcloud", state: "enabled", definition: { category: "storage" } },
+        { name: "pihole", state: "stopped", definition: { category: "dns" } },
+      ] as Array<Record<string, unknown>>;
 
     const browser = new ServiceBrowser(screen as never, lifecycleManager as never);
     await browser.render();

@@ -2,10 +2,10 @@
  * Infrastructure command - manage NFS mounts and external services
  */
 
-import { ConfigManager } from '../../core/config/manager.js';
-import { ConfigValidator } from '../../core/config/validator.js';
-import type { NfsConfig } from '../../types/index.js';
-import chalk from 'chalk';
+import { ConfigManager } from "../../core/config/manager.js";
+import { ConfigValidator } from "../../core/config/validator.js";
+import type { NfsConfig } from "../../types/index.js";
+import chalk from "chalk";
 
 export class InfraCommand {
   private configPath?: string;
@@ -27,8 +27,8 @@ export class InfraCommand {
     const manager = new ConfigManager(options.path ?? this.configPath);
 
     if (!(await manager.exists())) {
-      console.log(chalk.red('Tuition is not initialized'));
-      console.log(chalk.gray('Run: tuition init'));
+      console.log(chalk.red("Tuition is not initialized"));
+      console.log(chalk.gray("Run: tuition init"));
       return;
     }
 
@@ -36,16 +36,16 @@ export class InfraCommand {
     const entries = infra?.nfs ?? [];
 
     if (entries.length === 0) {
-      console.log(chalk.yellow('No NFS shares configured'));
-      console.log(chalk.gray('Add one with: tuition infra nfs add --name <name> --server <host> --path <export>'));
+      console.log(chalk.yellow("No NFS shares configured"));
+      console.log(chalk.gray("Add one with: tuition infra nfs add --name <name> --server <host> --path <export>"));
       return;
     }
 
-    console.log(chalk.blue('\nConfigured NFS Shares:\n'));
+    console.log(chalk.blue("\nConfigured NFS Shares:\n"));
     for (const nfs of entries) {
       console.log(`  ${chalk.white(nfs.name.padEnd(15))}  ${chalk.cyan(nfs.server)}  ${chalk.gray(nfs.path)}`);
       if (nfs.options) {
-        console.log(`  ${''.padEnd(15)}  ${chalk.gray('options: ' + nfs.options)}`);
+        console.log(`  ${"".padEnd(15)}  ${chalk.gray("options: " + nfs.options)}`);
       }
     }
     console.log();
@@ -58,7 +58,7 @@ export class InfraCommand {
     const manager = new ConfigManager(options.path ?? this.configPath);
 
     if (!(await manager.exists())) {
-      console.log(chalk.red('Tuition is not initialized'));
+      console.log(chalk.red("Tuition is not initialized"));
       return;
     }
 
@@ -82,20 +82,18 @@ export class InfraCommand {
   /**
    * Add a new NFS entry to infrastructure config.
    */
-  async nfsAdd(
-    options: {
-      name: string;
-      server: string;
-      path: string;
-      options?: string;
-      path_config?: string;
-    }
-  ): Promise<void> {
+  async nfsAdd(options: {
+    name: string;
+    server: string;
+    path: string;
+    options?: string;
+    path_config?: string;
+  }): Promise<void> {
     const manager = new ConfigManager(options.path_config ?? this.configPath);
 
     if (!(await manager.exists())) {
-      console.log(chalk.red('Tuition is not initialized'));
-      console.log(chalk.gray('Run: tuition init'));
+      console.log(chalk.red("Tuition is not initialized"));
+      console.log(chalk.gray("Run: tuition init"));
       return;
     }
 
@@ -104,7 +102,7 @@ export class InfraCommand {
       server: options.server,
       path: options.path,
       // mountPoint no longer needed for Docker-managed volumes, kept for type compat
-      mountPoint: '',
+      mountPoint: "",
       options: options.options,
     };
 
@@ -113,7 +111,7 @@ export class InfraCommand {
     const tempInfra = { nfs: [newEntry] };
     const result = validator.validateInfrastructure(tempInfra);
     if (!result.valid) {
-      console.log(chalk.red('✗ Invalid NFS configuration:'));
+      console.log(chalk.red("✗ Invalid NFS configuration:"));
       for (const error of result.errors) {
         console.log(chalk.red(`  - ${error.field}: ${error.message}`));
       }
@@ -141,7 +139,7 @@ export class InfraCommand {
     const manager = new ConfigManager(options.path ?? this.configPath);
 
     if (!(await manager.exists())) {
-      console.log(chalk.red('Tuition is not initialized'));
+      console.log(chalk.red("Tuition is not initialized"));
       return;
     }
 

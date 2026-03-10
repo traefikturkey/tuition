@@ -100,7 +100,9 @@ describe("ServiceDiagnostics", () => {
       configManager as never,
       caddyManager as never,
       dnsManager as never,
-      () => { backCalled = true; }
+      () => {
+        backCalled = true;
+      }
     );
   }
 
@@ -412,9 +414,7 @@ describe("ServiceDiagnostics", () => {
   });
 
   it("shows read-only marker for read-only volumes", async () => {
-    (service.definition as Record<string, unknown>).volumes = [
-      { host: "/media", container: "/media", readOnly: true },
-    ];
+    (service.definition as Record<string, unknown>).volumes = [{ host: "/media", container: "/media", readOnly: true }];
 
     const diag = createDiagnostics();
     await diag.render();

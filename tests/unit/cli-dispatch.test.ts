@@ -415,7 +415,10 @@ describe("CLI command dispatch", () => {
 
     expect(calls[0]).toEqual({ method: "nfs:list", path: "/tmp/infra-config" });
     expect(calls[1]).toEqual({ method: "nfs:show", name: "media", path: "/tmp/infra-config" });
-    expect(calls[2]).toEqual({ method: "nfs:add", opts: { name: "media", server: "192.168.1.10", path: "/export/media" } });
+    expect(calls[2]).toEqual({
+      method: "nfs:add",
+      opts: { name: "media", server: "192.168.1.10", path: "/export/media" },
+    });
     expect(calls[3]).toEqual({ method: "nfs:remove", name: "media", path: "/tmp/infra-config" });
   });
 });

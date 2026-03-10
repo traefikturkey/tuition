@@ -3,18 +3,18 @@
  * Detailed diagnostics for a single service with tabbed sections
  */
 
-import blessed from 'blessed';
-import type { Widgets } from 'blessed';
-import type { ChildProcess } from 'child_process';
-import { LifecycleManager } from '../../core/lifecycle/manager.js';
-import type { ServiceInfo } from '../../core/lifecycle/manager.js';
-import { docker } from '../../services/docker/client.js';
-import { ComposeManager } from '../../services/docker/compose.js';
-import { CaddyManager } from '../../services/caddy/manager.js';
-import { CoreDnsManager } from '../../services/dns/coredns.js';
-import { ConfigManager } from '../../core/config/manager.js';
+import blessed from "blessed";
+import type { Widgets } from "blessed";
+import type { ChildProcess } from "child_process";
+import { LifecycleManager } from "../../core/lifecycle/manager.js";
+import type { ServiceInfo } from "../../core/lifecycle/manager.js";
+import { docker } from "../../services/docker/client.js";
+import { ComposeManager } from "../../services/docker/compose.js";
+import { CaddyManager } from "../../services/caddy/manager.js";
+import { CoreDnsManager } from "../../services/dns/coredns.js";
+import { ConfigManager } from "../../core/config/manager.js";
 
-type Tab = 'overview' | 'logs' | 'network';
+type Tab = "overview" | "logs" | "network";
 
 export class ServiceDiagnostics {
   private screen: Widgets.Screen;
@@ -26,7 +26,7 @@ export class ServiceDiagnostics {
   private onBack: () => void;
   private serviceName: string;
 
-  private activeTab: Tab = 'overview';
+  private activeTab: Tab = "overview";
   private tabContentBox?: Widgets.BoxElement;
   private tabButtons: Map<Tab, Widgets.ButtonElement> = new Map();
   private logProcess?: ChildProcess;
@@ -79,10 +79,10 @@ export class ServiceDiagnostics {
       top: 4,
       left: 0,
       right: 0,
-      height: '100%-5',
-      border: { type: 'line' },
+      height: "100%-5",
+      border: { type: "line" },
       label: ` Diagnostics: ${this.serviceName} `,
-      style: { border: { fg: 'cyan' } },
+      style: { border: { fg: "cyan" } },
     });
 
     // Info bar at top (always visible)
@@ -93,9 +93,9 @@ export class ServiceDiagnostics {
       right: 0,
       height: 3,
       tags: true,
-      border: { type: 'line' },
-      label: ' Status ',
-      style: { border: { fg: 'blue' } },
+      border: { type: "line" },
+      label: " Status ",
+      style: { border: { fg: "blue" } },
       content: this.formatInfoBar(service),
     });
 
@@ -114,13 +114,13 @@ export class ServiceDiagnostics {
       top: 0,
       width: 10,
       height: 3,
-      content: 'Back',
-      align: 'center',
-      valign: 'middle',
-      border: { type: 'line' },
+      content: "Back",
+      align: "center",
+      valign: "middle",
+      border: { type: "line" },
       mouse: true,
       keys: true,
-      style: { fg: 'white', bg: 'blue', focus: { bg: 'cyan' } },
+      style: { fg: "white", bg: "blue", focus: { bg: "cyan" } },
     });
 
     const btnRestart = blessed.button({
@@ -129,13 +129,13 @@ export class ServiceDiagnostics {
       top: 0,
       width: 12,
       height: 3,
-      content: 'Restart',
-      align: 'center',
-      valign: 'middle',
-      border: { type: 'line' },
+      content: "Restart",
+      align: "center",
+      valign: "middle",
+      border: { type: "line" },
       mouse: true,
       keys: true,
-      style: { fg: 'white', bg: 'green', focus: { bg: 'cyan' } },
+      style: { fg: "white", bg: "green", focus: { bg: "cyan" } },
     });
 
     const btnStartStop = blessed.button({
@@ -144,16 +144,16 @@ export class ServiceDiagnostics {
       top: 0,
       width: 12,
       height: 3,
-      content: service.state === 'running' ? 'Stop' : 'Start',
-      align: 'center',
-      valign: 'middle',
-      border: { type: 'line' },
+      content: service.state === "running" ? "Stop" : "Start",
+      align: "center",
+      valign: "middle",
+      border: { type: "line" },
       mouse: true,
       keys: true,
       style: {
-        fg: 'white',
-        bg: service.state === 'running' ? 'yellow' : 'green',
-        focus: { bg: 'cyan' },
+        fg: "white",
+        bg: service.state === "running" ? "yellow" : "green",
+        focus: { bg: "cyan" },
       },
     });
 
@@ -164,13 +164,13 @@ export class ServiceDiagnostics {
       left: 0,
       right: 0,
       height: 1,
-      style: { bg: 'default' },
+      style: { bg: "default" },
     });
 
     const tabDefs: Array<{ tab: Tab; label: string; left: number; width: number }> = [
-      { tab: 'overview', label: '[O]verview', left: 2, width: 14 },
-      { tab: 'logs', label: '[L]ogs', left: 18, width: 10 },
-      { tab: 'network', label: '[N]etwork', left: 30, width: 13 },
+      { tab: "overview", label: "[O]verview", left: 2, width: 14 },
+      { tab: "logs", label: "[L]ogs", left: 18, width: 10 },
+      { tab: "network", label: "[N]etwork", left: 30, width: 13 },
     ];
 
     for (const def of tabDefs) {
@@ -181,17 +181,17 @@ export class ServiceDiagnostics {
         width: def.width,
         height: 1,
         content: def.label,
-        align: 'center',
+        align: "center",
         mouse: true,
         keys: true,
         style: {
-          fg: 'white',
-          bg: this.activeTab === def.tab ? 'cyan' : 'blue',
-          focus: { bg: 'cyan' },
+          fg: "white",
+          bg: this.activeTab === def.tab ? "cyan" : "blue",
+          focus: { bg: "cyan" },
         },
       });
 
-      btn.on('press', () => this.switchTab(def.tab, service));
+      btn.on("press", () => this.switchTab(def.tab, service));
       this.tabButtons.set(def.tab, btn);
     }
 
@@ -206,41 +206,41 @@ export class ServiceDiagnostics {
     });
 
     // Button actions
-    btnBack.on('press', () => this.cleanup(() => this.onBack()));
+    btnBack.on("press", () => this.cleanup(() => this.onBack()));
 
-    btnRestart.on('press', async () => {
+    btnRestart.on("press", async () => {
       const result = await this.lifecycleManager.restart(this.serviceName);
-      this.showMessage(result.message, result.success ? 'green' : 'red');
+      this.showMessage(result.message, result.success ? "green" : "red");
       await this.refreshInfoBar();
     });
 
-    btnStartStop.on('press', async () => {
+    btnStartStop.on("press", async () => {
       // Always re-read state immediately before acting so the button is never
       // driven off the stale service object captured at render time.
       const current = await this.lifecycleManager.getService(this.serviceName);
-      const isRunning = current?.state === 'running';
+      const isRunning = current?.state === "running";
       const action = isRunning
         ? this.lifecycleManager.stop(this.serviceName)
         : this.lifecycleManager.start(this.serviceName);
       const result = await action;
-      this.showMessage(result.message, result.success ? 'green' : 'red');
+      this.showMessage(result.message, result.success ? "green" : "red");
       const updated = await this.refreshInfoBar();
       if (updated) {
-        const nowRunning = updated.state === 'running';
-        btnStartStop.setContent(nowRunning ? 'Stop' : 'Start');
-        (btnStartStop.style as { bg: string }).bg = nowRunning ? 'yellow' : 'green';
+        const nowRunning = updated.state === "running";
+        btnStartStop.setContent(nowRunning ? "Stop" : "Start");
+        (btnStartStop.style as { bg: string }).bg = nowRunning ? "yellow" : "green";
         this.screen.render();
       }
     });
 
     // Key bindings for tabs and navigation (escape is handled by TuiApp based on currentView)
-    this.addScreenKey(['o'], () => this.switchTab('overview', service));
-    this.addScreenKey(['l'], () => this.switchTab('logs', service));
-    this.addScreenKey(['n'], () => this.switchTab('network', service));
-    this.addScreenKey(['b'], () => this.cleanup(() => this.onBack()));
-    this.addScreenKey(['r'], async () => {
+    this.addScreenKey(["o"], () => this.switchTab("overview", service));
+    this.addScreenKey(["l"], () => this.switchTab("logs", service));
+    this.addScreenKey(["n"], () => this.switchTab("network", service));
+    this.addScreenKey(["b"], () => this.cleanup(() => this.onBack()));
+    this.addScreenKey(["r"], async () => {
       const result = await this.lifecycleManager.restart(this.serviceName);
-      this.showMessage(result.message, result.success ? 'green' : 'red');
+      this.showMessage(result.message, result.success ? "green" : "red");
       await this.refreshInfoBar();
     });
 
@@ -256,13 +256,11 @@ export class ServiceDiagnostics {
   private formatInfoBar(service: ServiceInfo): string {
     const stateColor = this.getStateColor(service.state);
     const icon = this.getStateIcon(service.state);
-    const health = service.containerStatus?.health
-      ? ` (${service.containerStatus.health})`
-      : '';
+    const health = service.containerStatus?.health ? ` (${service.containerStatus.health})` : "";
     const uptime = service.containerStatus?.uptime
       ? `  Uptime: ${this.formatUptime(service.containerStatus.uptime)}`
-      : '';
-    const image = service.definition?.image || 'unknown';
+      : "";
+    const image = service.definition?.image || "unknown";
 
     return ` ${icon} ${stateColor}${service.state}{/}${health}${uptime}  |  Image: ${image}`;
   }
@@ -286,7 +284,7 @@ export class ServiceDiagnostics {
     if (tab === this.activeTab) return;
 
     // Stop log streaming when leaving logs tab
-    if (this.activeTab === 'logs') {
+    if (this.activeTab === "logs") {
       this.stopLogStream();
     }
 
@@ -294,7 +292,7 @@ export class ServiceDiagnostics {
 
     // Update tab button styles
     for (const [t, btn] of this.tabButtons) {
-      btn.style.bg = t === tab ? 'cyan' : 'blue';
+      btn.style.bg = t === tab ? "cyan" : "blue";
     }
 
     // Re-fetch service info for current state
@@ -315,13 +313,13 @@ export class ServiceDiagnostics {
     }
 
     switch (this.activeTab) {
-      case 'overview':
+      case "overview":
         await this.renderOverviewTab(service);
         break;
-      case 'logs':
+      case "logs":
         await this.renderLogsTab(service);
         break;
-      case 'network':
+      case "network":
         await this.renderNetworkTab(service);
         break;
     }
@@ -341,12 +339,12 @@ export class ServiceDiagnostics {
       parent: this.tabContentBox,
       top: 0,
       left: 0,
-      width: '50%',
+      width: "50%",
       height: 8,
       tags: true,
-      border: { type: 'line' },
-      label: ' Ports ',
-      style: { border: { fg: 'blue' } },
+      border: { type: "line" },
+      label: " Ports ",
+      style: { border: { fg: "blue" } },
       content: portsContent,
     });
 
@@ -355,13 +353,13 @@ export class ServiceDiagnostics {
     blessed.box({
       parent: this.tabContentBox,
       top: 0,
-      left: '50%',
+      left: "50%",
       right: 0,
       height: 8,
       tags: true,
-      border: { type: 'line' },
-      label: ' Volumes ',
-      style: { border: { fg: 'blue' } },
+      border: { type: "line" },
+      label: " Volumes ",
+      style: { border: { fg: "blue" } },
       content: volumesContent,
     });
 
@@ -371,17 +369,17 @@ export class ServiceDiagnostics {
       parent: this.tabContentBox,
       top: 8,
       left: 0,
-      width: '50%',
+      width: "50%",
       height: 7,
       tags: true,
-      border: { type: 'line' },
-      label: ' Resource Limits ',
-      style: { border: { fg: 'blue' } },
+      border: { type: "line" },
+      label: " Resource Limits ",
+      style: { border: { fg: "blue" } },
       content: limitsContent,
     });
 
     // Routing box (bottom-right)
-    let routingContent = '  No routing data available';
+    let routingContent = "  No routing data available";
     try {
       const caddyStatus = await this.caddyManager.status();
       const dnsStatus = await this.dnsManager.status();
@@ -393,13 +391,13 @@ export class ServiceDiagnostics {
     blessed.box({
       parent: this.tabContentBox,
       top: 8,
-      left: '50%',
+      left: "50%",
       right: 0,
       height: 7,
       tags: true,
-      border: { type: 'line' },
-      label: ' Routing ',
-      style: { border: { fg: 'blue' } },
+      border: { type: "line" },
+      label: " Routing ",
+      style: { border: { fg: "blue" } },
       content: routingContent,
     });
 
@@ -412,9 +410,9 @@ export class ServiceDiagnostics {
       right: 0,
       height: 6,
       tags: true,
-      border: { type: 'line' },
-      label: ' Image ',
-      style: { border: { fg: 'blue' } },
+      border: { type: "line" },
+      label: " Image ",
+      style: { border: { fg: "blue" } },
       content: imageContent,
     });
   }
@@ -435,17 +433,17 @@ export class ServiceDiagnostics {
       scrollable: true,
       alwaysScroll: true,
       scrollbar: {
-        ch: '█',
-        track: { bg: 'gray' },
-        style: { bg: 'white' },
+        ch: "█",
+        track: { bg: "gray" },
+        style: { bg: "white" },
       },
       keys: true,
       mouse: true,
       vi: true,
-      border: { type: 'line' },
-      label: ' Logs (streaming) ',
-      style: { border: { fg: 'green' } },
-      content: 'Starting log stream...',
+      border: { type: "line" },
+      label: " Logs (streaming) ",
+      style: { border: { fg: "green" } },
+      content: "Starting log stream...",
     });
 
     this.logElement.focus();
@@ -459,16 +457,16 @@ export class ServiceDiagnostics {
     if (!this.tabContentBox) return;
 
     // Container network info
-    let networkContent = '  No container network info available';
+    let networkContent = "  No container network info available";
     try {
       if (service.containerStatus?.id) {
-        const containerIp = await docker.getContainerIP(this.serviceName, 'tuition');
-        const gateway = await docker.getNetworkGateway('tuition');
+        const containerIp = await docker.getContainerIP(this.serviceName, "tuition");
+        const gateway = await docker.getNetworkGateway("tuition");
 
-        let content = '';
-        content += `  Container IP: ${containerIp || 'N/A'}\n`;
+        let content = "";
+        content += `  Container IP: ${containerIp || "N/A"}\n`;
         content += `  Network: tuition\n`;
-        content += `  Gateway: ${gateway || 'N/A'}`;
+        content += `  Gateway: ${gateway || "N/A"}`;
         networkContent = content;
       }
     } catch {
@@ -482,24 +480,24 @@ export class ServiceDiagnostics {
       right: 0,
       height: 7,
       tags: true,
-      border: { type: 'line' },
-      label: ' Container Network ',
-      style: { border: { fg: 'blue' } },
+      border: { type: "line" },
+      label: " Container Network ",
+      style: { border: { fg: "blue" } },
       content: networkContent,
     });
 
     // Port bindings from Docker (actual state)
-    let portBindingsContent = '  No port bindings';
+    let portBindingsContent = "  No port bindings";
     try {
       if (service.containerStatus?.id) {
         const container = await docker.getContainer(this.serviceName);
         if (container && container.ports.length > 0) {
           portBindingsContent = container.ports
-            .map(p => {
-              const pub = p.publicPort ? `0.0.0.0:${p.publicPort}` : 'none';
+            .map((p) => {
+              const pub = p.publicPort ? `0.0.0.0:${p.publicPort}` : "none";
               return `  ${pub} -> ${p.privatePort}/${p.type}`;
             })
-            .join('\n');
+            .join("\n");
         }
       }
     } catch {
@@ -513,14 +511,14 @@ export class ServiceDiagnostics {
       right: 0,
       height: 7,
       tags: true,
-      border: { type: 'line' },
-      label: ' Port Bindings (actual) ',
-      style: { border: { fg: 'blue' } },
+      border: { type: "line" },
+      label: " Port Bindings (actual) ",
+      style: { border: { fg: "blue" } },
       content: portBindingsContent,
     });
 
     // Caddy route info
-    let caddyContent = '  No Caddy route configured';
+    let caddyContent = "  No Caddy route configured";
     try {
       const globalConfig = await this.configManager.loadGlobal();
       const domain = `${this.serviceName}.${globalConfig.domain}`;
@@ -537,21 +535,21 @@ export class ServiceDiagnostics {
       parent: this.tabContentBox,
       top: 14,
       left: 0,
-      width: '50%',
+      width: "50%",
       height: 6,
       tags: true,
-      border: { type: 'line' },
-      label: ' Caddy Route ',
-      style: { border: { fg: 'blue' } },
+      border: { type: "line" },
+      label: " Caddy Route ",
+      style: { border: { fg: "blue" } },
       content: caddyContent,
     });
 
     // DNS entry info
-    let dnsContent = '  No DNS entry';
+    let dnsContent = "  No DNS entry";
     try {
       const globalConfig = await this.configManager.loadGlobal();
       const hostname = `${this.serviceName}.${globalConfig.domain}`;
-      const containerIp = await docker.getContainerIP(this.serviceName, 'tuition');
+      const containerIp = await docker.getContainerIP(this.serviceName, "tuition");
 
       if (containerIp) {
         dnsContent = `  ${hostname}\n  -> ${containerIp}`;
@@ -563,13 +561,13 @@ export class ServiceDiagnostics {
     blessed.box({
       parent: this.tabContentBox,
       top: 14,
-      left: '50%',
+      left: "50%",
       right: 0,
       height: 6,
       tags: true,
-      border: { type: 'line' },
-      label: ' DNS Entry ',
-      style: { border: { fg: 'blue' } },
+      border: { type: "line" },
+      label: " DNS Entry ",
+      style: { border: { fg: "blue" } },
       content: dnsContent,
     });
   }
@@ -583,23 +581,23 @@ export class ServiceDiagnostics {
     try {
       this.logProcess = this.composeManager.streamLogs(this.serviceName, { tail: 100 });
 
-      this.logProcess.stdout?.on('data', (data: Buffer) => {
-        this.appendLog(data.toString('utf-8'));
+      this.logProcess.stdout?.on("data", (data: Buffer) => {
+        this.appendLog(data.toString("utf-8"));
       });
 
-      this.logProcess.stderr?.on('data', (data: Buffer) => {
-        this.appendLog(data.toString('utf-8'));
+      this.logProcess.stderr?.on("data", (data: Buffer) => {
+        this.appendLog(data.toString("utf-8"));
       });
 
-      this.logProcess.on('error', () => {
-        this.appendLog('\n[Log stream error]');
+      this.logProcess.on("error", () => {
+        this.appendLog("\n[Log stream error]");
       });
 
-      this.logProcess.on('close', () => {
-        this.appendLog('\n[Log stream ended]');
+      this.logProcess.on("close", () => {
+        this.appendLog("\n[Log stream ended]");
       });
     } catch {
-      this.appendLog('[Failed to start log stream]');
+      this.appendLog("[Failed to start log stream]");
     }
   }
 
@@ -611,7 +609,7 @@ export class ServiceDiagnostics {
 
     const current = this.logElement.getContent();
     // Remove the initial "Starting log stream..." placeholder
-    const content = current === 'Starting log stream...' ? text : current + text;
+    const content = current === "Starting log stream..." ? text : current + text;
     this.logElement.setContent(content);
 
     // Auto-scroll to bottom (guard against blessed _clines not yet initialized)
@@ -648,7 +646,10 @@ export class ServiceDiagnostics {
     this.stopLogStream();
     // Remove all screen-level key listeners registered by this view instance
     for (const { keys, handler } of this.screenKeyHandlers) {
-      (this.screen as unknown as { unkey: (keys: string[], handler: (...args: unknown[]) => void) => void }).unkey(keys, handler);
+      (this.screen as unknown as { unkey: (keys: string[], handler: (...args: unknown[]) => void) => void }).unkey(
+        keys,
+        handler
+      );
     }
     this.screenKeyHandlers = [];
     callback();
@@ -660,12 +661,10 @@ export class ServiceDiagnostics {
   private formatPorts(service: ServiceInfo): string {
     const ports = service.definition?.ports;
     if (!ports || ports.length === 0) {
-      return '  No ports defined';
+      return "  No ports defined";
     }
 
-    return ports
-      .map(p => `  ${p.host}:${p.container}/${p.protocol || 'tcp'}`)
-      .join('\n');
+    return ports.map((p) => `  ${p.host}:${p.container}/${p.protocol || "tcp"}`).join("\n");
   }
 
   /**
@@ -674,15 +673,15 @@ export class ServiceDiagnostics {
   private formatVolumes(service: ServiceInfo): string {
     const volumes = service.definition?.volumes;
     if (!volumes || volumes.length === 0) {
-      return '  No volumes defined';
+      return "  No volumes defined";
     }
 
     return volumes
-      .map(v => {
-        const ro = v.readOnly ? ' (ro)' : '';
+      .map((v) => {
+        const ro = v.readOnly ? " (ro)" : "";
         return `  ${v.host}:${v.container}${ro}`;
       })
-      .join('\n');
+      .join("\n");
   }
 
   /**
@@ -691,15 +690,15 @@ export class ServiceDiagnostics {
   private formatResourceLimits(service: ServiceInfo): string {
     const limits = service.definition?.resourceLimits;
     if (!limits) {
-      return '  No resource limits defined';
+      return "  No resource limits defined";
     }
 
-    let content = '';
+    let content = "";
     if (limits.cpus) content += `  CPUs: ${limits.cpus}\n`;
     if (limits.memory) content += `  Memory: ${limits.memory}\n`;
-    if (limits.gpus !== undefined) content += `  GPUs: ${limits.gpus ? 'yes' : 'no'}`;
+    if (limits.gpus !== undefined) content += `  GPUs: ${limits.gpus ? "yes" : "no"}`;
 
-    return content || '  No resource limits defined';
+    return content || "  No resource limits defined";
   }
 
   /**
@@ -710,13 +709,13 @@ export class ServiceDiagnostics {
     caddyStatus: { running: boolean; routes: number },
     dnsStatus: { running: boolean; hosts: number }
   ): string {
-    const hasLabels = service.definition?.labels?.['caddy'] !== undefined;
-    const caddyIcon = caddyStatus.running && hasLabels ? '{green-fg}✓{/}' : '{red-fg}✗{/}';
-    const dnsIcon = dnsStatus.running ? '{green-fg}✓{/}' : '{red-fg}✗{/}';
+    const hasLabels = service.definition?.labels?.["caddy"] !== undefined;
+    const caddyIcon = caddyStatus.running && hasLabels ? "{green-fg}✓{/}" : "{red-fg}✗{/}";
+    const dnsIcon = dnsStatus.running ? "{green-fg}✓{/}" : "{red-fg}✗{/}";
 
-    let content = '';
-    content += `  Caddy: ${caddyIcon} ${hasLabels ? 'route configured' : 'no route'}\n`;
-    content += `  DNS: ${dnsIcon} ${dnsStatus.running ? `${dnsStatus.hosts} hosts` : 'stopped'}`;
+    let content = "";
+    content += `  Caddy: ${caddyIcon} ${hasLabels ? "route configured" : "no route"}\n`;
+    content += `  DNS: ${dnsIcon} ${dnsStatus.running ? `${dnsStatus.hosts} hosts` : "stopped"}`;
 
     return content;
   }
@@ -727,13 +726,13 @@ export class ServiceDiagnostics {
   private formatImageInfo(service: ServiceInfo): string {
     const def = service.definition;
     if (!def) {
-      return '  No image info available';
+      return "  No image info available";
     }
 
-    let content = '';
+    let content = "";
     content += `  Name: ${def.image}\n`;
 
-    const tag = service.config?.imageTag || 'latest';
+    const tag = service.config?.imageTag || "latest";
     content += `  Tag: ${tag}\n`;
 
     if (service.containerStatus?.id) {
@@ -758,21 +757,31 @@ export class ServiceDiagnostics {
 
   private getStateColor(state: string): string {
     switch (state) {
-      case 'running': return '{green-fg}';
-      case 'enabled': return '{blue-fg}';
-      case 'stopped': return '{yellow-fg}';
-      case 'disabled': return '{gray-fg}';
-      default: return '{white-fg}';
+      case "running":
+        return "{green-fg}";
+      case "enabled":
+        return "{blue-fg}";
+      case "stopped":
+        return "{yellow-fg}";
+      case "disabled":
+        return "{gray-fg}";
+      default:
+        return "{white-fg}";
     }
   }
 
   private getStateIcon(state: string): string {
     switch (state) {
-      case 'running': return '▲';
-      case 'enabled': return '●';
-      case 'stopped': return '▼';
-      case 'disabled': return '○';
-      default: return '○';
+      case "running":
+        return "▲";
+      case "enabled":
+        return "●";
+      case "stopped":
+        return "▼";
+      case "disabled":
+        return "○";
+      default:
+        return "○";
     }
   }
 
@@ -783,14 +792,14 @@ export class ServiceDiagnostics {
     const message = err instanceof Error ? err.message : String(err);
     blessed.box({
       parent: this.screen,
-      top: 'center',
-      left: 'center',
-      width: '60%',
+      top: "center",
+      left: "center",
+      width: "60%",
       height: 10,
       tags: true,
-      border: { type: 'line' },
-      label: ' Diagnostics Error ',
-      style: { border: { fg: 'red' } },
+      border: { type: "line" },
+      label: " Diagnostics Error ",
+      style: { border: { fg: "red" } },
       content: `{red-fg}Failed to load service diagnostics:{/red-fg}\n\n${message}\n\n{yellow-fg}Press Escape to go back.{/yellow-fg}`,
     });
     this.screen.render();
@@ -802,12 +811,12 @@ export class ServiceDiagnostics {
   private showMessage(message: string, color: string): void {
     const msg = blessed.message({
       parent: this.screen,
-      border: 'line',
-      height: 'shrink',
-      width: 'half',
-      top: 'center',
-      left: 'center',
-      label: ' Message ',
+      border: "line",
+      height: "shrink",
+      width: "half",
+      top: "center",
+      left: "center",
+      label: " Message ",
       style: { border: { fg: color } },
     });
 

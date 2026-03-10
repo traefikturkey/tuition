@@ -394,9 +394,7 @@ export class LifecycleManager {
 
     return {
       success: true,
-      message: options.keepData
-        ? `Service '${name}' removed (data preserved)`
-        : `Service '${name}' removed`,
+      message: options.keepData ? `Service '${name}' removed (data preserved)` : `Service '${name}' removed`,
     };
   }
 
