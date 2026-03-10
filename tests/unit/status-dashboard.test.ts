@@ -72,6 +72,27 @@ describe("StatusDashboard", () => {
   it("shows a Docker access error when Docker info retrieval fails", async () => {
     patchSet.patch(docker, "info", async () => {
       throw new Error("daemon unavailable");
+    });
+    patchSet.patch(docker, "listContainers", async () => []);
+
+    const dashboard = new StatusDashboard(
+      screen as never,
+      configManager as never,
+      lifecycleManager as never,
+      caddyManager as never,
+      dnsManager as never
+    );
+
+    await dashboard.render();
+
+    const container = findChildByLabel(screen, " Dashboard ");
+    const dockerBox = container ? findChildByLabel(container, " Docker Status ") : undefined;
+
+    expect(dockerBox?.content).toContain("Docker is not accessible");
+
+    patchSet.restore();
+  });
+
   it("calls onServiceSelect when Enter is pressed on a service", async () => {
     patchSet.patch(docker, "info", async () => ({ ServerVersion: "26.1.0", Containers: 2, Images: 12 }));
     patchSet.patch(docker, "listContainers", async () => []);
@@ -127,25 +148,6 @@ describe("StatusDashboard", () => {
 
     // Should not throw even without callback
     await serviceList?.emitAsync("select", {}, 0);
-
-    patchSet.restore();
-  });
-});
-
-    const dashboard = new StatusDashboard(
-      screen as never,
-      configManager as never,
-      lifecycleManager as never,
-      caddyManager as never,
-      dnsManager as never
-    );
-
-    await dashboard.render();
-
-    const container = findChildByLabel(screen, " Dashboard ");
-    const dockerBox = container ? findChildByLabel(container, " Docker Status ") : undefined;
-
-    expect(dockerBox?.content).toContain("Docker is not accessible");
 
     patchSet.restore();
   });
