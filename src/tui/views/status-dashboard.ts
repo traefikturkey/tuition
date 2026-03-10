@@ -39,10 +39,16 @@ export class StatusDashboard {
    * Render the dashboard
    */
   async render(): Promise<void> {
-    const globalConfig = await this.configManager.loadGlobal();
-    const services = await this.lifecycleManager.listAll();
-    const caddyStatus = await this.caddyManager.status();
-    const dnsStatus = await this.dnsManager.status();
+    let globalConfig, services, caddyStatus, dnsStatus;
+    try {
+      globalConfig = await this.configManager.loadGlobal();
+      services = await this.lifecycleManager.listAll();
+      caddyStatus = await this.caddyManager.status();
+      dnsStatus = await this.dnsManager.status();
+    } catch (err) {
+      this.showRenderError(err);
+      return;
+    }
 
     // Calculate stats
     const totalServices = services.length;
@@ -193,6 +199,26 @@ export class StatusDashboard {
     }
 
     serviceList.focus();
+    this.screen.render();
+  }
+
+  /**
+   * Show an inline error box when render cannot proceed due to a manager failure
+   */
+  private showRenderError(err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    blessed.box({
+      parent: this.screen,
+      top: 'center',
+      left: 'center',
+      width: '60%',
+      height: 10,
+      tags: true,
+      border: { type: 'line' },
+      label: ' Dashboard Error ',
+      style: { border: { fg: 'red' } },
+      content: `{red-fg}Failed to load dashboard:{/red-fg}\n\n${message}\n\n{yellow-fg}Run: tuition init, then press Q to quit.{/yellow-fg}`,
+    });
     this.screen.render();
   }
 

@@ -23,7 +23,13 @@ export class ServiceBrowser {
   async render(): Promise<void> {
     // Mutable snapshot — always reflects the latest listAll() result so that
     // button actions and selection never operate on stale data.
-    let currentServices = await this.lifecycleManager.listAll();
+    let currentServices;
+    try {
+      currentServices = await this.lifecycleManager.listAll();
+    } catch (err) {
+      this.showRenderError(err);
+      return;
+    }
 
     // Create main container
     const container = blessed.box({
@@ -359,6 +365,26 @@ export class ServiceBrowser {
       case 'disabled': return '○';
       default: return '○';
     }
+  }
+
+  /**
+   * Show an inline error box when render cannot proceed due to a manager failure
+   */
+  private showRenderError(err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    blessed.box({
+      parent: this.screen,
+      top: 'center',
+      left: 'center',
+      width: '60%',
+      height: 10,
+      tags: true,
+      border: { type: 'line' },
+      label: ' Service Browser Error ',
+      style: { border: { fg: 'red' } },
+      content: `{red-fg}Failed to load services:{/red-fg}\n\n${message}\n\n{yellow-fg}Press Q to quit or run: tuition service list{/yellow-fg}`,
+    });
+    this.screen.render();
   }
 
   /**

@@ -60,7 +60,13 @@ export class ServiceDiagnostics {
    * Render the diagnostics view
    */
   async render(): Promise<void> {
-    const service = await this.lifecycleManager.getService(this.serviceName);
+    let service;
+    try {
+      service = await this.lifecycleManager.getService(this.serviceName);
+    } catch (err) {
+      this.showRenderError(err);
+      return;
+    }
 
     if (!service) {
       this.onBack();
@@ -768,6 +774,26 @@ export class ServiceDiagnostics {
       case 'disabled': return '○';
       default: return '○';
     }
+  }
+
+  /**
+   * Show an inline error box when render cannot proceed due to a manager failure
+   */
+  private showRenderError(err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    blessed.box({
+      parent: this.screen,
+      top: 'center',
+      left: 'center',
+      width: '60%',
+      height: 10,
+      tags: true,
+      border: { type: 'line' },
+      label: ' Diagnostics Error ',
+      style: { border: { fg: 'red' } },
+      content: `{red-fg}Failed to load service diagnostics:{/red-fg}\n\n${message}\n\n{yellow-fg}Press Escape to go back.{/yellow-fg}`,
+    });
+    this.screen.render();
   }
 
   /**

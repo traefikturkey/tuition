@@ -202,4 +202,22 @@ describe("ServiceBrowser", () => {
 
     patchSet.restore();
   });
+
+  it("shows an error box when listAll throws during render", async () => {
+    lifecycleManager.listAll = async () => {
+      throw new Error("connection refused");
+    };
+
+    const browser = new ServiceBrowser(
+      screen as never,
+      lifecycleManager as never
+    );
+    await browser.render();
+
+    const errorBox = findChildByLabel(screen, " Service Browser Error ");
+    expect(errorBox).toBeDefined();
+    expect(errorBox?.content).toContain("connection refused");
+
+    patchSet.restore();
+  });
 });

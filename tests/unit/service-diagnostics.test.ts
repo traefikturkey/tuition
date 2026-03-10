@@ -424,4 +424,19 @@ describe("ServiceDiagnostics", () => {
 
     patchSet.restore();
   });
+
+  it("shows an error box when getService throws during render", async () => {
+    lifecycleManager.getService = async () => {
+      throw new Error("service lookup failed");
+    };
+
+    const diag = createDiagnostics();
+    await diag.render();
+
+    const errorBox = findChildByLabel(screen, " Diagnostics Error ");
+    expect(errorBox).toBeDefined();
+    expect(errorBox?.content).toContain("service lookup failed");
+
+    patchSet.restore();
+  });
 });

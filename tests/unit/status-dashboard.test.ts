@@ -151,4 +151,25 @@ describe("StatusDashboard", () => {
 
     patchSet.restore();
   });
+
+  it("shows an error box when a manager throws during render", async () => {
+    lifecycleManager.listAll = async () => {
+      throw new Error("docker not running");
+    };
+
+    const dashboard = new StatusDashboard(
+      screen as never,
+      configManager as never,
+      lifecycleManager as never,
+      caddyManager as never,
+      dnsManager as never
+    );
+    await dashboard.render();
+
+    const errorBox = findChildByLabel(screen, " Dashboard Error ");
+    expect(errorBox).toBeDefined();
+    expect(errorBox?.content).toContain("docker not running");
+
+    patchSet.restore();
+  });
 });
